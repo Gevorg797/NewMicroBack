@@ -14,6 +14,7 @@ export function microOrmConfig(
     password: configService.get<string>('DB_PASSWORD'),
     dbName: configService.get<string>('DB_NAME'),
     entities: ENTITIES,
-    debug: configService.get<string>('NODE_ENV') !== 'production',
+    debug: false,
+    allowGlobalContext: true,
   };
 }

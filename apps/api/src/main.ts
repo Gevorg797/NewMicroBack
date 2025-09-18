@@ -10,6 +10,7 @@ import * as qs from 'qs';
 import { ApiModule } from './api.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { MikroORM } from '@mikro-orm/core';
 
 const fAdapter = new FastifyAdapter({
   logger: false,
@@ -42,6 +43,13 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
+
+  const orm = app.get(MikroORM);
+  if (process.env.NODE_ENV === 'dev') {
+    const generator = orm.getSchemaGenerator();
+    await generator.updateSchema();
+    console.log('Database schema updated successfully!');
+  }
 
   const docs = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,

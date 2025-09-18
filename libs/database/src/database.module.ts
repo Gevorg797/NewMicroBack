@@ -1,0 +1,26 @@
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as path from 'path';
+import { microOrmConfig } from './config/mikro-orm.config';
+import { ENTITIES } from './entities';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: path.resolve(
+        process.cwd(),
+        `.env${process.env.NODE_ENV ? `.${process.env.NODE_ENV}` : ''}`,
+      ),
+    }),
+    MikroOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: microOrmConfig,
+      inject: [ConfigService],
+    }),
+    MikroOrmModule.forFeature(ENTITIES),
+  ],
+  exports: [MikroOrmModule],
+})
+export class DatabaseModule {}

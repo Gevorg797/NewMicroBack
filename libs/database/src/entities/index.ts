@@ -8,6 +8,7 @@ import { GamesProviderSettingGroup } from './game-provider-settings-group.entity
 import { Game } from './games.entity';
 import { GameSession } from './game-sassion.entity';
 import { GameTransaction } from './game-transaction.entity';
+import { Currency } from './currency.entity';
 
 // Export everything for convenient imports
 export const ENTITIES = [
@@ -19,6 +20,7 @@ export const ENTITIES = [
     Game,
     GameSession,
     GameTransaction,
+    Currency,
 ];
 
 export {
@@ -30,4 +32,5 @@ export {
     Game,
     GameSession,
     GameTransaction,
+    Currency,
 };

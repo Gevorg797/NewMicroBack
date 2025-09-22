@@ -35,7 +35,7 @@ export class GameSession extends BaseEntity {
     @Property({ columnType: 'numeric(10,2)', default: 1 })
     denomination: string = '1'; // numeric best stored as string
 
-    @Property({ columnType: 'json', nullable: true })
+    @Property({ columnType: 'jsonb', nullable: true })
     metadata?: unknown;
 
     @Property({ columnType: 'double precision', default: 0 })

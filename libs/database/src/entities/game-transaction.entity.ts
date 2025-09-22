@@ -17,7 +17,7 @@ export class GameTransaction extends BaseEntity {
 
     // Assuming `user_balance` is a custom PostgreSQL domain/type based on numeric/decimal
     @Property({ columnType: 'numeric' })
-    amount!: string; // MikroORM maps `numeric` best as string
+    amount!: number; // MikroORM maps `numeric` best as string
 
 
     @Property({ columnType: 'timestamptz', nullable: true })

@@ -1,10 +1,11 @@
-import { ConsoleLogger, Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { MikroORM } from '@mikro-orm/core';
+import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 
 
 @Injectable()
 export class DatabaseSyncService implements OnModuleInit {
-    private readonly logger = new ConsoleLogger('DatabaseBootstrap');
+    private readonly logger = new LocalTimeLogger('DatabaseBootstrap');
 
     constructor(private readonly orm: MikroORM) { }
 

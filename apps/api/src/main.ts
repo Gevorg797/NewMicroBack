@@ -11,6 +11,7 @@ import { ApiModule } from './api.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MikroORM } from '@mikro-orm/core';
+import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 
 const fAdapter = new FastifyAdapter({
   logger: false,
@@ -25,6 +26,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     ApiModule,
     fAdapter,
+    { logger: new LocalTimeLogger() },
   );
 
   await app.register(fastifyCookie as FastifyPluginCallback);

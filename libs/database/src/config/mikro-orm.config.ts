@@ -1,7 +1,7 @@
 import { MikroOrmModuleOptions } from '@mikro-orm/nestjs';
 import { ConfigService } from '@nestjs/config';
-import { ENTITIES } from '../entities';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
+import { ENTITIES } from '../entities';
 
 export function microOrmConfig(
   configService: ConfigService,
@@ -14,6 +14,7 @@ export function microOrmConfig(
     password: configService.get<string>('DB_PASSWORD'),
     dbName: configService.get<string>('DB_NAME'),
     entities: ENTITIES,
-    debug: configService.get<string>('NODE_ENV') !== 'production',
+    debug: false,
+    allowGlobalContext: true,
   };
 }

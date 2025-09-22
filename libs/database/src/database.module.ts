@@ -1,6 +1,7 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import * as path from 'path';
 import { microOrmConfig } from './config/mikro-orm.config';
 import { ENTITIES } from './entities';
@@ -16,11 +17,12 @@ import { ENTITIES } from './entities';
     }),
     MikroOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: microOrmConfig,
       inject: [ConfigService],
+      driver: PostgreSqlDriver,
+      useFactory: microOrmConfig,
     }),
     MikroOrmModule.forFeature(ENTITIES),
   ],
   exports: [MikroOrmModule],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

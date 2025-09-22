@@ -44,12 +44,6 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  const orm = app.get(MikroORM);
-  if (process.env.NODE_ENV === 'dev') {
-    const generator = orm.getSchemaGenerator();
-    await generator.updateSchema();
-    console.log('Database schema updated successfully!');
-  }
 
   const docs = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,

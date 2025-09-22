@@ -5,6 +5,7 @@ import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import * as path from 'path';
 import { microOrmConfig } from './config/mikro-orm.config';
 import { ENTITIES } from './entities';
+import { DatabaseSyncService } from './database.service';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ENTITIES } from './entities';
     }),
     MikroOrmModule.forFeature(ENTITIES),
   ],
+  providers: [DatabaseSyncService],
   exports: [MikroOrmModule],
 })
 export class DatabaseModule { }

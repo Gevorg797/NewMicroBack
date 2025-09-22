@@ -13,6 +13,11 @@
       {
         "include": "ecosystem.config.js",
         "watchAssets": true
+      },
+      {
+        "include": "apps/api/src/bots/bik-bet/images/**/*",
+        "outDir": "dist/apps/api/images",
+        "watchAssets": true
       }
     ],
     "webpack": true

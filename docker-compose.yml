@@ -6,13 +6,25 @@ services:
     container_name: nestjs_postgres
     restart: always
     environment:
-      POSTGRES_DB: nestjs_advansed
-      POSTGRES_USER: nestjs_advansed
-      POSTGRES_PASSWORD: Arm20032003
+      POSTGRES_DB: bik_bet
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  nestjs:
+    build: .
+    container_name: nestjs_app
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - '3000:3000'
+    command: sh -c "npm install && npm run start:dev"
 
 volumes:
   postgres_data:

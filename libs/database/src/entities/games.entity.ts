@@ -1,6 +1,8 @@
-import { Entity, Property, ManyToOne } from '@mikro-orm/core';
+import { Entity, Property, ManyToOne, OneToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { GameSubProvider } from './game-sub-providers.entity';
+import { GameFreeSpin } from './game-free-spins.entity';
+import { GameCategory } from './game-category.entity';
 
 @Entity({ tableName: 'games' })
 export class Game extends BaseEntity {
@@ -33,6 +35,12 @@ export class Game extends BaseEntity {
 
     @ManyToOne(() => GameSubProvider)
     subProvider!: GameSubProvider;
+
+    @OneToMany(() => GameFreeSpin, fs => fs.game)
+    freeSpins = new Collection<GameFreeSpin>(this);
+
+    @OneToMany(() => GameCategory, gc => gc.game)
+    gameCategories = new Collection<GameCategory>(this);
 
     @Property({ default: true })
     isDesktop: boolean = true;

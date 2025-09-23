@@ -2,12 +2,16 @@ import { Entity, Property, ManyToOne, OneToMany, Collection } from '@mikro-orm/c
 import { BaseEntity } from './base.entity';
 import { GameProvider } from './game-providers.entity';
 import { GamesProviderSettingGroup } from './game-provider-settings-group.entity';
+import { Site } from './site.entity';
 
 @Entity({ tableName: 'gameProviderSettings' })
 export class GameProviderSetting extends BaseEntity {
     // If you have a Site entity, switch to ManyToOne(() => Site)
     @ManyToOne(() => GameProvider)
     provider!: GameProvider;
+
+    @ManyToOne(() => Site)
+    site!: Site;
 
     @Property({ length: 100, nullable: true })
     token?: string;

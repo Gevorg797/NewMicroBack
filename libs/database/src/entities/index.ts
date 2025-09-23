@@ -9,10 +9,15 @@ import { Game } from './games.entity';
 import { GameSession } from './game-sassion.entity';
 import { GameTransaction } from './game-transaction.entity';
 import { Currency } from './currency.entity';
+import { Site } from './site.entity';
+import { GameFreeSpin } from './game-free-spins.entity';
+import { GameCategory } from './game-category.entity';
 
 // Export everything for convenient imports
 export const ENTITIES = [
     User,
+    Site,
+    Currency,
     GameProvider,
     GameSubProvider,
     GameProviderSetting,
@@ -20,11 +25,14 @@ export const ENTITIES = [
     Game,
     GameSession,
     GameTransaction,
-    Currency,
+    GameFreeSpin,
+    GameCategory,
 ];
 
 export {
     User,
+    Site,
+    Currency,
     GameProvider,
     GameSubProvider,
     GameProviderSetting,
@@ -32,5 +40,6 @@ export {
     Game,
     GameSession,
     GameTransaction,
-    Currency,
+    GameFreeSpin,
+    GameCategory,
 };

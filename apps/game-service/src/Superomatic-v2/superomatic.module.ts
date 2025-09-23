@@ -6,7 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
     imports: [ConfigModule.forRoot({
         isGlobal: true,
-    }),],
+    })],
     controllers: [SuperomaticController],
     providers: [SuperomaticService],
     exports: [SuperomaticService],

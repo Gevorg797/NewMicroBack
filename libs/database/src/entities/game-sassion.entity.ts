@@ -1,7 +1,8 @@
-import { Entity, Property, ManyToOne } from '@mikro-orm/core';
+import { Entity, Property, ManyToOne, OneToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { Game } from './games.entity';
-// if you have User/Balance entities, swap integer FKs to @ManyToOne
+import { GameFreeSpin } from './game-free-spins.entity';
+
 
 @Entity({ tableName: 'gameSessions' })
 export class GameSession extends BaseEntity {
@@ -22,6 +23,9 @@ export class GameSession extends BaseEntity {
 
     @ManyToOne(() => Game)
     game!: Game;
+
+    @OneToMany(() => GameFreeSpin, fs => fs.gameSession)
+    freeSpins = new Collection<GameFreeSpin>(this);
 
     @Property()
     balanceId!: number; // replace with @ManyToOne(() => Balance) if exists

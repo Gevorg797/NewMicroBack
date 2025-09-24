@@ -23,37 +23,42 @@ export class BikBetController {
     // Button click handler
     this.bot.action('check_subscription', async (ctx) => {
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
-      await ctx.answerCbQuery(); // remove "loading" animation
+    });
+
+    // Dynamic deposit amount handler: deposit:<amount>
+    this.bot.action(/deposit:(.+)/, async (ctx) => {
+      const amount = Number((ctx as any).match?.[1]);
+      if (!Number.isFinite(amount)) {
+        await ctx.answerCbQuery('Некорректная сумма');
+        return;
+      }
+      await this.bikbetService.depositAmount(ctx, amount);
+      await ctx.answerCbQuery();
     });
 
     // Game button click handler
     this.bot.action('games', async (ctx) => {
       await this.bikbetService.game(ctx);
-      await ctx.answerCbQuery(); // remove "loading" animation
     });
 
     // Balances button click handler
     this.bot.action('donate_menu', async (ctx) => {
-      await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
-      await ctx.answerCbQuery(); // remove "loading" animation
+      await this.bikbetService.donateMenu(ctx);
     });
 
     // Top button click handler
     this.bot.action('leaderboard_wins', async (ctx) => {
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
-      await ctx.answerCbQuery(); // remove "loading" animation
     });
 
     // Bounuses button click handler
     this.bot.action('bonuses', async (ctx) => {
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
-      await ctx.answerCbQuery(); // remove "loading" animation
     });
 
     // Start button click handler
     this.bot.action('start', async (ctx) => {
       await this.bikbetService.start(ctx, channelLink);
-      await ctx.answerCbQuery(); // remove "loading" animation
     });
 
     // Ignore button click handler
@@ -69,19 +74,28 @@ export class BikBetController {
     // Start game button click handler
     this.bot.action('slotsB2B', async (ctx) => {
       await this.bikbetService.slotsB2B(ctx);
-      await ctx.answerCbQuery(); // remove "loading" animation
     });
 
     // Add balance button click handler
     this.bot.action('donate', async (ctx) => {
       await this.bikbetService.donate(ctx);
-      await ctx.answerCbQuery(); // remove "loading" animation
+    });
+
+    // Withdraw button click handler
+    this.bot.action('withdraw', async (ctx) => {
+      await this.bikbetService.withdraw(ctx);
     });
 
     // Desposit Custom button click handler
     this.bot.action('deposit:custom', async (ctx) => {
       await this.bikbetService.depositCustom(ctx);
-      await ctx.answerCbQuery(); // remove "loading" animation
+    });
+
+    // (moved earlier) dynamic deposit handler above
+
+    // Withdraw Custom button click handler
+    this.bot.action('withdraw:custom', async (ctx) => {
+      await this.bikbetService.withdrawCustom(ctx);
     });
 
     this.bot.launch();

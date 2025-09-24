@@ -2,6 +2,7 @@
 import { Collection, Entity, OneToMany, Property, Enum } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { GamesProviderSettingGroup } from './game-provider-settings-group.entity';
+import { Balances } from './balances.entity';
 
 export enum CurrencyType {
   RUB = 'RUB',
@@ -61,4 +62,7 @@ export class Currency extends BaseEntity {
 
   @OneToMany(() => GamesProviderSettingGroup, (group) => group.currency)
   groups = new Collection<GamesProviderSettingGroup>(this);
+
+  @OneToMany(() => Balances, (balance) => balance.currency)
+  balances = new Collection<Balances>(this);
 }

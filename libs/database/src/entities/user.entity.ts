@@ -3,12 +3,14 @@ import {
   Entity,
   ManyToOne,
   OneToMany,
+  OneToOne,
   Property,
   Unique,
 } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { Site } from './site.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
+import { Balances } from './balances.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -29,6 +31,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => GameFreeSpin, (fs) => fs.user)
   freeSpins = new Collection<GameFreeSpin>(this);
+
+  @OneToOne(() => Balances, (b) => b.user)
+  balance?: Balances;
 
   @Property({ onCreate: () => new Date() })
   createdAt: Date = new Date();

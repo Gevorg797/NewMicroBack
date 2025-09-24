@@ -189,19 +189,19 @@ export class BikBetService {
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [
-          Markup.button.callback('100 RUB', 'ignore_game'),
-          Markup.button.callback('250 RUB', 'ignore_game'),
+          Markup.button.callback('100 RUB', 'deposit:100'),
+          Markup.button.callback('250 RUB', 'deposit:250'),
         ],
         [
-          Markup.button.callback('500 RUB', 'ignore_game'),
-          Markup.button.callback('1000 RUB', 'ignore_game'),
+          Markup.button.callback('500 RUB', 'deposit:500'),
+          Markup.button.callback('1000 RUB', 'deposit:1000'),
         ],
         [
-          Markup.button.callback('2500 RUB', 'ignore_game'),
-          Markup.button.callback('5000 RUB', 'ignore_game'),
+          Markup.button.callback('2500 RUB', 'deposit:2500'),
+          Markup.button.callback('5000 RUB', 'deposit:5000'),
         ],
         [Markup.button.callback('💰 Своя сумма', 'deposit:custom')],
-        [Markup.button.callback('⬅️ Назад', 'start')],
+        [Markup.button.callback('🔙 Назад', 'donate_menu')],
       ]).reply_markup,
     });
   }
@@ -212,7 +212,6 @@ export class BikBetService {
 <blockquote><b>• Минимальная сумма: 50 RUB</b></blockquote>
 <blockquote><b>• Отправьте сообщением нужную сумму</b></blockquote>
 <blockquote><b>• Только целое число</b></blockquote>
-
 `;
 
     const filePath = this.getImagePath('bik_bet_1.jpg');
@@ -228,6 +227,142 @@ export class BikBetService {
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('⬅️ Назад', 'games')],
+      ]).reply_markup,
+    });
+  }
+
+  async depositAmount(ctx: any, amount: number) {
+    const minAmount = 50;
+    const valid = Number.isInteger(amount) && amount >= minAmount;
+
+    const text = valid
+      ? `\n<blockquote><b>💰 Выберите способ оплаты</b></blockquote>\n<blockquote><b>• Сумма: ${amount} RUB</b></blockquote>\n<blockquote><b>• Выберите удобный способ оплаты</b></blockquote>`
+      : `\n<blockquote><b>❌ Минимальная сумма пополнения ${minAmount} RUB</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_1.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('От 50р:', 'ignore_game')],
+        [
+          Markup.button.callback('💎 CryptoBot', 'payment:crypto'),
+          Markup.button.callback('👛 FKwallet', 'paymentSystem_fkwallet_'),
+        ],
+        [
+          Markup.button.callback(
+            '💳 Оплата с карты(+5% бонус)',
+            'depositYOOMONEY_',
+          ),
+        ],
+        [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
+        [Markup.button.callback('📷 СБП', 'paymentSystem_platega_')],
+        [Markup.button.callback('От 250р:', 'ignore_game')],
+        [
+          Markup.button.callback(
+            '🛡 Криптовалюты',
+            'paymentSystem_cryptocloud_',
+          ),
+        ],
+        [Markup.button.callback('От 500р до 100 000р', 'ignore_game')],
+
+        [Markup.button.callback('💳 Карта', 'paymentSystem_1plat_')],
+        [Markup.button.callback('⬅️ Назад', 'donate_menu')],
+      ]).reply_markup,
+    });
+  }
+
+  async donateMenu(ctx: any) {
+    const text = `
+<blockquote><b>🆔 ID: ${this.totalPlayers}</b></blockquote>
+<blockquote>💰 Баланс: <code>${this.totalPlayers}</code></blockquote>
+<blockquote> <b>🎁 Бонусный баланс: 0 RUB</b> </blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.answerCbQuery();
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback('📥 Пополнить', 'donate'),
+          Markup.button.callback('📤 Вывести', 'withdraw'),
+        ],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdraw(ctx: any) {
+    const text = `
+<blockquote><b>💳 Вывод средств</b></blockquote>
+<blockquote><b>💰 Доступно: 0 RUB</b></blockquote>
+<blockquote><b>• Минимальная сумма: 200 RUB
+• Выберите сумму для вывода
+• После выбора суммы выберите способ вывода</b></blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.answerCbQuery();
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback('200 RUB', 'withdraw:200'),
+          Markup.button.callback('500 RUB', 'withdraw:500'),
+        ],
+        [
+          Markup.button.callback('1000 RUB', 'withdraw:1000'),
+          Markup.button.callback('2500 RUB', 'withdraw:2500'),
+        ],
+        [Markup.button.callback('5000 RUB', 'withdraw:5000')],
+        [Markup.button.callback('💰 Свой вариант', 'withdraw:custom')],
+        [Markup.button.callback('🔙 Назад', 'donate_menu')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdrawCustom(ctx: any) {
+    const text = `
+<blockquote><b>💰 Введите сумму вывода</b></blockquote>
+<blockquote><b>• Минимальная сумма: 200 RUB</b></blockquote>
+<blockquote><b>• Отправьте сообщением нужную сумму
+• Только целое число
+</b></blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.answerCbQuery();
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ Назад', 'withdraw')],
       ]).reply_markup,
     });
   }

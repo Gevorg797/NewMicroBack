@@ -6,10 +6,10 @@ import { GameSession } from './game-sassion.entity';
 
 @Entity({ tableName: 'gameFreeSpins' })
 export class GameFreeSpin extends BaseEntity {
-    @ManyToOne(() => User, { fieldName: 'userId' })
+    @ManyToOne(() => User)
     user!: User;
 
-    @ManyToOne(() => Game, { fieldName: 'gameId' })
+    @ManyToOne(() => Game)
     game!: Game;
 
     @Property({ default: 1 })

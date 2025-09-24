@@ -1,4 +1,4 @@
-import { Entity, Property, ManyToOne } from '@mikro-orm/core';
+import { Entity, Property, ManyToMany, Collection } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { Game } from './games.entity';
 
@@ -7,8 +7,8 @@ export class GameCategory extends BaseEntity {
     @Property({ length: 100 })
     name!: string; // replaces categoryId with plain name
 
-    @ManyToOne(() => Game)
-    game!: Game;
+    @ManyToMany(() => Game, g => g.categories)
+    games = new Collection<Game>(this);
 
     @Property({ default: true })
     isGameDesktop: boolean = true;

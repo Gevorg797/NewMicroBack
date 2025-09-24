@@ -9,14 +9,17 @@ import { B2BSlotsUtilsService } from './b2bslots.utils.service';
 import { B2BSlotsProviderSettingsService } from './provider-settings.service';
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
-        MikroOrmModule.forFeature([GameProviderSetting]),
-    ],
-    controllers: [B2BSlotsController],
-    providers: [B2BSlotsService, B2BSlotsApiService, B2BSlotsUtilsService, B2BSlotsProviderSettingsService],
-    exports: [B2BSlotsService],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    MikroOrmModule.forFeature([GameProviderSetting]),
+  ],
+  controllers: [B2BSlotsController],
+  providers: [
+    B2BSlotsService,
+    B2BSlotsApiService,
+    B2BSlotsUtilsService,
+    B2BSlotsProviderSettingsService,
+  ],
+  exports: [B2BSlotsService],
 })
-export class B2BSlotsModule { }
-
-
+export class B2BSlotsModule {}

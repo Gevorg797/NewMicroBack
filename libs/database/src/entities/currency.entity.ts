@@ -62,7 +62,4 @@ export class Currency extends BaseEntity {
 
   @OneToMany(() => GamesProviderSettingGroup, (group) => group.currency)
   groups = new Collection<GamesProviderSettingGroup>(this);
-
-  @OneToMany(() => Balances, (balance) => balance.currency)
-  balances = new Collection<Balances>(this);
 }

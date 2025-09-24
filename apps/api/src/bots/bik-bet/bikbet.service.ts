@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
-import { InputMediaPhoto } from 'telegraf/typings/core/types/typegram';
+
 
 @Injectable()
 export class BikBetService {
@@ -10,7 +10,7 @@ export class BikBetService {
   private readonly gamesPlayed = 61192;
   private readonly totalBets = '5973499.88 RUB';
 
-  constructor() {}
+  constructor() { }
 
   async checkSubscription(ctx: any, channelId: string, link: string) {
     try {

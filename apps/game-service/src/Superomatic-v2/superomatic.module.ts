@@ -9,12 +9,17 @@ import { SuperomaticApiService } from './superomatic.api.service';
 import { SuperomaticUtilsService } from './superomatic.utils.service';
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
-        MikroOrmModule.forFeature([GameProviderSetting]),
-    ],
-    controllers: [SuperomaticController],
-    providers: [SuperomaticService, ProviderSettingsService, SuperomaticApiService, SuperomaticUtilsService],
-    exports: [SuperomaticService],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    MikroOrmModule.forFeature([GameProviderSetting]),
+  ],
+  controllers: [SuperomaticController],
+  providers: [
+    SuperomaticService,
+    ProviderSettingsService,
+    SuperomaticApiService,
+    SuperomaticUtilsService,
+  ],
+  exports: [SuperomaticService],
 })
-export class SuperomaticModule { }
+export class SuperomaticModule {}

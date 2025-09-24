@@ -36,7 +36,7 @@ export class AppExceptionFilter implements ExceptionFilter {
 
     // Default payload
     const base = {
-      data: null as null,
+      data: null,
       error: this.getName(exception),
       message: 'An unexpected error occurred',
       status,
@@ -50,7 +50,7 @@ export class AppExceptionFilter implements ExceptionFilter {
           ? body
           : Array.isArray(body?.message)
             ? body.message.join(', ')
-            : body?.message ?? exception.message;
+            : (body?.message ?? exception.message);
 
       return res.status(status).send({
         ...base,
@@ -97,7 +97,8 @@ export class AppExceptionFilter implements ExceptionFilter {
         ...base,
         status,
         message:
-          exception.message || 'Optimistic lock failed. Please retry the action.',
+          exception.message ||
+          'Optimistic lock failed. Please retry the action.',
         error: 'OptimisticLockError',
       });
     }

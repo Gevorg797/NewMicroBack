@@ -27,4 +27,4 @@ import { DatabaseSyncService } from './database.service';
   providers: [DatabaseSyncService],
   exports: [MikroOrmModule],
 })
-export class DatabaseModule { }
+export class DatabaseModule {}

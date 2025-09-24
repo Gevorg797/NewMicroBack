@@ -5,18 +5,18 @@ import { GameProviderSetting } from './game-provider-settings.entity';
 
 @Entity({ tableName: 'gameProviders' })
 export class GameProvider extends BaseEntity {
-    @Property({ length: 250 })
-    name!: string;
+  @Property({ length: 250 })
+  name!: string;
 
-    @Property({ columnType: 'double precision', default: 0 })
-    feePercent: number = 0;
+  @Property({ columnType: 'double precision', default: 0 })
+  feePercent: number = 0;
 
-    @Property({ columnType: 'timestamptz', nullable: true })
-    deletedAt?: Date;
+  @Property({ columnType: 'timestamptz', nullable: true })
+  deletedAt?: Date;
 
-    @OneToMany(() => GameSubProvider, sp => sp.provider)
-    subProviders = new Collection<GameSubProvider>(this);
+  @OneToMany(() => GameSubProvider, (sp) => sp.provider)
+  subProviders = new Collection<GameSubProvider>(this);
 
-    @OneToMany(() => GameProviderSetting, s => s.provider)
-    settings = new Collection<GameProviderSetting>(this);
+  @OneToMany(() => GameProviderSetting, (s) => s.provider)
+  settings = new Collection<GameProviderSetting>(this);
 }

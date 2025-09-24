@@ -46,7 +46,6 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-
   const docs = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,
   });

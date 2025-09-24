@@ -3,14 +3,13 @@ import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
 
-
 @Injectable()
 export class BikBetService {
   private readonly totalPlayers = 1311;
   private readonly gamesPlayed = 61192;
   private readonly totalBets = '5973499.88 RUB';
 
-  constructor() { }
+  constructor() {}
 
   async checkSubscription(ctx: any, channelId: string, link: string) {
     try {

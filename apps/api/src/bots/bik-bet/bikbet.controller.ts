@@ -56,6 +56,11 @@ export class BikBetController {
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
     });
 
+    // Profile button click handler
+    this.bot.action('profile', async (ctx) => {
+      await this.bikbetService.profile(ctx);
+    });
+
     // Start button click handler
     this.bot.action('start', async (ctx) => {
       await this.bikbetService.start(ctx, channelLink);
@@ -68,7 +73,7 @@ export class BikBetController {
 
     // Ignore button click handler
     this.bot.action('ignore_all', async (ctx) => {
-      await ctx.answerCbQuery();
+      await ctx.answerCbQuery('⏳ В разработке');
     });
 
     // Start game button click handler
@@ -96,6 +101,11 @@ export class BikBetController {
     // Withdraw Custom button click handler
     this.bot.action('withdraw:custom', async (ctx) => {
       await this.bikbetService.withdrawCustom(ctx);
+    });
+
+    //My Bounses button click handler
+    this.bot.action('myBonuses', async (ctx) => {
+      await this.bikbetService.myBonuses(ctx);
     });
 
     this.bot.launch();

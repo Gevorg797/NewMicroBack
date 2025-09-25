@@ -24,11 +24,11 @@ export const ENTITIES = [
   GameSubProvider,
   GameProviderSetting,
   GamesProviderSettingGroup,
+  GameCategory,
   Game,
   GameSession,
   GameTransaction,
   GameFreeSpin,
-  GameCategory,
 ];
 
 export {

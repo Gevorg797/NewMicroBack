@@ -46,8 +46,8 @@ export class Game extends BaseEntity {
     @OneToMany(() => GameFreeSpin, (fs) => fs.game)
     freeSpins = new Collection<GameFreeSpin>(this);
 
-    @ManyToMany(() => GameCategory, (gc) => gc.games, { owner: true })
-    categories = new Collection<GameCategory>(this);
+    @ManyToMany(() => GameCategory, (gc) => gc.games, { owner: true, nullable: true })
+    categories? = new Collection<GameCategory>(this);
 
     @Property({ default: true })
     isDesktop: boolean = true;

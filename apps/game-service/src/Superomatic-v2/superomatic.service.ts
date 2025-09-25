@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { SuperomaticUtilsService } from './superomatic.utils.service';
 import { SuperomaticApiService } from './superomatic.api.service';
 import { ProviderSettingsService } from './provider-settings.service';
+import { EntityManager } from '@mikro-orm/postgresql';
+import { wrap } from '@mikro-orm/core';
+import { Game, GameProvider, GameSubProvider } from '@lib/database';
 
 @Injectable()
 export class SuperomaticService {
@@ -9,6 +12,7 @@ export class SuperomaticService {
         private readonly providerSettings: ProviderSettingsService,
         private readonly api: SuperomaticApiService,
         private readonly utils: SuperomaticUtilsService,
+        private readonly em: EntityManager,
     ) {
         // Initialize any dependencies here
     }
@@ -22,15 +26,65 @@ export class SuperomaticService {
         const apiResponse = await this.api.getGames(baseURL, params);
 
         // Extract games from Superomatic API response
-        const gamesList = apiResponse.response || [];
+        const gamesList: Array<any> = (apiResponse?.games || apiResponse?.response || []);
 
         let loadGamesCount = 0;
-        const deleteGamesCount = 0;
+        let deleteGamesCount = 0;
 
-        // TODO: if (params?.isHardReset) delete provider games and set deleteGamesCount
+        const providerRef = await this.em.findOneOrFail(GameProvider, { id: providerId });
+
+        // Hard reset: delete games and sub-providers of this provider
+        if (params?.isHardReset) {
+            const subProviders = await this.em.find(GameSubProvider, { provider: providerRef });
+            for (const sp of subProviders) {
+                const toDelete = await this.em.find(Game, { subProvider: sp });
+                deleteGamesCount += toDelete.length;
+                await this.em.removeAndFlush(toDelete);
+            }
+            // Remove sub-providers after removing games
+            // await this.em.removeAndFlush(subProviders);
+        }
+
         for (const game of gamesList) {
-            const modificatedBody = this.utils.modificationForGameLoad(game);
-            // TODO: insert modificatedBody with providerId into DB
+            const groupName: string = game.group || 'default';
+            let subProvider = await this.em.findOne(GameSubProvider, { name: groupName, provider: providerRef });
+            if (!subProvider) {
+                subProvider = new GameSubProvider();
+                wrap(subProvider).assign({ name: groupName, provider: providerRef });
+                await this.em.persistAndFlush(subProvider);
+            }
+
+            // Upsert by superomatic id as uuid
+            const existing = await this.em.findOne(Game, { uuid: String(game.id) });
+            if (existing) {
+                wrap(existing).assign({
+                    name: game.title,
+                    type: game.type,
+                    image: game.icon,
+                    subProvider,
+                    metadata: { provider: game.provider, isEnabled: game.is_enabled },
+                },);
+                await this.em.flush();
+            } else {
+                const newGame = new Game();
+                wrap(newGame).assign({
+                    name: game.title,
+                    uuid: String(game.id),
+                    type: game.type,
+                    technology: 'html5',
+                    isHasLobby: false,
+                    isMobile: true,
+                    isHasFreeSpins: true,
+                    isHasTables: false,
+                    isFreeSpinValidUntilFullDay: false,
+                    isDesktop: true,
+                    image: game.icon,
+                    subProvider,
+                    metadata: { provider: game.provider, isEnabled: game.is_enabled },
+                },);
+                await this.em.persistAndFlush(newGame);
+            }
+
             loadGamesCount++;
         }
 

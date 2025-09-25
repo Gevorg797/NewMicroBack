@@ -12,7 +12,14 @@ export class BikBetService {
   private readonly gamesPlayed = 61192;
   private readonly totalBets = '5973499.88 RUB';
 
-  constructor() {}
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: EntityRepository<User>,
+    @InjectRepository(Currency)
+    private readonly currencyRepository: EntityRepository<Currency>,
+    @InjectRepository(Balances)
+    private readonly balancesRepository: EntityRepository<Balances>,
+  ) {}
 
   async checkSubscription(ctx: any, channelId: string, link: string) {
     try {

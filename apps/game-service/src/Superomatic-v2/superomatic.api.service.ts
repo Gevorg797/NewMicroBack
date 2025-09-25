@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 
-// Inline endpoints
+// Superomatic API endpoints based on https://demo.superomatic.biz/doc/
 const GET_GAMES = '/games.list';
 const GET_CURRENCIES = '/currencies.list';
 const GET_GAME_DEMO_SESSION = '/init.demo.session';
@@ -10,13 +10,18 @@ const GAMES_FREE_ROUNDS_INFO = '/games.freeroundsInfo';
 
 @Injectable()
 export class SuperomaticApiService {
-  async getGames(baseURL: string) {
+  async getGames(baseURL: string, params: any = {}) {
     const url = `${baseURL}${GET_GAMES}`;
     const { data } = await axios.get(url, {
       headers: { 'Content-Type': 'application/json' },
+      params: {
+        // Default parameters for Superomatic games API
+        limit: params.limit || 100,
+        offset: params.offset || 0,
+        ...params
+      }
     });
-    const { response } = data;
-    return response;
+    return data;
   }
 
   async getCurrenciesList(baseURL: string) {

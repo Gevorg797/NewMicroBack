@@ -4,7 +4,7 @@ import { SuperomaticService } from './superomatic.service';
 
 @Controller('superomatic')
 export class SuperomaticController {
-  constructor(private readonly superomaticService: SuperomaticService) {}
+  constructor(private readonly superomaticService: SuperomaticService) { }
 
   @MessagePattern('superomatic.loadGames')
   async loadGames(

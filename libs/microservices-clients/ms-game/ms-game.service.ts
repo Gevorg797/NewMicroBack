@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { MS_GAME } from './ms-game.module';
+import { MS_GAME } from './tokens';
 
 @Injectable()
 export class MsGameService {
-  constructor(@Inject(MS_GAME) private readonly client: ClientProxy) {}
+  constructor(@Inject(MS_GAME) private readonly client: ClientProxy) { }
 
   // Superomatic patterns
   loadSuperomaticGames(data: { userId: number; siteId: number; params?: any }) {

@@ -12,11 +12,13 @@ import { Currency } from './currency.entity';
 import { Site } from './site.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
 import { GameCategory } from './game-category.entity';
+import { SiteSettings } from './site-settings.entity';
 
 // Export everything for convenient imports
 export const ENTITIES = [
   User,
   Site,
+  SiteSettings,
   Currency,
   GameProvider,
   GameSubProvider,
@@ -32,6 +34,7 @@ export const ENTITIES = [
 export {
   User,
   Site,
+  SiteSettings,
   Currency,
   GameProvider,
   GameSubProvider,

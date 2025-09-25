@@ -10,6 +10,8 @@ import qs from 'qs';
 import { AdminModule } from './admin.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppExceptionFilter } from 'libs/utils/interceptors/AppExeptionFilter';
+import { ResponseInterceptor } from 'libs/utils/interceptors/ResponseInterceptor';
 
 const fAdapter = new FastifyAdapter({
   logger: false,
@@ -36,6 +38,9 @@ async function bootstrap() {
     }),
   );
 
+  // Add global interceptors
+  app.useGlobalFilters(new AppExceptionFilter());
+
   app.setGlobalPrefix('admin');
 
   const config = new DocumentBuilder()
@@ -45,6 +50,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
+  app.useGlobalInterceptors(new ResponseInterceptor());
   const docs = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,
   });

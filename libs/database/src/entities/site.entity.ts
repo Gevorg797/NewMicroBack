@@ -1,7 +1,8 @@
-import { Collection, Entity, OneToMany, Property } from '@mikro-orm/core';
+import { Collection, Entity, OneToMany, OneToOne, Property } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { GameProviderSetting } from './game-provider-settings.entity';
+import { SiteSettings } from './site-settings.entity';
 
 @Entity({ tableName: 'sites' })
 export class Site extends BaseEntity {
@@ -31,6 +32,9 @@ export class Site extends BaseEntity {
 
   @OneToMany(() => GameProviderSetting, (s) => s.site)
   providerSettings = new Collection<GameProviderSetting>(this);
+
+  @OneToOne(() => SiteSettings, { owner: true, nullable: true })
+  settings?: SiteSettings;
 
   @Property({ columnType: 'timestamptz', nullable: true })
   deletedAt?: Date;

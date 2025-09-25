@@ -16,5 +16,12 @@ export function microOrmConfig(
     entities: ENTITIES,
     debug: false,
     allowGlobalContext: true,
+    driverOptions: {
+      connection: {
+        ssl: {
+          rejectUnauthorized: false,
+        },
+      },
+    },
   };
 }

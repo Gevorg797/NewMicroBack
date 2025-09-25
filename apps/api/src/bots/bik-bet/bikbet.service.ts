@@ -498,4 +498,52 @@ export class BikBetService {
       ]).reply_markup,
     });
   }
+
+  async info(ctx: any, channelLink: string) {
+    const text = `<blockquote><b>🎰 <i><a href="${channelLink}">BikBet</a>! — передовая игровая платформа!</i></b></blockquote>
+<blockquote><b>🎮 Доступные игры:
+• 🎰 Настоящие слоты
+• 🎲 Кости
+• 💀 Черепа
+• 🪙 Коинфлип
+• 💣 Мины
+• 🍭 Слот
+• 🏀 Баскетбол
+• ⚽️ Футбол
+• 🎯 Дартс
+• 🎳 Боулинг</b></blockquote>
+<blockquote><b>💰 Минимальная сумма:
+• Депозит: 50 RUB
+• Вывод: 200 RUB</b></blockquote>
+<blockquote><b><a href="${channelLink}">🎯 Честная игра и мгновенные выплаты только у нас!</a></b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_8.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.answerCbQuery();
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.url(
+            '👨‍💻 Техническая Поддержка',
+            'https://t.me/bikbetsupport',
+          ),
+        ],
+        [Markup.button.url('📰 Новости', channelLink)],
+        [
+          Markup.button.url(
+            '📝 Правила',
+            'https://teletype.in/@bikbetsupport/terms',
+          ),
+        ],
+
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
 }

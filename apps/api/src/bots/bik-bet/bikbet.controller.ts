@@ -48,17 +48,22 @@ export class BikBetController {
 
     // Top button click handler
     this.bot.action('leaderboard_wins', async (ctx) => {
-      await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
+      await ctx.answerCbQuery('⏳ В разработке');
     });
 
     // Bounuses button click handler
     this.bot.action('bonuses', async (ctx) => {
-      await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
+      await ctx.answerCbQuery('⏳ В разработке');
     });
 
     // Profile button click handler
     this.bot.action('profile', async (ctx) => {
       await this.bikbetService.profile(ctx);
+    });
+
+    // Info button click handler
+    this.bot.action('info', async (ctx) => {
+      await this.bikbetService.info(ctx, channelLink);
     });
 
     // Start button click handler
@@ -68,7 +73,7 @@ export class BikBetController {
 
     // Ignore button click handler
     this.bot.action('ignore_game', async (ctx) => {
-      await ctx.answerCbQuery();
+      await ctx.answerCbQuery('⏳ В разработке');
     });
 
     // Ignore button click handler

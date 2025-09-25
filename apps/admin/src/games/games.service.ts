@@ -5,7 +5,7 @@ import { MsGameService } from 'libs/microservices-clients/ms-game/ms-game.servic
 export class GamesService {
   constructor(private readonly msGameService: MsGameService) { }
 
-  async loadGames(provider: string, data: { userId: number; siteId: number; params?: any }) {
+  async loadGames(provider: string, data: { siteId: number; params?: any }) {
     if (provider === 'superomatic') {
       return this.msGameService.loadSuperomaticGames(data);
     } else if (provider === 'b2bslots') {

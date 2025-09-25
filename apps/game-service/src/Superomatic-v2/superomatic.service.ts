@@ -13,7 +13,7 @@ export class SuperomaticService {
         // Initialize any dependencies here
     }
 
-    async loadGames(payload: { userId: number; siteId: number; params?: any }) {
+    async loadGames(payload: { siteId: number; params?: any }) {
         const { params, siteId } = payload;
         const { baseURL, providerId } =
             await this.providerSettings.getProviderSettings(siteId);

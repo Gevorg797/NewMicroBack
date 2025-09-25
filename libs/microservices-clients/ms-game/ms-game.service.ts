@@ -8,7 +8,7 @@ export class MsGameService {
   constructor(@Inject(MS_GAME) private readonly client: ClientProxy) { }
 
   // Superomatic patterns
-  loadSuperomaticGames(data: { userId: number; siteId: number; params?: any }) {
+  loadSuperomaticGames(data: { siteId: number; params?: any }) {
     return firstValueFrom(this.client.send('superomatic.loadGames', data));
   }
   superomaticGetCurrencies(data: { userId: number; siteId: number }) {
@@ -39,7 +39,7 @@ export class MsGameService {
   }
 
   // B2BSlots patterns
-  b2bslotsLoadGames(data: { userId: number; siteId: number; params?: any }) {
+  b2bslotsLoadGames(data: { siteId: number; params?: any }) {
     return firstValueFrom(this.client.send('b2bslots.loadGames', data));
   }
   b2bslotsGetCurrencies(data: { userId: number; siteId: number }) {

@@ -8,7 +8,7 @@ export class SuperomaticController {
 
   @MessagePattern('superomatic.loadGames')
   async loadGames(
-    @Payload() payload: { userId: number; siteId: number; params?: any },
+    @Payload() payload: { siteId: number; params?: any },
   ) {
     return this.superomaticService.loadGames(payload);
   }

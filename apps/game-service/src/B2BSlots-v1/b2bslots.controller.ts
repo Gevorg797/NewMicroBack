@@ -4,11 +4,11 @@ import { B2BSlotsService } from './b2bslots.service';
 
 @Controller('b2bslots')
 export class B2BSlotsController {
-  constructor(private readonly service: B2BSlotsService) {}
+  constructor(private readonly service: B2BSlotsService) { }
 
   @MessagePattern('b2bslots.loadGames')
   loadGames(
-    @Payload() payload: { userId: number; siteId: number; params?: any },
+    @Payload() payload: { siteId: number; params?: any },
   ) {
     return this.service.loadGames(payload);
   }

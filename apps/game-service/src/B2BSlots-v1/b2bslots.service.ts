@@ -9,9 +9,9 @@ export class B2BSlotsService {
     private readonly settings: B2BSlotsProviderSettingsService,
     private readonly api: B2BSlotsApiService,
     private readonly utils: B2BSlotsUtilsService,
-  ) {}
+  ) { }
 
-  async loadGames(payload: { userId: number; siteId: number; params?: any }) {
+  async loadGames(payload: { siteId: number; params?: any }) {
     const { baseURL } = await this.settings.getProviderSettings(payload.siteId);
     const games = await this.api.getGames(baseURL);
     // TODO: map and insert

@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { EntityRepository } from '@mikro-orm/core';
+import { User, Currency, Balances, CurrencyType, Site } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
-
 
 @Injectable()
 export class BikBetService {
@@ -10,7 +12,14 @@ export class BikBetService {
   private readonly gamesPlayed = 61192;
   private readonly totalBets = '5973499.88 RUB';
 
-  constructor() { }
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: EntityRepository<User>,
+    @InjectRepository(Currency)
+    private readonly currencyRepository: EntityRepository<Currency>,
+    @InjectRepository(Balances)
+    private readonly balancesRepository: EntityRepository<Balances>,
+  ) {}
 
   async checkSubscription(ctx: any, channelId: string, link: string) {
     try {
@@ -18,6 +27,46 @@ export class BikBetService {
 
       if (member.status === 'left' || member.status === 'kicked') {
         return await this.sendSubscriptionPrompt(ctx, link);
+      }
+
+      // Ensure user exists and has default RUB balance
+      const telegramId = String(ctx.from.id);
+      let user = await this.userRepository.findOne({ telegramId });
+      if (!user) {
+        const fallbackName = (
+          (ctx.from.first_name ?? '') +
+          ' ' +
+          (ctx.from.last_name ?? '')
+        ).trim();
+        const derivedName = (ctx.from.username ?? fallbackName) || undefined;
+        const siteId = 1;
+        const em = this.userRepository.getEntityManager();
+        let siteRef = await em.findOne(Site, { id: siteId });
+        user = this.userRepository.create({
+          telegramId,
+          name: derivedName,
+          site: siteRef,
+        } as any);
+        await this.userRepository.getEntityManager().persistAndFlush(user);
+      }
+
+      // Ensure a balance exists for the user with default RUB currency
+      let balance = await this.balancesRepository.findOne({ user });
+      if (!balance) {
+        const rub = await this.currencyRepository.findOne({
+          name: CurrencyType.RUB,
+        });
+        if (rub) {
+          balance = this.balancesRepository.create({
+            user,
+            currency: rub,
+            balance: 0,
+            bonusBalance: 0,
+          } as any);
+          await this.balancesRepository
+            .getEntityManager()
+            .persistAndFlush(balance);
+        }
       }
 
       const text = `
@@ -277,6 +326,58 @@ export class BikBetService {
     });
   }
 
+  async profile(ctx: any) {
+    const telegramId = String(ctx.from.id);
+    const user = await this.userRepository.findOne({ telegramId });
+    let balanceValue = 0;
+    let bonusValue = 0;
+    let currencyCode = 'N/A';
+    if (user) {
+      const balance = await this.balancesRepository.findOne(
+        { user },
+        { populate: ['currency'] },
+      );
+      if (balance) {
+        balanceValue = balance.balance ?? 0;
+        bonusValue = balance.bonusBalance ?? 0;
+        currencyCode = balance.currency?.name ?? 'N/A';
+      }
+    }
+
+    const text = `
+<blockquote><b>📊 Статистика</b></blockquote>
+<blockquote><b>🆔 ID:</b> <code>${telegramId}</code></blockquote>
+<blockquote><b>🎮 Игр сыграно:</b> <code>1</code>
+<b>🏆 Игр выиграно: 0</b></blockquote>
+<blockquote><b>🎯 Винрейт: 0.00%</b>
+ <b>🔥 Винстрик: 0 игр</b>
+ <b>💥 Поражений подряд: 0 игр</b></blockquote>
+<blockquote><b>💰 Всего поставлено: 0 RUB</b> 
+<b>💰 Реально поставлено: 0 RUB</b>
+<b>💵 Баланс: 0 RUB</b></blockquote>
+
+`;
+
+    const filePath = this.getImagePath('bik_bet_9.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.answerCbQuery();
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback('🔗 Реф. система', 'ignore_all'),
+          Markup.button.callback('🔮 Ранг', 'ignore_all'),
+        ],
+        [Markup.button.callback('🎁 Мои бонусы', 'myBonuses')],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
   async donateMenu(ctx: any) {
     const text = `
 <blockquote><b>🆔 ID: ${this.totalPlayers}</b></blockquote>
@@ -363,6 +464,37 @@ export class BikBetService {
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('⬅️ Назад', 'withdraw')],
+      ]).reply_markup,
+    });
+  }
+
+  async myBonuses(ctx: any) {
+    const text = `
+<blockquote><b>🎁 Мои бонусы</b></blockquote>
+<blockquote><b>🟢 - Активный</b>
+<b>🟠 - Не использован
+</b>
+<b>🔴 - Использован
+</b></blockquote>
+<blockquote><b>Показаны последние 10 бонусов
+</b></blockquote>
+<blockquote><b>📍 Чтобы перейти к бонусу, нажмите на кнопку
+</b></blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_6.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.answerCbQuery();
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ Назад', 'profile')],
       ]).reply_markup,
     });
   }

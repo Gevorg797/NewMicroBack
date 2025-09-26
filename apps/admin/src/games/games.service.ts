@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { MsGameService } from 'libs/microservices-clients/ms-game/ms-game.service';
+import { EntityManager } from '@mikro-orm/postgresql';
+import { Game } from '@lib/database';
+import { paginate, PaginateQuery, PaginateResult } from 'libs/utils/pagination';
 
 @Injectable()
 export class GamesService {
-  constructor(private readonly msGameService: MsGameService) { }
+  constructor(
+    private readonly msGameService: MsGameService,
+    private readonly em: EntityManager,
+  ) { }
 
   async loadGames(data: { siteId: number; params?: any }) {
     return this.msGameService.loadSuperomaticGames(data);
@@ -41,5 +47,15 @@ export class GamesService {
 
   async closeSession(data: { userId: number; siteId: number; params: any }) {
     return this.msGameService.superomaticCloseSession(data);
+  }
+
+  async getGames(query: PaginateQuery): Promise<PaginateResult<Game>> {
+    return paginate(
+      this.em,
+      Game,
+      query,
+      ['subProvider', 'subProvider.provider', 'categories'], // Relations to populate
+      ['name', 'type', 'subProvider.name', 'subProvider.provider.name'] // Searchable fields
+    );
   }
 }

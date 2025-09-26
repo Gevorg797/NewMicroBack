@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GamesService } from './games.service';
 import { LoadGamesDto } from './dto/load-games.dto';
@@ -8,6 +8,8 @@ import { GameHistoryDto } from './dto/game-history.dto';
 import { GameStatisticsDto } from './dto/game-statistics.dto';
 import { ProviderInfoDto } from './dto/provider-info.dto';
 import { SessionManagementDto } from './dto/session-management.dto';
+import { ApiPaginated, PaginateQuery } from 'libs/utils/pagination';
+import { Game } from '@lib/database';
 
 @ApiTags('Superomatic Games')
 @Controller('games')
@@ -95,5 +97,15 @@ export class GamesController {
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async closeSession(@Body() data: SessionManagementDto) {
         return this.gamesService.closeSession(data);
+    }
+
+    @Get()
+    @ApiOperation({ summary: 'Get games with pagination' })
+    @ApiPaginated(Game)
+    @ApiResponse({ status: 200, description: 'Games retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getGames(@Query() query: PaginateQuery) {
+        return this.gamesService.getGames(query);
     }
 }

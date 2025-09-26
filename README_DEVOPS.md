@@ -99,7 +99,10 @@ DB_USER=
 DB_PASSWORD=
 
 # Service Configuration
-API_PORT=
+APP_PORT=
+
+# Bot Configuration
+BOT_TOKEN=
 ```
 
 ## Build Commands

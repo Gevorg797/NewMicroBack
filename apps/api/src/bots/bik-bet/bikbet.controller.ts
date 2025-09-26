@@ -22,6 +22,7 @@ export class BikBetController {
 
     // Button click handler
     this.bot.action('check_subscription', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
     });
 
@@ -32,42 +33,87 @@ export class BikBetController {
         await ctx.answerCbQuery('Некорректная сумма');
         return;
       }
-      await this.bikbetService.depositAmount(ctx, amount);
       await ctx.answerCbQuery();
+      await this.bikbetService.depositAmount(ctx, amount);
     });
 
     // Game button click handler
     this.bot.action('games', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.game(ctx);
     });
 
     // Balances button click handler
     this.bot.action('donate_menu', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.donateMenu(ctx);
     });
 
     // Top button click handler
     this.bot.action('leaderboard_wins', async (ctx) => {
-      await ctx.answerCbQuery('⏳ В разработке');
+      await this.bikbetService.leaderboardWins(ctx);
     });
 
     // Bounuses button click handler
     this.bot.action('bonuses', async (ctx) => {
-      await ctx.answerCbQuery('⏳ В разработке');
+      await this.bikbetService.bonuses(ctx);
     });
 
     // Profile button click handler
     this.bot.action('profile', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.profile(ctx);
     });
 
     // Info button click handler
     this.bot.action('info', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.info(ctx, channelLink);
+    });
+
+    // Wheel Info button click handler
+    this.bot.action('wheelInfo', async (ctx) => {
+      await this.bikbetService.wheelInfo(ctx);
+    });
+
+    // Promos Info button click handler
+    this.bot.action('promosInfo', async (ctx) => {
+      await this.bikbetService.promosInfo(ctx);
+    });
+
+    // Cashback Info button click handler
+    this.bot.action('cashbackInfo', async (ctx) => {
+      await this.bikbetService.cashbackInfo(ctx);
+    });
+
+    // VIP Club button click handler
+    this.bot.action('vipClub', async (ctx) => {
+      await this.bikbetService.vipClub(ctx);
+    });
+
+    // Leaderboard Winstreak button click handler
+    this.bot.action('leaderboard_winstreak', async (ctx) => {
+      await this.bikbetService.leaderboardWinstreak(ctx);
+    });
+
+    // Leaderboard Loosestrick button click handler
+    this.bot.action('leaderboard_loosestrick', async (ctx) => {
+      await this.bikbetService.leaderboardLoosestrick(ctx);
+    });
+
+    // Leaderboard Games button click handler
+    this.bot.action('leaderboard_games', async (ctx) => {
+      await this.bikbetService.leaderboardGames(ctx);
+    });
+
+    // Leaderboard Bets button click handler
+    this.bot.action('leaderboard_bets', async (ctx) => {
+      await this.bikbetService.leaderboardBets(ctx);
     });
 
     // Start button click handler
     this.bot.action('start', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.start(ctx, channelLink);
     });
 
@@ -83,21 +129,25 @@ export class BikBetController {
 
     // Start game button click handler
     this.bot.action('slotsB2B', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.slotsB2B(ctx);
     });
 
     // Add balance button click handler
     this.bot.action('donate', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.donate(ctx);
     });
 
     // Withdraw button click handler
     this.bot.action('withdraw', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.withdraw(ctx);
     });
 
     // Desposit Custom button click handler
     this.bot.action('deposit:custom', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.depositCustom(ctx);
     });
 
@@ -105,11 +155,13 @@ export class BikBetController {
 
     // Withdraw Custom button click handler
     this.bot.action('withdraw:custom', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.withdrawCustom(ctx);
     });
 
     //My Bounses button click handler
     this.bot.action('myBonuses', async (ctx) => {
+      await ctx.answerCbQuery();
       await this.bikbetService.myBonuses(ctx);
     });
 

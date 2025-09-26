@@ -1,25 +1,28 @@
 import { Module } from '@nestjs/common';
 import { SuperomaticController } from './superomatic.controller';
 import { SuperomaticService } from './superomatic.service';
+import { PartnerWebhooksController } from './partner-webhooks.controller';
+import { PartnerWebhooksService } from './partner-webhooks.service';
 import { ConfigModule } from '@nestjs/config';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { ProviderSettingsService } from './provider-settings.service';
-import { GameProviderSetting, Game, GameSubProvider, GameProvider } from '@lib/database';
+import { GameProviderSetting, Game, GameSubProvider, GameProvider, User } from '@lib/database';
 import { SuperomaticApiService } from './superomatic.api.service';
 import { SuperomaticUtilsService } from './superomatic.utils.service';
 
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
-        MikroOrmModule.forFeature([GameProviderSetting, Game, GameSubProvider, GameProvider]),
+        MikroOrmModule.forFeature([GameProviderSetting, Game, GameSubProvider, GameProvider, User]),
     ],
-    controllers: [SuperomaticController],
+    controllers: [SuperomaticController, PartnerWebhooksController],
     providers: [
         SuperomaticService,
+        PartnerWebhooksService,
         ProviderSettingsService,
         SuperomaticApiService,
         SuperomaticUtilsService,
     ],
-    exports: [SuperomaticService],
+    exports: [SuperomaticService, PartnerWebhooksService],
 })
 export class SuperomaticModule { }

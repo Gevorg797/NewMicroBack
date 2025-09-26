@@ -3,11 +3,11 @@ import { IsNumber, IsString, IsOptional, ValidateNested } from 'class-validator'
 import { Type } from 'class-transformer';
 
 class GameSessionParamsDto {
-    @ApiProperty({ description: 'Game ID', example: 15 })
+    @ApiProperty({ description: 'Game ID', example: 288 })
     @IsNumber()
     gameId: number;
 
-    @ApiProperty({ description: 'Currency code', example: 'USD' })
+    @ApiProperty({ description: 'Currency code', example: 'RUB' })
     @IsString()
     currency: string;
 
@@ -23,20 +23,14 @@ class GameSessionParamsDto {
     denomination?: number;
 
     // For real session
-    @ApiProperty({ description: 'Partner alias', example: 12345, required: false })
-    @IsOptional()
-    @IsNumber()
-    partnerAlias?: number;
 
-    @ApiProperty({ description: 'Partner session', example: 67890, required: false })
+    @ApiProperty({ description: 'Partner session', example: "67890", required: false })
     @IsOptional()
-    @IsNumber()
-    partnerSession?: number;
+    partnerSession?: number | string;
 
-    @ApiProperty({ description: 'Freerounds ID', example: 98765, required: false })
+    @ApiProperty({ description: 'Freerounds ID', example: "98765", required: false })
     @IsOptional()
-    @IsNumber()
-    freeroundsId?: number;
+    freeroundsId?: number | string;
 
     // Optional parameters
     @ApiProperty({ description: 'Language code', example: 'en', required: false })

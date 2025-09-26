@@ -140,12 +140,12 @@ export class SuperomaticService {
         params: any;
     }) {
         const { params, siteId } = payload;
-        const { baseURL, key } =
+        const { baseURL, key, partnerAlias } =
             await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
-            'partner.alias': params.partnerAlias,
+            'partner.alias': partnerAlias || params.partnerAlias,
             'partner.session': params.partnerSession,
             'game.id': params.gameId,
             'currency': params.currency,
@@ -166,12 +166,12 @@ export class SuperomaticService {
         params: any;
     }) {
         const { params, siteId } = payload;
-        const { baseURL, key } =
+        const { baseURL, key, partnerAlias } =
             await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
-            'partner.alias': params.partnerAlias,
+            'partner.alias': partnerAlias || params.partnerAlias,
             'partner.session': params.partnerSession,
             'game.id': params.gameId,
             'currency': params.currency,
@@ -191,12 +191,12 @@ export class SuperomaticService {
         params: any;
     }) {
         const { params, siteId } = payload;
-        const { baseURL, key } =
+        const { baseURL, key, partnerAlias } =
             await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
-            'partner.alias': params.partnerAlias,
+            'partner.alias': partnerAlias || params.partnerAlias,
             'partner.session': params.partnerSession,
             'currency': params.currency,
         };
@@ -215,12 +215,12 @@ export class SuperomaticService {
         params: any;
     }) {
         const { params, siteId } = payload;
-        const { baseURL, key } =
+        const { baseURL, key, partnerAlias } =
             await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
-            'partner.alias': params.partnerAlias,
+            'partner.alias': partnerAlias || params.partnerAlias,
             'partner.session': params.partnerSession,
             'game.id': params.gameId,
             'currency': params.currency,
@@ -242,12 +242,12 @@ export class SuperomaticService {
         params: any;
     }) {
         const { params, siteId } = payload;
-        const { baseURL, key } =
+        const { baseURL, key, partnerAlias } =
             await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
-            'partner.alias': params.partnerAlias,
+            'partner.alias': partnerAlias || params.partnerAlias,
             'partner.session': params.partnerSession,
             'game.id': params.gameId,
             'currency': params.currency,
@@ -269,17 +269,168 @@ export class SuperomaticService {
         params?: any;
     }) {
         const { siteId } = payload;
-        const { baseURL, key } =
+        const { baseURL, key, partnerAlias } =
             await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
-            'partner.alias': payload.params?.partnerAlias,
+            'partner.alias': partnerAlias || payload.params?.partnerAlias,
             'partner.session': payload.params?.partnerSession,
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/provider.info');
         const response = await this.api.getProviderInfo(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async cancelTransaction(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key, partnerAlias } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'trx.id': params.trxId,
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/trx.cancel');
+        const response = await this.api.cancelTransaction(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async completeTransaction(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key, partnerAlias } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'trx.id': params.trxId,
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/trx.complete');
+        const response = await this.api.completeTransaction(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async checkSession(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key, partnerAlias } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'session.id': params.sessionId,
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/check.session');
+        const response = await this.api.checkSession(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async withdrawBet(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key, partnerAlias } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'trx.id': params.trxId,
+            'amount': Math.round(params.amount * 100), // Convert to cents
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/withdraw.bet');
+        const response = await this.api.withdrawBet(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async depositWin(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key, partnerAlias } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'trx.id': params.trxId,
+            'amount': Math.round(params.amount * 100), // Convert to cents
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/deposit.win');
+        const response = await this.api.depositWin(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async createSession(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key, partnerAlias } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/session.create');
+        const response = await this.api.createSession(baseURL, {
             ...superomaticParams,
             sign,
         });

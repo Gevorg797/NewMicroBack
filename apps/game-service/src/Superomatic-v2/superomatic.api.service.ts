@@ -11,6 +11,12 @@ const CHECK_BALANCE = '/balance.check';
 const GET_GAME_HISTORY = '/games.history';
 const GET_GAME_STATISTICS = '/games.statistics';
 const GET_PROVIDER_INFO = '/provider.info';
+const TRX_CANCEL = '/trx.cancel';
+const TRX_COMPLETE = '/trx.complete';
+const CHECK_SESSION = '/check.session';
+const WITHDRAW_BET = '/withdraw.bet';
+const DEPOSIT_WIN = '/deposit.win';
+const CREATE_SESSION = '/session.create';
 
 @Injectable()
 export class SuperomaticApiService {
@@ -129,6 +135,96 @@ export class SuperomaticApiService {
 
   async getProviderInfo(baseURL: string, requestBody: Record<string, any>) {
     const url = `${baseURL}${GET_PROVIDER_INFO}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async cancelTransaction(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${TRX_CANCEL}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async completeTransaction(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${TRX_COMPLETE}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkSession(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${CHECK_SESSION}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async withdrawBet(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${WITHDRAW_BET}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async depositWin(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${DEPOSIT_WIN}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async createSession(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${CREATE_SESSION}`;
     try {
       const { data } = await axios.get(url, {
         params: requestBody,

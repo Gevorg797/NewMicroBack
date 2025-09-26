@@ -12,6 +12,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppExceptionFilter } from 'libs/utils/interceptors/AppExeptionFilter';
 import { ResponseInterceptor } from 'libs/utils/interceptors/ResponseInterceptor';
+import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 
 const fAdapter = new FastifyAdapter({
   logger: false,
@@ -26,6 +27,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AdminModule,
     fAdapter,
+    { logger: new LocalTimeLogger() },
   );
 
   await app.register(fastifyCookie as FastifyPluginCallback);

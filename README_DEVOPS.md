@@ -83,7 +83,9 @@ DB_PASSWORD=
 
 
 # Service Configuration
-FINANCE_PORT=
+FINANCE_TCP_HOST=
+FINANCE_TCP_PORT=
+FINANCE_HTTP_PORT=
 ```
 
 ### API Gateway (.env in apps/api/)

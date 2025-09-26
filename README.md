@@ -34,15 +34,22 @@ $ npm install
 ## Compile and run the project
 
 ```bash
-# development
-$ npm run start
+# Build all services
+$ npm run build
 
-# watch mode
-$ npm run start:dev
+# Development - run specific service
+$ npm run start:admin:dev
+$ npm run start:game-service:dev
+$ npm run start:finance-service:dev
+$ npm run start:api:dev
 
-# production mode
-$ npm run start:prod
+# Production - run specific service
+$ npm run start:admin:prod
+$ npm run start:game-service:prod
+$ npm run start:finance-service:prod
+$ npm run start:api:prod
 ```
+
 
 ## Run tests
 

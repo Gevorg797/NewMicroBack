@@ -113,13 +113,22 @@ export class SuperomaticService {
         const { params, siteId } = payload;
         const { baseURL, key } =
             await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format according to API docs
+        const superomaticParams = {
+            'game.id': params.gameId,
+            'balance': Math.round(params.balance * 100), // Convert to cents
+            'denomination': Math.round(params.denomination * 100), // Convert to cents
+            'currency': params.currency,
+        };
+
         const sign = this.utils.generateSigniture(
-            params,
+            superomaticParams,
             key,
             '/init.demo.session',
         );
         const response = await this.api.getGameDemoSession(baseURL, {
-            ...params,
+            ...superomaticParams,
             sign,
         });
         return response;
@@ -133,9 +142,19 @@ export class SuperomaticService {
         const { params, siteId } = payload;
         const { baseURL, key } =
             await this.providerSettings.getProviderSettings(siteId);
-        const sign = this.utils.generateSigniture(params, key, '/init.session');
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'game.id': params.gameId,
+            'currency': params.currency,
+            ...(params.freeroundsId && { 'freerounds.id': params.freeroundsId }),
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/init.session');
         const response = await this.api.getGameSession(baseURL, {
-            ...params,
+            ...superomaticParams,
             sign,
         });
         return response;
@@ -149,14 +168,121 @@ export class SuperomaticService {
         const { params, siteId } = payload;
         const { baseURL, key } =
             await this.providerSettings.getProviderSettings(siteId);
-        // In legacy, sign is generated before call
-        const sign = this.utils.generateSigniture(params, key, '/freerounds-info');
-        const requestBody = { ...params, sign };
-        const response = await this.api.gamesFreeRoundsInfo(baseURL, requestBody);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'game.id': params.gameId,
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/freerounds-info');
+        const response = await this.api.gamesFreeRoundsInfo(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
         return response;
     }
 
-    async checkBalance(payload: any) {
-        return null;
+    async checkBalance(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'currency': params.currency,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/balance.check');
+        const response = await this.api.checkBalance(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async getGameHistory(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'game.id': params.gameId,
+            'currency': params.currency,
+            ...(params.from && { 'from.date': params.from }),
+            ...(params.to && { 'to.date': params.to }),
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/games.history');
+        const response = await this.api.getGameHistory(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async getGameStatistics(payload: {
+        userId: number;
+        siteId: number;
+        params: any;
+    }) {
+        const { params, siteId } = payload;
+        const { baseURL, key } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': params.partnerAlias,
+            'partner.session': params.partnerSession,
+            'game.id': params.gameId,
+            'currency': params.currency,
+            ...(params.from && { 'from.date': params.from }),
+            ...(params.to && { 'to.date': params.to }),
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/games.statistics');
+        const response = await this.api.getGameStatistics(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
+    }
+
+    async getProviderInfo(payload: {
+        userId: number;
+        siteId: number;
+        params?: any;
+    }) {
+        const { siteId } = payload;
+        const { baseURL, key } =
+            await this.providerSettings.getProviderSettings(siteId);
+
+        // Transform params to Superomatic format
+        const superomaticParams = {
+            'partner.alias': payload.params?.partnerAlias,
+            'partner.session': payload.params?.partnerSession,
+        };
+
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/provider.info');
+        const response = await this.api.getProviderInfo(baseURL, {
+            ...superomaticParams,
+            sign,
+        });
+        return response;
     }
 }

@@ -55,7 +55,50 @@ export class SuperomaticController {
   }
 
   @MessagePattern('superomatic.checkBalance')
-  async checkBalance(@Payload() payload: any) {
+  async checkBalance(
+    @Payload()
+    payload: {
+      userId: number;
+      siteId: number;
+      params: any;
+    },
+  ) {
     return this.superomaticService.checkBalance(payload);
+  }
+
+  @MessagePattern('superomatic.getGameHistory')
+  async getGameHistory(
+    @Payload()
+    payload: {
+      userId: number;
+      siteId: number;
+      params: any;
+    },
+  ) {
+    return this.superomaticService.getGameHistory(payload);
+  }
+
+  @MessagePattern('superomatic.getGameStatistics')
+  async getGameStatistics(
+    @Payload()
+    payload: {
+      userId: number;
+      siteId: number;
+      params: any;
+    },
+  ) {
+    return this.superomaticService.getGameStatistics(payload);
+  }
+
+  @MessagePattern('superomatic.getProviderInfo')
+  async getProviderInfo(
+    @Payload()
+    payload: {
+      userId: number;
+      siteId: number;
+      params?: any;
+    },
+  ) {
+    return this.superomaticService.getProviderInfo(payload);
   }
 }

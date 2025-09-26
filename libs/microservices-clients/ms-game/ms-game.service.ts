@@ -37,6 +37,42 @@ export class MsGameService {
       this.client.send('superomatic.gamesFreeRoundsInfo', data),
     );
   }
+  superomaticCheckBalance(data: {
+    userId: number;
+    siteId: number;
+    params: any;
+  }) {
+    return firstValueFrom(
+      this.client.send('superomatic.checkBalance', data),
+    );
+  }
+  superomaticGetGameHistory(data: {
+    userId: number;
+    siteId: number;
+    params: any;
+  }) {
+    return firstValueFrom(
+      this.client.send('superomatic.getGameHistory', data),
+    );
+  }
+  superomaticGetGameStatistics(data: {
+    userId: number;
+    siteId: number;
+    params: any;
+  }) {
+    return firstValueFrom(
+      this.client.send('superomatic.getGameStatistics', data),
+    );
+  }
+  superomaticGetProviderInfo(data: {
+    userId: number;
+    siteId: number;
+    params?: any;
+  }) {
+    return firstValueFrom(
+      this.client.send('superomatic.getProviderInfo', data),
+    );
+  }
 
   // B2BSlots patterns
   b2bslotsLoadGames(data: { siteId: number; params?: any }) {

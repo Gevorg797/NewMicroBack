@@ -5,48 +5,39 @@ import { MsGameService } from 'libs/microservices-clients/ms-game/ms-game.servic
 export class GamesService {
   constructor(private readonly msGameService: MsGameService) { }
 
-  async loadGames(provider: string, data: { siteId: number; params?: any }) {
-    if (provider === 'superomatic') {
-      return this.msGameService.loadSuperomaticGames(data);
-    } else if (provider === 'b2bslots') {
-      return this.msGameService.b2bslotsLoadGames(data);
-    }
-    throw new Error(`Unsupported provider: ${provider}`);
+  async loadGames(data: { siteId: number; params?: any }) {
+    return this.msGameService.loadSuperomaticGames(data);
   }
 
-  async getCurrencies(provider: string, data: { userId: number; siteId: number }) {
-    if (provider === 'superomatic') {
-      return this.msGameService.superomaticGetCurrencies(data);
-    } else if (provider === 'b2bslots') {
-      return this.msGameService.b2bslotsGetCurrencies(data);
-    }
-    throw new Error(`Unsupported provider: ${provider}`);
+  async getCurrencies(data: { userId: number; siteId: number }) {
+    return this.msGameService.superomaticGetCurrencies(data);
   }
 
-  async initGameDemoSession(provider: string, data: { userId: number; siteId: number; params: any }) {
-    if (provider === 'superomatic') {
-      return this.msGameService.superomaticInitDemo(data);
-    } else if (provider === 'b2bslots') {
-      return this.msGameService.b2bslotsInitDemo(data);
-    }
-    throw new Error(`Unsupported provider: ${provider}`);
+  async initGameDemoSession(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticInitDemo(data);
   }
 
-  async initGameSession(provider: string, data: { userId: number; siteId: number; params: any }) {
-    if (provider === 'superomatic') {
-      return this.msGameService.superomaticInitSession(data);
-    } else if (provider === 'b2bslots') {
-      return this.msGameService.b2bslotsInitSession(data);
-    }
-    throw new Error(`Unsupported provider: ${provider}`);
+  async initGameSession(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticInitSession(data);
   }
 
-  async gamesFreeRoundsInfo(provider: string, data: { userId: number; siteId: number; params: any }) {
-    if (provider === 'superomatic') {
-      return this.msGameService.superomaticFreeRoundsInfo(data);
-    } else if (provider === 'b2bslots') {
-      return this.msGameService.b2bslotsFreeRoundsInfo(data);
-    }
-    throw new Error(`Unsupported provider: ${provider}`);
+  async gamesFreeRoundsInfo(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticFreeRoundsInfo(data);
+  }
+
+  async checkBalance(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticCheckBalance(data);
+  }
+
+  async getGameHistory(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticGetGameHistory(data);
+  }
+
+  async getGameStatistics(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticGetGameStatistics(data);
+  }
+
+  async getProviderInfo(data: { userId: number; siteId: number; params?: any }) {
+    return this.msGameService.superomaticGetProviderInfo(data);
   }
 }

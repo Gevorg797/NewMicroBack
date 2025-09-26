@@ -7,6 +7,10 @@ const GET_CURRENCIES = '/currencies.list';
 const GET_GAME_DEMO_SESSION = '/init.demo.session';
 const GET_GAME_SESSION = '/init.session';
 const GAMES_FREE_ROUNDS_INFO = '/games.freeroundsInfo';
+const CHECK_BALANCE = '/balance.check';
+const GET_GAME_HISTORY = '/games.history';
+const GET_GAME_STATISTICS = '/games.statistics';
+const GET_PROVIDER_INFO = '/provider.info';
 
 @Injectable()
 export class SuperomaticApiService {
@@ -35,28 +39,106 @@ export class SuperomaticApiService {
 
   async getGameDemoSession(baseURL: string, requestBody: Record<string, any>) {
     const url = `${baseURL}${GET_GAME_DEMO_SESSION}`;
-    const { data } = await axios.post(url, requestBody, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const { response } = data;
-    return response;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async getGameSession(baseURL: string, requestBody: Record<string, any>) {
     const url = `${baseURL}${GET_GAME_SESSION}`;
-    const { data } = await axios.post(url, requestBody, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const { response } = data;
-    return response;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async gamesFreeRoundsInfo(baseURL: string, requestBody: Record<string, any>) {
     const url = `${baseURL}${GAMES_FREE_ROUNDS_INFO}`;
-    const { data } = await axios.post(url, requestBody, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const { response } = data;
-    return response;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkBalance(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${CHECK_BALANCE}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getGameHistory(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${GET_GAME_HISTORY}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getGameStatistics(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${GET_GAME_STATISTICS}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getProviderInfo(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${GET_PROVIDER_INFO}`;
+    try {
+      const { data } = await axios.get(url, {
+        params: requestBody,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return data;
+    } catch (error) {
+      throw error;
+    }
   }
 }

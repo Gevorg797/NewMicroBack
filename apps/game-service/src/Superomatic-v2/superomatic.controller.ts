@@ -4,11 +4,11 @@ import { SuperomaticService } from './superomatic.service';
 
 @Controller('superomatic')
 export class SuperomaticController {
-  constructor(private readonly superomaticService: SuperomaticService) {}
+  constructor(private readonly superomaticService: SuperomaticService) { }
 
   @MessagePattern('superomatic.loadGames')
   async loadGames(
-    @Payload() payload: { userId: number; siteId: number; params?: any },
+    @Payload() payload: { siteId: number; params?: any },
   ) {
     return this.superomaticService.loadGames(payload);
   }

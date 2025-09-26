@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MsGameService } from './ms-game.service';
-
-export const MS_GAME = 'MS_GAME';
+import { MS_GAME } from './tokens';
 
 @Module({
   imports: [
@@ -20,4 +19,4 @@ export const MS_GAME = 'MS_GAME';
   providers: [MsGameService],
   exports: [MsGameService],
 })
-export class MsGameModule {}
+export class MsGameModule { }

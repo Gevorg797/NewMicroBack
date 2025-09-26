@@ -1,11 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { User } from '@lib/database';
 import * as crypto from 'crypto';
+import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 
 @Injectable()
 export class PartnerWebhooksService {
-    private readonly logger = new Logger(PartnerWebhooksService.name);
+    private readonly logger = new LocalTimeLogger(PartnerWebhooksService.name);
 
     constructor(private readonly em: EntityManager) { }
 

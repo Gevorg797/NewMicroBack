@@ -40,4 +40,9 @@ export class GamesService {
   async getProviderInfo(data: { userId: number; siteId: number; params?: any }) {
     return this.msGameService.superomaticGetProviderInfo(data);
   }
+
+
+  async closeSession(data: { userId: number; siteId: number; params: any }) {
+    return this.msGameService.superomaticCloseSession(data);
+  }
 }

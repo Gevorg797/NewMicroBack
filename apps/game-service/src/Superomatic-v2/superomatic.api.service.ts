@@ -16,7 +16,7 @@ const TRX_COMPLETE = '/trx.complete';
 const CHECK_SESSION = '/check.session';
 const WITHDRAW_BET = '/withdraw.bet';
 const DEPOSIT_WIN = '/deposit.win';
-const CREATE_SESSION = '/session.create';
+const CLOSE_SESSION = '/session.close';
 
 @Injectable()
 export class SuperomaticApiService {
@@ -60,6 +60,7 @@ export class SuperomaticApiService {
 
   async getGameSession(baseURL: string, requestBody: Record<string, any>) {
     const url = `${baseURL}${GET_GAME_SESSION}`;
+    console.log('Superomatic getGameSession requestBody:', requestBody, url); // --- IGNORE ---
     try {
       const { data } = await axios.get(url, {
         params: requestBody,
@@ -223,8 +224,9 @@ export class SuperomaticApiService {
     }
   }
 
-  async createSession(baseURL: string, requestBody: Record<string, any>) {
-    const url = `${baseURL}${CREATE_SESSION}`;
+
+  async closeSession(baseURL: string, requestBody: Record<string, any>) {
+    const url = `${baseURL}${CLOSE_SESSION}`;
     try {
       const { data } = await axios.get(url, {
         params: requestBody,

@@ -8,6 +8,7 @@ import { CheckBalanceDto } from './dto/check-balance.dto';
 import { GameHistoryDto } from './dto/game-history.dto';
 import { GameStatisticsDto } from './dto/game-statistics.dto';
 import { ProviderInfoDto } from './dto/provider-info.dto';
+import { SessionManagementDto } from './dto/session-management.dto';
 
 @ApiTags('Superomatic Games')
 @Controller('games')
@@ -93,5 +94,15 @@ export class GamesController {
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async getProviderInfo(@Body() data: ProviderInfoDto) {
         return this.gamesService.getProviderInfo(data);
+    }
+
+
+    @Post('close-session')
+    @ApiOperation({ summary: 'Close user session' })
+    @ApiResponse({ status: 200, description: 'Session closed successfully' })
+    @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async closeSession(@Body() data: SessionManagementDto) {
+        return this.gamesService.closeSession(data);
     }
 }

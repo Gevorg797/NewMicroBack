@@ -413,7 +413,8 @@ export class SuperomaticService {
         return response;
     }
 
-    async createSession(payload: {
+
+    async closeSession(payload: {
         userId: number;
         siteId: number;
         params: any;
@@ -429,8 +430,8 @@ export class SuperomaticService {
             'currency': params.currency,
         };
 
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/session.create');
-        const response = await this.api.createSession(baseURL, {
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/session.close');
+        const response = await this.api.closeSession(baseURL, {
             ...superomaticParams,
             sign,
         });

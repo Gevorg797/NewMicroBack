@@ -74,6 +74,16 @@ export class MsGameService {
     );
   }
 
+  superomaticCloseSession(data: {
+    userId: number;
+    siteId: number;
+    params: any;
+  }) {
+    return firstValueFrom(
+      this.client.send('superomatic.closeSession', data),
+    );
+  }
+
   // B2BSlots patterns
   b2bslotsLoadGames(data: { siteId: number; params?: any }) {
     return firstValueFrom(this.client.send('b2bslots.loadGames', data));

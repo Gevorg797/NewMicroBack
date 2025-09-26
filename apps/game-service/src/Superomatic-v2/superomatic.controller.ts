@@ -101,4 +101,17 @@ export class SuperomaticController {
   ) {
     return this.superomaticService.getProviderInfo(payload);
   }
+
+
+  @MessagePattern('superomatic.closeSession')
+  async closeSession(
+    @Payload()
+    payload: {
+      userId: number;
+      siteId: number;
+      params: any;
+    },
+  ) {
+    return this.superomaticService.closeSession(payload);
+  }
 }

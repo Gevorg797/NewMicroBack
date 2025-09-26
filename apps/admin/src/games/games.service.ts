@@ -25,9 +25,6 @@ export class GamesService {
     return this.msGameService.superomaticFreeRoundsInfo(data);
   }
 
-  async checkBalance(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticCheckBalance(data);
-  }
 
   async getGameHistory(data: { userId: number; siteId: number; params: any }) {
     return this.msGameService.superomaticGetGameHistory(data);

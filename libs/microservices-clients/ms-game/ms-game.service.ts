@@ -37,15 +37,6 @@ export class MsGameService {
       this.client.send('superomatic.gamesFreeRoundsInfo', data),
     );
   }
-  superomaticCheckBalance(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.checkBalance', data),
-    );
-  }
   superomaticGetGameHistory(data: {
     userId: number;
     siteId: number;

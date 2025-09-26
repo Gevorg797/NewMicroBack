@@ -4,7 +4,6 @@ import { GamesService } from './games.service';
 import { LoadGamesDto } from './dto/load-games.dto';
 import { GetCurrenciesDto } from './dto/get-currencies.dto';
 import { GameSessionDto } from './dto/game-session.dto';
-import { CheckBalanceDto } from './dto/check-balance.dto';
 import { GameHistoryDto } from './dto/game-history.dto';
 import { GameStatisticsDto } from './dto/game-statistics.dto';
 import { ProviderInfoDto } from './dto/provider-info.dto';
@@ -60,14 +59,6 @@ export class GamesController {
         return this.gamesService.gamesFreeRoundsInfo(data);
     }
 
-    @Post('check-balance')
-    @ApiOperation({ summary: 'Check user balance' })
-    @ApiResponse({ status: 200, description: 'Balance checked successfully' })
-    @ApiResponse({ status: 400, description: 'Bad request' })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    async checkBalance(@Body() data: CheckBalanceDto) {
-        return this.gamesService.checkBalance(data);
-    }
 
     @Post('game-history')
     @ApiOperation({ summary: 'Get game history' })

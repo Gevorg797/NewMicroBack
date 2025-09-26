@@ -149,8 +149,6 @@ export class BikBetService {
       parse_mode: 'HTML',
     };
 
-    await ctx.answerCbQuery();
-
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('Базовые игры', 'ignore_game')],
@@ -195,8 +193,6 @@ export class BikBetService {
       parse_mode: 'HTML',
     };
 
-    await ctx.answerCbQuery();
-
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('🎰 Играть!', 'games')],
@@ -233,8 +229,6 @@ export class BikBetService {
       parse_mode: 'HTML',
     };
 
-    await ctx.answerCbQuery();
-
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [
@@ -270,8 +264,6 @@ export class BikBetService {
       caption: text,
       parse_mode: 'HTML',
     };
-
-    await ctx.answerCbQuery();
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
@@ -366,7 +358,6 @@ export class BikBetService {
       parse_mode: 'HTML',
     };
 
-    await ctx.answerCbQuery();
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [
@@ -392,8 +383,6 @@ export class BikBetService {
       caption: text,
       parse_mode: 'HTML',
     };
-
-    await ctx.answerCbQuery();
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
@@ -422,8 +411,6 @@ export class BikBetService {
       caption: text,
       parse_mode: 'HTML',
     };
-
-    await ctx.answerCbQuery();
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
@@ -459,8 +446,6 @@ export class BikBetService {
       parse_mode: 'HTML',
     };
 
-    await ctx.answerCbQuery();
-
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('⬅️ Назад', 'withdraw')],
@@ -489,8 +474,6 @@ export class BikBetService {
       caption: text,
       parse_mode: 'HTML',
     };
-
-    await ctx.answerCbQuery();
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
@@ -525,7 +508,6 @@ export class BikBetService {
       parse_mode: 'HTML',
     };
 
-    await ctx.answerCbQuery();
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [
@@ -542,6 +524,307 @@ export class BikBetService {
           ),
         ],
 
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async bonuses(ctx: any) {
+    const text = `<blockquote><b>🎁 Раздел "Бонусы" в Bik Bet</b></blockquote>
+<blockquote>Здесь собраны все актуальные предложения:
+💥 За активность
+🎉 За участие в акциях
+🎁 И просто так — в знак благодарности, что Вы с нами</blockquote>
+<blockquote>На каждый бонус действует единое правило — отыгрыш x2 от суммы бонуса.
+Но обратите внимание: условия получения и использования могут отличаться.</blockquote>
+<blockquote>Проявляйте активность и активируйте как можно больше бонусов, чтобы играть с максимальной выгодой! 🚀</blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_6.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('👑 VIP Клуб', 'vipClub')],
+        [Markup.button.callback('🎡 Колесо фортуны', 'wheelInfo')],
+        [Markup.button.callback('🎟 Промокоды', 'promosInfo')],
+        [Markup.button.callback('💸 Кэшбек', 'cashbackInfo')],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async wheelInfo(ctx: any) {
+    const text = `<blockquote><b>🎰 Добро пожаловать в колесо Фортуны! 🎰</b></blockquote>
+<blockquote><b>🔥 Испытай удачу и забери свой куш!</b></blockquote>
+<blockquote>Крути колесо и получи приятную сумму или даже крупный выигрыш — всё в твоих руках!</blockquote>
+<blockquote><b>💎 Активируй Колесо Фортуны при сумме депозитов от 5000₽ за 30 дней и лови момент для большой победы!</b></blockquote>
+<blockquote><b>🚀 Чем больше депозитов — тем ближе удача!</b></blockquote>
+<blockquote>Крути, выигрывай, побеждай!</blockquote>
+<blockquote><b>💡 Ваша текущая сумма депозитов — 0₽. Пора сделать шаг к удаче!</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_6.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ Назад', 'bonuses')],
+      ]).reply_markup,
+    });
+  }
+
+  async promosInfo(ctx: any) {
+    const text = `<blockquote><b>🎁 Добро пожаловать в промокоды! 🎁</b></blockquote>
+<blockquote>Здесь вы можете вводить актуальные промокоды с нашего канала и получать приятные бонусы на бонусный баланс.</blockquote>
+<blockquote>Успейте активировать — лимит может закончиться в любой момент!</blockquote>
+<blockquote><b>🚀 Следите за новостями и будьте первыми в очереди за бонусами!</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_6.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ Назад', 'bonuses')],
+      ]).reply_markup,
+    });
+  }
+
+  async cashbackInfo(ctx: any) {
+    await ctx.answerCbQuery('⏳ В разработке');
+  }
+
+  async vipClub(ctx: any) {
+    const text = `<blockquote><b>👑 VIP-Клуб</b></blockquote>
+<blockquote>Ощутите VIP-опыт: быстрые выводы, персональные бонусы, закрытые акции и индивидуальная поддержка ждут вас 🫡</blockquote>
+<blockquote><b>🏆 Чтобы попасть в приватный канал и получить все привилегии, необходимо сделать суммарный депозит 10 000₽ с момента запуска VIP-Клуба.</b></blockquote>
+<blockquote><b>💎 Ваш текущий прогресс:</b></blockquote>
+<blockquote>┗ 0.0₽ / 10 000₽ | 0%</blockquote>
+<blockquote><b>🎁 Продолжайте пополнять счёт, чтобы открыть доступ к эксклюзивным бонусам, личному VIP менеджеру и закрытым ивентам!</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_11.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('⬅️ Назад', 'bonuses')],
+      ]).reply_markup,
+    });
+  }
+
+  async leaderboardWins(ctx: any) {
+    const text = `<b>🏆 Топ пользователей (по победам):</b>
+
+<blockquote><b>🥇 1. - Synkov | побед - 4065</b></blockquote>
+<blockquote><b>🥈 2. - Юзер №2 | побед - 1952</b></blockquote>
+<blockquote><b>🥉 3. - Юзер №3 | побед - 1788</b></blockquote>
+<blockquote><b>🎖 4. - 13 | побед - 1717</b></blockquote>
+<blockquote><b>🎖 5. - Юзер №5 | побед - 714</b></blockquote>
+<blockquote><b>🎖 6. - Александра | побед - 703</b></blockquote>
+<blockquote><b>🎖 7. - Jimik | побед - 476</b></blockquote>
+<blockquote><b>🎖 8. - Maksi | побед - 440</b></blockquote>
+<blockquote><b>🎖 9. - Не | побед - 391</b></blockquote>
+<blockquote><b>🎖 10. - Алина | побед - 337</b></blockquote>
+
+<i>Отсортировано по количеству побед!</i>`;
+
+    const filePath = this.getImagePath('bik_bet_3.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🏆 По победам', 'leaderboard_wins')],
+        [
+          Markup.button.callback('⚡️ По винстрику', 'leaderboard_winstreak'),
+          Markup.button.callback('💥 По лузстрику', 'leaderboard_loosestrick'),
+        ],
+        [
+          Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
+          Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
+        ],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async leaderboardWinstreak(ctx: any) {
+    const text = `<b>🏆 Топ пользователей (по винстрику):</b>
+
+<blockquote><b>🥇 1. - Максим Андреевич | винстрик - 8</b></blockquote>
+<blockquote><b>🥈 2. - Xauceq | винстрик - 5</b></blockquote>
+<blockquote><b>🥉 3. - мотя xvii | винстрик - 5</b></blockquote>
+<blockquote><b>🎖 4. - Юзер №4 | винстрик - 4</b></blockquote>
+<blockquote><b>🎖 5. - Rostik🩸 | винстрик - 4</b></blockquote>
+<blockquote><b>🎖 6. - LORDIN | винстрик - 4</b></blockquote>
+<blockquote><b>🎖 7. - Korney | винстрик - 4</b></blockquote>
+<blockquote><b>🎖 8. - 13 | винстрик - 3</b></blockquote>
+<blockquote><b>🎖 9. - Михалы4 | винстрик - 3</b></blockquote>
+<blockquote><b>🎖 10. - Миша | винстрик - 3</b></blockquote>
+
+<i>Отсортировано по количеству побед подряд!</i>`;
+
+    const filePath = this.getImagePath('bik_bet_3.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🏆 По победам', 'leaderboard_wins')],
+        [
+          Markup.button.callback('⚡️ По винстрику', 'leaderboard_winstreak'),
+          Markup.button.callback('💥 По лузстрику', 'leaderboard_loosestrick'),
+        ],
+        [
+          Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
+          Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
+        ],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async leaderboardLoosestrick(ctx: any) {
+    const text = `<b>🏆 Топ пользователей (по лузстрику):</b>
+
+<blockquote><b>🥇 1. - Pavel | лузстрик - 22</b></blockquote>
+<blockquote><b>🥈 2. - Натуля🎀 | лузстрик - 20</b></blockquote>
+<blockquote><b>🥉 3. - Рлл | лузстрик - 20</b></blockquote>
+<blockquote><b>🎖 4. - Perfect | лузстрик - 20</b></blockquote>
+<blockquote><b>🎖 5. - Frend | лузстрик - 19</b></blockquote>
+<blockquote><b>🎖 6. - 𝚂𝚂𝙰 | лузстрик - 18</b></blockquote>
+<blockquote><b>🎖 7. - серега | лузстрик - 17</b></blockquote>
+<blockquote><b>🎖 8. - Светлана | лузстрик - 17</b></blockquote>
+<blockquote><b>🎖 9. - Иван | лузстрик - 15</b></blockquote>
+<blockquote><b>🎖 10. - Borov | лузстрик - 15</b></blockquote>
+
+<i>Отсортировано по количеству поражений подряд!</i>`;
+
+    const filePath = this.getImagePath('bik_bet_3.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🏆 По победам', 'leaderboard_wins')],
+        [
+          Markup.button.callback('⚡️ По винстрику', 'leaderboard_winstreak'),
+          Markup.button.callback('💥 По лузстрику', 'leaderboard_loosestrick'),
+        ],
+        [
+          Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
+          Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
+        ],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async leaderboardGames(ctx: any) {
+    const text = `<b>🏆 Топ пользователей (по кол-ву игр):</b>
+
+<blockquote><b>🥇 1. - Synkov | игр - 7100</b></blockquote>
+<blockquote><b>🥈 2. - R3QU1EM | игр - 6213</b></blockquote>
+<blockquote><b>🥉 3. - Юзер №3 | игр - 3321</b></blockquote>
+<blockquote><b>🎖 4. - Юзер №4 | игр - 3067</b></blockquote>
+<blockquote><b>🎖 5. - 13 | игр - 2852</b></blockquote>
+<blockquote><b>🎖 6. - Александра | игр - 1973</b></blockquote>
+<blockquote><b>🎖 7. - Юзер №7 | игр - 1290</b></blockquote>
+<blockquote><b>🎖 8. - Игорь | игр - 1088</b></blockquote>
+<blockquote><b>🎖 9. - Юзер №9 | игр - 891</b></blockquote>
+<blockquote><b>🎖 10. - [𝗜𝗧] 𝗠𝗼𝗻𝗸 | игр - 867</b></blockquote>
+
+<i>Отсортировано по количеству игр!</i>`;
+
+    const filePath = this.getImagePath('bik_bet_3.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🏆 По победам', 'leaderboard_wins')],
+        [
+          Markup.button.callback('⚡️ По винстрику', 'leaderboard_winstreak'),
+          Markup.button.callback('💥 По лузстрику', 'leaderboard_loosestrick'),
+        ],
+        [
+          Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
+          Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
+        ],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async leaderboardBets(ctx: any) {
+    const text = `<b>🏆 Топ пользователей (по сумме ставок):</b>
+
+<blockquote><b>🥇 1. - 62240 | ставок на 469367.2000000915 RUB</b></blockquote>
+<blockquote><b>🥈 2. - Буеда | ставок на 372955.5500000798 RUB</b></blockquote>
+<blockquote><b>🥉 3. - Антоха | ставок на 344004.7199999913 RUB</b></blockquote>
+<blockquote><b>🎖 4. - Юзер №4 | ставок на 246371.17000000295 RUB</b></blockquote>
+<blockquote><b>🎖 5. - Игорь | ставок на 202940.03000000017 RUB</b></blockquote>
+<blockquote><b>🎖 6. - 𝓐𝓷𝓰𝓮𝓵 ❤️‍🩹 | ставок на 195294.40000001568 RUB</b></blockquote>
+<blockquote><b>🎖 7. - Valfram👾 BITS | ставок на 193849.7600000002 RUB</b></blockquote>
+<blockquote><b>🎖 8. - van | ставок на 175589.27000000633 RUB</b></blockquote>
+<blockquote><b>🎖 9. - Дима | ставок на 166294.00000000108 RUB</b></blockquote>
+<blockquote><b>🎖 10. -                             | ставок на 163915.0100000036 RUB</b></blockquote>
+
+<i>Отсортировано по общей сумме ставок!</i>`;
+
+    const filePath = this.getImagePath('bik_bet_3.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🏆 По победам', 'leaderboard_wins')],
+        [
+          Markup.button.callback('⚡️ По винстрику', 'leaderboard_winstreak'),
+          Markup.button.callback('💥 По лузстрику', 'leaderboard_loosestrick'),
+        ],
+        [
+          Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
+          Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
+        ],
         [Markup.button.callback('⬅️ Назад', 'start')],
       ]).reply_markup,
     });

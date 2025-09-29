@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { MS_GAME } from 'libs/config';
 import { firstValueFrom } from 'rxjs';
-import { MS_GAME } from './tokens';
+// import { MS_GAME } from './tokens';
 
 @Injectable()
 export class MsGameService {

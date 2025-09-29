@@ -12,6 +12,10 @@ import { Currency, CurrencyType } from './currency.entity';
 import { Site } from './site.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
 import { GameCategory } from './game-category.entity';
+import { FinanceProvider } from './finance-provider.entity';
+import { FinanceProviderSettings } from './finance-provider-settings.entity';
+import { FinanceProviderMethods } from './finance-provider-methods.entity';
+import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { SiteSettings } from './site-settings.entity';
 import { Balances } from './balances.entity';
 
@@ -21,16 +25,20 @@ export const ENTITIES = [
   Site,
   SiteSettings,
   Currency,
-  Balances,
   GameProvider,
   GameSubProvider,
   GameProviderSetting,
   GamesProviderSettingGroup,
-  GameCategory,
   Game,
   GameSession,
   GameTransaction,
   GameFreeSpin,
+  GameCategory,
+  FinanceProvider,
+  FinanceProviderSettings,
+  FinanceProviderMethods,
+  FinanceTransactions,
+  Balances
 ];
 
 export {
@@ -38,8 +46,6 @@ export {
   Site,
   SiteSettings,
   Currency,
-  CurrencyType,
-  Balances,
   GameProvider,
   GameSubProvider,
   GameProviderSetting,
@@ -49,4 +55,9 @@ export {
   GameTransaction,
   GameFreeSpin,
   GameCategory,
+  FinanceProvider,
+  FinanceProviderSettings,
+  FinanceProviderMethods,
+  FinanceTransactions,
+  Balances
 };

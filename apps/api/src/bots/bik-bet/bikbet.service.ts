@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/core';
-import { User, Currency, Balances, CurrencyType, Site } from '@lib/database';
+import { User, Currency, Balances, Site } from '@lib/database';
+import { CurrencyType } from '@lib/database/entities/currency.entity';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';

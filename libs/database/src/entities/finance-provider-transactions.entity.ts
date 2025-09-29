@@ -1,66 +1,66 @@
-import { Collection, Entity, Enum, ManyToOne, Property } from "@mikro-orm/core";
-import { BaseEntity } from "./base.entity";
-import { FinanceProviderMethods, MethodTypeEnum } from "./finance-provider-methods.entity";
-import { User } from "./user.entity";
-import { Currency } from "./currency.entity";
-
+import { Collection, Entity, Enum, ManyToOne, Property } from '@mikro-orm/core';
+import { BaseEntity } from './base.entity';
+import { User } from './user.entity';
+import { Currency } from './currency.entity';
+import { FinanceProviderSubMethods } from './finance-provider-sub-method.entity';
 
 export enum PaymentTransactionStatus {
-    CREATED = 'Created',
-    PENDING = 'Pending',
-    COMPLETED = 'Completed',
-    FAILED = 'Failed',
+  CREATED = 'Created',
+  PENDING = 'Pending',
+  COMPLETED = 'Completed',
+  FAILED = 'Failed',
 }
 
 export enum PaymentTransactionUserResponseStatus {
-    PENDING = 'Pending',
-    APPROVED = 'Approved',
-    REJECTED = 'Rejected',
+  PENDING = 'Pending',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
 }
 
 export enum PaymentTransactionType {
-    PAYIN = 'Payin',
-    PAYOUT = 'Payout',
+  PAYIN = 'Payin',
+  PAYOUT = 'Payout',
 }
 
 @Entity({ tableName: 'financeTransactions' })
 export class FinanceTransactions extends BaseEntity {
-    @Property({ columnType: 'double precision' })
-    amount!: number;
+  @Property({ columnType: 'double precision' })
+  amount!: number;
 
-    @Enum(() => PaymentTransactionType)
-    type!: PaymentTransactionType;
+  @Enum(() => PaymentTransactionType)
+  type!: PaymentTransactionType;
 
-    @Enum(() => PaymentTransactionUserResponseStatus)
-    userResponseStatus: PaymentTransactionUserResponseStatus = PaymentTransactionUserResponseStatus.PENDING
+  @Enum(() => PaymentTransactionUserResponseStatus)
+  userResponseStatus: PaymentTransactionUserResponseStatus =
+    PaymentTransactionUserResponseStatus.PENDING;
 
-    @Enum(() => PaymentTransactionStatus)
-    status: PaymentTransactionStatus = PaymentTransactionStatus.PENDING
+  @Enum(() => PaymentTransactionStatus)
+  status: PaymentTransactionStatus = PaymentTransactionStatus.PENDING;
 
-    @ManyToOne(() => FinanceProviderMethods)
-    method!: FinanceProviderMethods;
+  @ManyToOne(() => FinanceProviderSubMethods)
+  subMethod!: FinanceProviderSubMethods;
 
-    @ManyToOne(() => User)
-    user!: User
+  @ManyToOne(() => User)
+  user!: User;
 
-    @Property({ nullable: true })
-    paymentTransactionId?: string;
+  @Property({ nullable: true })
+  paymentTransactionId?: string;
 
-    @Property({ nullable: true })
-    phoneNumber?: number
+  @Property({ nullable: true })
+  phoneNumber?: number;
 
-    @Property({ nullable: true })
-    requisite?: string;
+  @Property({ nullable: true })
+  requisite?: string;
 
-    @Property({ nullable: true })
-    uuid?: string; // Optional transaction uuid
+  @Property({ nullable: true })
+  uuid?: string; // Optional transaction uuid
 
-    @Property({ nullable: true, default: null })
-    redirectSuccessUrl?: string | null;
+  @Property({ nullable: true, default: null })
+  redirectSuccessUrl?: string | null;
 
-    @Property({ nullable: true, default: null })
-    redirectFailedUrl?: string | null;
+  @Property({ nullable: true, default: null })
+  redirectFailedUrl?: string | null;
 
-    @ManyToOne(() => Currency)
-    currency: Currency
+  @ManyToOne(() => Currency)
+  currency: Currency;
 }

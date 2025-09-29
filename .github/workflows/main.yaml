@@ -1,0 +1,92 @@
+name: Build and Push Docker Image
+
+env:
+  SERVICE_NAME: bik-bet
+  CONTAINER_REGISTRY: docker.io
+  CONTAINER_REGISTRY_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  CONTAINER_REGISTRY_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+  GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build-push-image:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.tagging.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v3
+
+
+      - name: Add new tag
+        id: tagging
+        run: |-
+          git config --global user.email "github+actions@gmail.com"
+          git config --global user.name "Actions"
+          git fetch --tags
+          oldv=$(git tag --sort=-v:refname --list "v[0-9]*" | head -n 1)
+          echo "oldv: $oldv"
+          if [ -z "$oldv" ]; then
+             echo "No existing version, starting at 0.0.0"
+             oldv="0.0.0"
+          fi
+          newv=$(docker run --rm -v "$PWD":/app treeder/bump --input "$oldv" patch)
+          echo "newv=$newv"  >> $GITHUB_ENV
+          echo "::set-output name=new_version::$newv"
+          git tag -a "v$newv" -m "version $newv"
+          git push --follow-tags
+
+      - name: Log in to Docker Hub with Personal Access Token
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.CONTAINER_REGISTRY }}
+          username: ${{ env.CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ env.CONTAINER_REGISTRY_TOKEN }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile  # Path to your Dockerfile
+          push: true
+          tags: ${{ env.CONTAINER_REGISTRY_USERNAME}}/${{ env.SERVICE_NAME }}:${{ steps.tagging.outputs.new_version }}, ${{ env.CONTAINER_REGISTRY_USERNAME}}/${{ env.SERVICE_NAME }}:latest # Tagging the image with the run ID and latest
+
+      - name: Logout from Docker Hub
+        run: docker logout
+
+  edit-image-tag:
+    needs: build-push-image
+    name: Edit image tag in value.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone live environments repo
+        uses: actions/checkout@v3
+        with:
+          repository: 'VV-Soft-5/app-gitops'
+          ref: main
+          path: app-gitops
+          token: ${{ env.GIT_TOKEN }}
+
+      - name: Install yq
+        run: |-
+          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod a+x /usr/local/bin/yq
+
+      - name: Edit image tag for production environment
+        run: |-
+          export NEW_VERSION_TAG=${{needs.build-push-image.outputs.new_version}}
+          yq e -i ".\"bik-bet-admin-api\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-admin-api/values.yaml
+          yq e -i ".\"bik-bet-api\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-api/values.yaml
+          yq e -i ".\"bik-bet-finance-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-finance-service/values.yaml
+          yq e -i ".\"bik-bet-game-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-game-service/values.yaml
+          yq e -i ".\"bik-bet-file-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-file-service/values.yaml
+      - name: Git push
+        run: |-
+          cd app-gitops
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Edited values.yaml file in \"$SERVICE_NAME"
+          git push origin main

@@ -17,7 +17,5 @@ async function bootstrap() {
     );
 
     await app.listen();
-    const logger = app.get('Logger');
-    logger.log(`File Service is listening on port ${process.env.FILE_SERVICE_PORT || 3003}`);
 }
 void bootstrap();

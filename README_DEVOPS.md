@@ -123,14 +123,14 @@ BOT_TOKEN=
 NODE_ENV=DEV
 
 # Service Configuration
-FILE_SERVICE_HOST=localhost
-FILE_SERVICE_PORT=3003
+FILE_SERVICE_HOST=
+FILE_SERVICE_PORT=
 
 # AWS S3 Configuration
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_S3_BUCKET=your-bucket-name
+AWS_REGION=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_S3_BUCKET=
 
 # Optional: Database Configuration (for file metadata)
 DB_HOST=

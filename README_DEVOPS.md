@@ -29,6 +29,12 @@ This is a microservices-based gaming platform with NestJS applications and share
 - **Type**: HTTP API
 - **Dependencies**: Game Service (TCP), Finance Service (TCP)
 
+### 5. File Service
+- **Port**: 3003 (TCP only)
+- **Purpose**: File upload/management with S3 integration
+- **Type**: TCP Microservice
+- **Dependencies**: AWS S3, Database (optional)
+
 ## Environment Variables
 
 Each microservice has its own environment configuration. Create `.env` files in each app directory:
@@ -107,6 +113,29 @@ APP_PORT=
 BOT_TOKEN=
 ```
 
+### File Service (.env in apps/file-service/)
+```bash
+# Environment
+NODE_ENV=DEV
+
+# Service Configuration
+FILE_SERVICE_HOST=localhost
+FILE_SERVICE_PORT=3003
+
+# AWS S3 Configuration
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_S3_BUCKET=your-bucket-name
+
+# Optional: Database Configuration (for file metadata)
+DB_HOST=
+DB_PORT=
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+```
+
 ## Build Commands
 
 ### Install Dependencies
@@ -129,18 +158,20 @@ npm run build
 ```bash
 # Run specific service in development
 npm run start:admin:dev
+npm run start:api:dev
 npm run start:game-service:dev
 npm run start:finance-service:dev
-npm run start:api:dev
+npm run start:file-service:dev
 ```
 
 ### Production Mode
 ```bash
 # Run specific service in production
 npm run start:admin:prod
+npm run start:api:prod
 npm run start:game-service:prod
 npm run start:finance-service:prod
-npm run start:api:prod
+npm run start:file-service:prod
 ```
 
 **Note**: Each microservice has its own environment configuration and runs independently.

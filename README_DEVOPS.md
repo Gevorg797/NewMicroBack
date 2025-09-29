@@ -7,24 +7,28 @@ This is a microservices-based gaming platform with NestJS applications and share
 
 ### 1. Admin App
 - **Port**: 3000
+- **Prefix**: `admin`
 - **Purpose**: Admin interface for managing games and platform
 - **Type**: HTTP API
 - **Dependencies**: Game Service (TCP), Database
 
 ### 2. Game Service
 - **Ports**: 3010 (HTTP) + 3005 (TCP)
+- **Prefix**: `games`
 - **Purpose**: Game logic and provider integrations
 - **Type**: Hybrid (HTTP + TCP)
 - **Dependencies**: Database, External APIs (Superomatic, B2BSlots)
 
 ### 3. Finance Service
 - **Ports**: 3003 (HTTP) + 5000 (TCP)
+- **Prefix**: `finance`
 - **Purpose**: Financial operations and transactions
 - **Type**: Hybrid (HTTP + TCP)
 - **Dependencies**: Database, External APIs
 
 ### 4. API Gateway
 - **Port**: 3002
+- **Prefix**: `api`
 - **Purpose**: Main API gateway and bot integrations
 - **Type**: HTTP API
 - **Dependencies**: Game Service (TCP), Finance Service (TCP)

@@ -34,6 +34,7 @@ This project consists of multiple microservices:
 - **Game Service** - Game provider integrations (Superomatic, B2BSlots)
 - **Finance Service** - Financial operations and transactions
 - **File Service** - File upload/management with S3 integration (TCP only)
+- **Cronjobs Service** - Background scheduled tasks (Nest Schedule)
 
 ### File Service
 
@@ -64,6 +65,7 @@ $ npm run start:api:dev
 $ npm run start:game-service:dev
 $ npm run start:finance-service:dev
 $ npm run start:file-service:dev
+$ npm run start:cronjobs:dev
 
 # Production - run specific service
 $ npm run start:admin:prod
@@ -71,6 +73,7 @@ $ npm run start:api:prod
 $ npm run start:game-service:prod
 $ npm run start:finance-service:prod
 $ npm run start:file-service:prod
+$ npm run start:cronjobs:prod
 ```
 
 

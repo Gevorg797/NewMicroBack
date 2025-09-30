@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { ConfigService } from '@nestjs/config';
 
 
 export interface FileInfo {
@@ -26,15 +27,16 @@ export class FileUploadService {
     'application/pdf',
   ];
 
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     this.s3 = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: this.configService.getOrThrow<string>('AWS_REGION'),
+      endpoint: this.configService.get<string>('AWS_S3_ENDPOINT'),
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: this.configService.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.getOrThrow<string>('AWS_SECRET_ACCESS_KEY'),
       },
     });
-    this.bucketName = process.env.AWS_S3_BUCKET || 'your-bucket-name';
+    this.bucketName = this.configService.getOrThrow<string>('AWS_S3_BUCKET');
   }
 
   private validateFile(buffer: Buffer, mimeType: string): boolean {

@@ -44,6 +44,6 @@ async function bootstrap() {
         origin: '*',
     });
 
-    await app.listen(Number(process.env.CRONJOBS_HTTP_PORT), 'localhost');
+    await app.listen(Number(process.env.CRONJOBS_HTTP_PORT));
 }
 bootstrap();

@@ -39,6 +39,13 @@ This is a microservices-based gaming platform with NestJS applications and share
 - **Type**: TCP Microservice
 - **Dependencies**: AWS S3, Database (optional)
 
+### 6. Cronjobs Service
+- **Port**: N/A (no HTTP/TCP by default)
+- **Prefix**: `cronjobs`
+- **Purpose**: Background scheduled jobs using `@nestjs/schedule`
+- **Type**: Application
+- **Dependencies**: Database (optional), external APIs (optional)
+
 ## Environment Variables
 
 Each microservice has its own environment configuration. Create `.env` files in each app directory:
@@ -167,6 +174,7 @@ npm run start:api:dev
 npm run start:game-service:dev
 npm run start:finance-service:dev
 npm run start:file-service:dev
+npm run start:cronjobs:dev
 ```
 
 ### Production Mode
@@ -177,6 +185,7 @@ npm run start:api:prod
 npm run start:game-service:prod
 npm run start:finance-service:prod
 npm run start:file-service:prod
+npm run start:cronjobs:prod
 ```
 
 **Note**: Each microservice has its own environment configuration and runs independently.

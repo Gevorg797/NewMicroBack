@@ -148,6 +148,22 @@ DB_USER=
 DB_PASSWORD=
 ```
 
+### Cronjobs Service (.env in apps/cronjobs/)
+```bash
+# Environment
+NODE_ENV=DEV
+
+# Optional: Database Configuration (if jobs access DB)
+DB_HOST=
+DB_PORT=
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+
+# Optional: External API configuration for jobs
+CRONJOBS_PORT=
+```
+
 ## Build Commands
 
 ### Install Dependencies

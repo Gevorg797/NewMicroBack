@@ -77,11 +77,12 @@ jobs:
       - name: Edit image tag for production environment
         run: |-
           export NEW_VERSION_TAG=${{needs.build-push-image.outputs.new_version}}
-          yq e -i ".\"bik-bet-admin-api\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-admin-api/values.yaml
+          yq e -i ".\"bik-bet-admin\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-admin/values.yaml
           yq e -i ".\"bik-bet-api\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-api/values.yaml
           yq e -i ".\"bik-bet-finance-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-finance-service/values.yaml
           yq e -i ".\"bik-bet-game-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-game-service/values.yaml
           yq e -i ".\"bik-bet-file-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-file-service/values.yaml
+          yq e -i ".\"bik-bet-cronjobs\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-cronjobs/values.yaml
       - name: Git push
         run: |-
           cd app-gitops

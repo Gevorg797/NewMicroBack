@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CronjobsController } from './cronjobs.controller';
 import { CronjobsService } from './cronjobs.service';
+import { HealthModule } from './health/health.module';
 
 
 @Module({
@@ -13,6 +14,7 @@ import { CronjobsService } from './cronjobs.service';
     ScheduleModule.forRoot(),
     HttpModule,
     ConfigModule,
+    HealthModule,
   ],
   controllers: [CronjobsController],
   providers: [CronjobsService],

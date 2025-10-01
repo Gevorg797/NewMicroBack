@@ -11,6 +11,7 @@ import { BaseEntity } from './base.entity';
 import { Site } from './site.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
 import { Balances } from './balances.entity';
+import { GameSession } from './game-sassion.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -31,6 +32,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => GameFreeSpin, (fs) => fs.user)
   freeSpins = new Collection<GameFreeSpin>(this);
+
+  @OneToMany(() => GameSession, (gs) => gs.user)
+  gameSessions = new Collection<GameSession>(this);
 
   @OneToOne(() => Balances, (b) => b.user)
   balance?: Balances;

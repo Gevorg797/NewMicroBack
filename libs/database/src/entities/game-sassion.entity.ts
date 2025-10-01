@@ -8,11 +8,13 @@ import {
 import { BaseEntity } from './base.entity';
 import { Game } from './games.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
+import { User } from './user.entity';
+import { GameTransaction } from './game-transaction.entity';
 
 @Entity({ tableName: 'gameSessions' })
 export class GameSession extends BaseEntity {
-  @Property()
-  userId!: number; // replace with @ManyToOne(() => User) if you have a User entity
+  @ManyToOne(() => User)
+  user!: User;
 
   @Property({ columnType: 'text', nullable: true })
   launchURL?: string;
@@ -32,6 +34,9 @@ export class GameSession extends BaseEntity {
   @OneToMany(() => GameFreeSpin, (fs) => fs.gameSession)
   freeSpins = new Collection<GameFreeSpin>(this);
 
+  @OneToMany(() => GameTransaction, (gt) => gt.session)
+  transactions = new Collection<GameTransaction>(this);
+
   @Property()
   balanceId!: number; // replace with @ManyToOne(() => Balance) if exists
 
@@ -41,8 +46,8 @@ export class GameSession extends BaseEntity {
   @Property({ columnType: 'double precision', nullable: true })
   endAmount?: number;
 
-  @Property({ columnType: 'numeric(10,2)', default: 1 })
-  denomination: string = '1'; // numeric best stored as string
+  @Property({ columnType: 'numeric(10,2)', default: '1.00' })
+  denomination: string = '1.00'; // supports values like 0.1, 0.2, 1.00, etc.
 
   @Property({ columnType: 'jsonb', nullable: true })
   metadata?: unknown;

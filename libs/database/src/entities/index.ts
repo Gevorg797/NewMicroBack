@@ -7,7 +7,7 @@ import { GameProviderSetting } from './game-provider-settings.entity';
 import { GamesProviderSettingGroup } from './game-provider-settings-group.entity';
 import { Game } from './games.entity';
 import { GameSession } from './game-sassion.entity';
-import { GameTransaction } from './game-transaction.entity';
+import { GameTransaction, GameTransactionType } from './game-transaction.entity';
 import { Currency, CurrencyType } from './currency.entity';
 import { Site } from './site.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
@@ -47,6 +47,7 @@ export {
   Game,
   GameSession,
   GameTransaction,
+  GameTransactionType,
   GameFreeSpin,
   GameCategory,
 };

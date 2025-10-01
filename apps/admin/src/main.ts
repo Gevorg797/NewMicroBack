@@ -63,7 +63,7 @@ async function bootstrap() {
     origin: '*',
   });
 
-  await app.listen(Number(process.env.ADMIN_PORT));
+  await app.listen(Number(process.env.ADMIN_PORT), '0.0.0.0');
 }
 
 void bootstrap();

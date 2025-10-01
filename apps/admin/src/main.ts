@@ -17,7 +17,7 @@ import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 const fAdapter = new FastifyAdapter({
   logger: false,
   querystringParser: (str: string) => qs.parse(str),
-  pluginTimeout: 60000,
+  pluginTimeout: 600000,
   bodyLimit: 1048576 * 5,
 });
 

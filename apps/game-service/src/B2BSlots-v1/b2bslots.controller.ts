@@ -38,4 +38,11 @@ export class B2BSlotsController {
   ) {
     return this.service.gamesFreeRoundsInfo(payload);
   }
+
+  @MessagePattern('b2bslots.closeSession')
+  closeSession(
+    @Payload() payload: { userId: number; siteId: number; params: any },
+  ) {
+    return this.service.closeSession(payload);
+  }
 }

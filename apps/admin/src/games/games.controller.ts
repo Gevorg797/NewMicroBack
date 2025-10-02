@@ -11,12 +11,12 @@ import { SessionManagementDto } from './dto/session-management.dto';
 import { ApiPaginated, PaginateQuery } from 'libs/utils/pagination';
 import { Game } from '@lib/database';
 
-@ApiTags('Superomatic Games')
+@ApiTags('Games Management')
 @Controller('games')
 export class GamesController {
     constructor(private readonly gamesService: GamesService) { }
 
-    @Post('load-games')
+    @Post('load-superomatic-games')
     @ApiOperation({ summary: 'Load games from Superomatic' })
     @ApiResponse({ status: 200, description: 'Games loaded successfully' })
     @ApiResponse({ status: 400, description: 'Bad request' })
@@ -25,13 +25,13 @@ export class GamesController {
         return this.gamesService.loadGames(data);
     }
 
-    @Post('currencies')
-    @ApiOperation({ summary: 'Get currencies from Superomatic' })
-    @ApiResponse({ status: 200, description: 'Currencies retrieved successfully' })
+    @Post('load-b2bslots-games')
+    @ApiOperation({ summary: 'Load games from B2BSlots provider' })
+    @ApiResponse({ status: 200, description: 'B2BSlots games loaded successfully' })
     @ApiResponse({ status: 400, description: 'Bad request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    async getCurrencies(@Body() data: GetCurrenciesDto) {
-        return this.gamesService.getCurrencies(data);
+    async loadB2BSlotsGames(@Body() data: LoadGamesDto) {
+        return this.gamesService.loadB2BSlotsGames(data);
     }
 
     @Post('demo-session')
@@ -60,35 +60,6 @@ export class GamesController {
     async gamesFreeRoundsInfo(@Body() data: GameSessionDto) {
         return this.gamesService.gamesFreeRoundsInfo(data);
     }
-
-
-    @Post('game-history')
-    @ApiOperation({ summary: 'Get game history' })
-    @ApiResponse({ status: 200, description: 'Game history retrieved successfully' })
-    @ApiResponse({ status: 400, description: 'Bad request' })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    async getGameHistory(@Body() data: GameHistoryDto) {
-        return this.gamesService.getGameHistory(data);
-    }
-
-    @Post('game-statistics')
-    @ApiOperation({ summary: 'Get game statistics' })
-    @ApiResponse({ status: 200, description: 'Game statistics retrieved successfully' })
-    @ApiResponse({ status: 400, description: 'Bad request' })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    async getGameStatistics(@Body() data: GameStatisticsDto) {
-        return this.gamesService.getGameStatistics(data);
-    }
-
-    @Post('provider-info')
-    @ApiOperation({ summary: 'Get provider information' })
-    @ApiResponse({ status: 200, description: 'Provider info retrieved successfully' })
-    @ApiResponse({ status: 400, description: 'Bad request' })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    async getProviderInfo(@Body() data: ProviderInfoDto) {
-        return this.gamesService.getProviderInfo(data);
-    }
-
 
     @Post('close-session')
     @ApiOperation({ summary: 'Close user session' })

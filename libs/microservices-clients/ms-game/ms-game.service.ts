@@ -7,96 +7,76 @@ import { MS_GAME } from './tokens';
 export class MsGameService {
   constructor(@Inject(MS_GAME) private readonly client: ClientProxy) { }
 
-  // Superomatic patterns
+  // ===== UNIFIED GAME ROUTING METHODS =====
+  // These methods automatically route to the correct provider based on gameId
+
+  /**
+   * Initialize a game session - automatically routes to correct provider based on gameId
+   * @param data Must include gameId for provider routing
+   */
+  initGameSession(data: {
+    userId: number;
+    siteId: number;
+    gameId: number;
+    params: any;
+  }) {
+    return firstValueFrom(this.client.send('game.initGameSession', data));
+  }
+
+  /**
+   * Initialize a demo game session - automatically routes to correct provider based on gameId
+   * @param data Must include gameId for provider routing
+   */
+  initGameDemoSession(data: {
+    userId: number;
+    siteId: number;
+    gameId: number;
+    params: any;
+  }) {
+    return firstValueFrom(this.client.send('game.initGameDemoSession', data));
+  }
+
+  /**
+   * Get free rounds info - automatically routes to correct provider based on gameId
+   * @param data Must include gameId for provider routing
+   */
+  gamesFreeRoundsInfo(data: {
+    userId: number;
+    siteId: number;
+    gameId: number;
+    params: any;
+  }) {
+    return firstValueFrom(this.client.send('game.gamesFreeRoundsInfo', data));
+  }
+
+  /**
+   * Close a game session - automatically routes to correct provider based on gameId
+   * @param data Must include gameId for provider routing
+   */
+  closeSession(data: {
+    userId: number;
+    siteId: number;
+    gameId: number;
+    params: any;
+  }) {
+    return firstValueFrom(this.client.send('game.closeSession', data));
+  }
+
+  // ===== PROVIDER-SPECIFIC METHODS =====
+  // These methods are kept for operations that don't require gameId routing
+
+  /**
+   * Load games from Superomatic provider
+   */
   loadSuperomaticGames(data: { siteId: number; params?: any }) {
     return firstValueFrom(this.client.send('superomatic.loadGames', data));
   }
-  superomaticGetCurrencies(data: { userId: number; siteId: number }) {
-    return firstValueFrom(this.client.send('superomatic.getCurrencies', data));
-  }
-  superomaticInitDemo(data: { userId: number; siteId: number; params: any }) {
-    return firstValueFrom(
-      this.client.send('superomatic.initGameDemoSession', data),
-    );
-  }
-  superomaticInitSession(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.initGameSession', data),
-    );
-  }
-  superomaticFreeRoundsInfo(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.gamesFreeRoundsInfo', data),
-    );
-  }
-  superomaticGetGameHistory(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.getGameHistory', data),
-    );
-  }
-  superomaticGetGameStatistics(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.getGameStatistics', data),
-    );
-  }
-  superomaticGetProviderInfo(data: {
-    userId: number;
-    siteId: number;
-    params?: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.getProviderInfo', data),
-    );
-  }
 
-  superomaticCloseSession(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('superomatic.closeSession', data),
-    );
-  }
-
-  // B2BSlots patterns
-  b2bslotsLoadGames(data: { siteId: number; params?: any }) {
+  /**
+   * Load games from B2BSlots provider
+   */
+  loadB2BSlotsGames(data: { siteId: number; params?: any }) {
     return firstValueFrom(this.client.send('b2bslots.loadGames', data));
   }
-  b2bslotsGetCurrencies(data: { userId: number; siteId: number }) {
-    return firstValueFrom(this.client.send('b2bslots.getCurrencies', data));
-  }
-  b2bslotsInitDemo(data: { userId: number; siteId: number; params: any }) {
-    return firstValueFrom(
-      this.client.send('b2bslots.initGameDemoSession', data),
-    );
-  }
-  b2bslotsInitSession(data: { userId: number; siteId: number; params: any }) {
-    return firstValueFrom(this.client.send('b2bslots.initGameSession', data));
-  }
-  b2bslotsFreeRoundsInfo(data: {
-    userId: number;
-    siteId: number;
-    params: any;
-  }) {
-    return firstValueFrom(
-      this.client.send('b2bslots.gamesFreeRoundsInfo', data),
-    );
-  }
+
 }

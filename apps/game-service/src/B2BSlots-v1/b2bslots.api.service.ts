@@ -7,6 +7,7 @@ const GET_CURRENCIES = '/currencies';
 const INIT_DEMO = '/session/demo';
 const INIT_SESSION = '/session/start';
 const FREE_ROUNDS_INFO = '/freerounds/info';
+const CLOSE_SESSION = '/session/close';
 
 @Injectable()
 export class B2BSlotsApiService {
@@ -32,6 +33,11 @@ export class B2BSlotsApiService {
 
   async freeRoundsInfo(baseURL: string, body: any) {
     const { data } = await axios.post(`${baseURL}${FREE_ROUNDS_INFO}`, body);
+    return data;
+  }
+
+  async closeSession(baseURL: string, body: any) {
+    const { data } = await axios.post(`${baseURL}${CLOSE_SESSION}`, body);
     return data;
   }
 }

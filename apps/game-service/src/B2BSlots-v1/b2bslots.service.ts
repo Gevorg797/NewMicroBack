@@ -61,4 +61,16 @@ export class B2BSlotsService {
     const sign = this.utils.sign(payload.params, key);
     return this.api.freeRoundsInfo(baseURL, { ...payload.params, sign });
   }
+
+  async closeSession(payload: {
+    userId: number;
+    siteId: number;
+    params: any;
+  }) {
+    const { baseURL, key } = await this.settings.getProviderSettings(
+      payload.siteId,
+    );
+    const sign = this.utils.sign(payload.params, key);
+    return this.api.closeSession(baseURL, { ...payload.params, sign });
+  }
 }

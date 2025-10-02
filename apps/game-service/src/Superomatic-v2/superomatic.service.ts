@@ -42,7 +42,7 @@ export class SuperomaticService {
                 await this.em.removeAndFlush(toDelete);
             }
             // Remove sub-providers after removing games
-            // await this.em.removeAndFlush(subProviders);
+            await this.em.removeAndFlush(subProviders);
         }
 
         for (const game of gamesList) {

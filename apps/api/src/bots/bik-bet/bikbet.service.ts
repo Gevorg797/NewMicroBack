@@ -5,12 +5,32 @@ import { User, Currency, Balances, CurrencyType, Site } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
+import {
+  PLAYNGO_GAME_NAMES_WITH_IDS,
+  NOVOMATIC_GAME_NAMES_WITH_IDS,
+  NETENT_GAME_NAMES_WITH_IDS,
+  PRAGMATIC_GAME_NAMES_WITH_IDS,
+  PUSH_GAME_NAMES_WITH_IDS,
+  POPULAR_GAME_NAMES_WITH_IDS,
+  BETINHELL_GAME_NAMES_WITH_IDS,
+  PLAYTECH_GAME_NAMES_WITH_IDS,
+  GameData,
+} from './games-data';
 
 @Injectable()
 export class BikBetService {
   private readonly totalPlayers = 1311;
   private readonly gamesPlayed = 61192;
   private readonly totalBets = '5973499.88 RUB';
+  private readonly userStates = new Map<
+    number,
+    { chosenBalance?: string; state?: string }
+  >();
+  private readonly currentPage = new Map<number, number>();
+  private readonly lastMessageId = new Map<number, number>();
+  private readonly ITEMS_PER_PAGE = 10;
+  private readonly SECRET_KEY = 'h553k34n45mktkm55143a';
 
   constructor(
     @InjectRepository(User)
@@ -20,6 +40,67 @@ export class BikBetService {
     @InjectRepository(Balances)
     private readonly balancesRepository: EntityRepository<Balances>,
   ) {}
+
+  // Game data for different operators (imported from games-data.ts)
+  private readonly PRAGMATIC_GAMES = PRAGMATIC_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+    }),
+  );
+
+  private readonly NETENT_GAMES = NETENT_GAME_NAMES_WITH_IDS.map((game) => ({
+    id: String(game.id),
+    name: game.name,
+  }));
+
+  private readonly NOVOMATIC_GAMES = NOVOMATIC_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+    }),
+  );
+
+  private readonly PLAYNGO_GAMES = PLAYNGO_GAME_NAMES_WITH_IDS.map((game) => ({
+    id: String(game.id),
+    name: game.name,
+  }));
+
+  private readonly PUSH_GAMES = PUSH_GAME_NAMES_WITH_IDS.map((game) => ({
+    id: String(game.id),
+    name: game.name,
+  }));
+
+  private readonly BETINHELL_GAMES = BETINHELL_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+    }),
+  );
+
+  private readonly PLAYTECH_GAMES = PLAYTECH_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+    }),
+  );
+
+  private readonly POPULAR_GAMES = POPULAR_GAME_NAMES_WITH_IDS.map((game) => ({
+    id: String(game.id),
+    name: game.name,
+    provider: game.provider,
+  }));
+
+  // Generate user authentication token
+  private generateUserAuthToken(userId: number): string {
+    const message = `user_${userId}_slot_auth`;
+    const secret = this.SECRET_KEY;
+    const hmacHash = crypto
+      .createHmac('sha256', secret)
+      .update(message)
+      .digest('hex');
+    return `slot_${userId}_${hmacHash.substring(0, 16)}`;
+  }
 
   async checkSubscription(ctx: any, channelId: string, link: string) {
     try {
@@ -209,7 +290,627 @@ export class BikBetService {
     });
   }
 
-  async slotsB2B(ctx: any) {}
+  async slotsB2B(ctx: any) {
+    const text = `
+<blockquote><b>🎰 Выберите баланс на котором будете играть:</b></blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_2.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('💰 Основной', 'playslots_main')],
+        [Markup.button.callback('🎁 Бонусный', 'playslots_bonus')],
+        [Markup.button.callback('⬅️ Назад', 'games')],
+      ]).reply_markup,
+    });
+  }
+
+  async showOperatorsMenu(ctx: any, chosenBalance: string) {
+    const userId = ctx.from.id;
+
+    try {
+      // Store the chosen balance in user state
+      this.userStates.set(userId, { chosenBalance, state: 'select_operator' });
+
+      const text = `<blockquote><b>🎰 Выберите оператора:</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_1.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🔥Популярные🔥', `popular_pp_${userId}`)],
+          [
+            Markup.button.callback('Pragmatic Play', `operator_pp_${userId}`),
+            Markup.button.callback('NetEnt', `operator_netent_${userId}`),
+          ],
+          [
+            Markup.button.callback('Novomatic', `operator_novomatic_${userId}`),
+            Markup.button.callback('PlaynGo', `operator_playngo_${userId}`),
+          ],
+          [
+            Markup.button.callback('PushGaming', `operator_push_${userId}`),
+            Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
+          ],
+          [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
+          [Markup.button.callback('🔙 Назад', 'slotsB2B')],
+        ]).reply_markup,
+      });
+
+      await ctx.answerCbQuery();
+    } catch (error) {
+      console.error('Update error:', error);
+      await ctx.answerCbQuery('⚠ Не удалось обновить', { show_alert: true });
+    }
+  }
+
+  // Helper method to get user state
+  getUserState(userId: number) {
+    return this.userStates.get(userId) || {};
+  }
+
+  // Helper method to validate user and extract user ID from callback data
+  private validateUserAndExtractId(
+    ctx: any,
+    callbackData: string,
+  ): number | null {
+    try {
+      const userId = parseInt(callbackData.split('_').pop() || '0');
+      if (!userId || ctx.from.id !== userId) {
+        return null;
+      }
+      return userId;
+    } catch {
+      return null;
+    }
+  }
+
+  // Optimized BetInHell games handler using generic method
+  async showBetinhellGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'BetInHell',
+      this.BETINHELL_GAMES,
+    );
+  }
+
+  // Handle BetInHell pagination using generic method
+  async handleBetinhellPagination(ctx: any, callbackData: string) {
+    await this.handleOperatorPagination(
+      ctx,
+      callbackData,
+      'BetInHell',
+      this.BETINHELL_GAMES,
+    );
+  }
+
+  // Operator handlers using real game data
+  async showPragmaticPlayGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'PragmaticPlay',
+      this.PRAGMATIC_GAMES,
+    );
+  }
+
+  async showNetEntGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'NetEnt',
+      this.NETENT_GAMES,
+    );
+  }
+
+  async showNovomaticGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'Novomatic',
+      this.NOVOMATIC_GAMES,
+    );
+  }
+
+  async showPlaynGoGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'PlaynGo',
+      this.PLAYNGO_GAMES,
+    );
+  }
+
+  async showPushGamingGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'PushGaming',
+      this.PUSH_GAMES,
+    );
+  }
+
+  async showPlayTechGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'PlayTech',
+      this.PLAYTECH_GAMES,
+    );
+  }
+
+  async showPopularGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'Popular',
+      this.POPULAR_GAMES,
+    );
+  }
+
+  // Generic operator games handler (reusable for all operators)
+  async showOperatorGames(
+    ctx: any,
+    callbackData: string,
+    operatorName: string,
+    games: Array<{ id: string; name: string }>,
+  ) {
+    // Always answer callback query first to prevent timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      // Ignore callback query errors (already answered or expired)
+      console.log('Callback query already answered or expired');
+    }
+
+    try {
+      const userId = this.validateUserAndExtractId(ctx, callbackData);
+      if (!userId) {
+        await ctx.answerCbQuery('⚠ Это действие недоступно', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      // Update user state and reset pagination
+      this.userStates.set(userId, {
+        ...this.getUserState(userId),
+        state: 'select_game',
+      });
+      this.currentPage.set(userId, 0);
+
+      const text = `<blockquote><b>🎰 Выберите игру ${operatorName}:</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_1.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: this.buildOperatorGamesKeyboard(
+          0,
+          userId,
+          operatorName,
+          games,
+        ).reply_markup,
+      });
+
+      this.lastMessageId.set(userId, ctx.message?.message_id || 0);
+    } catch (error) {
+      console.error(`Error in show${operatorName}Games:`, error);
+    }
+  }
+
+  // Generic operator games keyboard builder
+  private buildOperatorGamesKeyboard(
+    page: number,
+    userId: number,
+    operatorName: string,
+    games: Array<{ id: string; name: string }>,
+  ) {
+    const totalPages = Math.ceil(games.length / this.ITEMS_PER_PAGE);
+    const startIndex = page * this.ITEMS_PER_PAGE;
+    const endIndex = Math.min(startIndex + this.ITEMS_PER_PAGE, games.length);
+    const pageGames = games.slice(startIndex, endIndex);
+
+    const keyboard: any[][] = [];
+
+    // Add games in rows of 2
+    for (let i = 0; i < pageGames.length; i += 2) {
+      const row: any[] = [];
+      const gameTitle =
+        page === 0 && i < 2 ? `🔥 ${pageGames[i].name}` : pageGames[i].name;
+
+      row.push(
+        Markup.button.callback(gameTitle, `${pageGames[i].id}_${userId}`),
+      );
+
+      if (i + 1 < pageGames.length) {
+        const secondGameTitle =
+          page === 0 && i + 1 < 2
+            ? `🔥 ${pageGames[i + 1].name}`
+            : pageGames[i + 1].name;
+        row.push(
+          Markup.button.callback(
+            secondGameTitle,
+            `${pageGames[i + 1].id}_${userId}`,
+          ),
+        );
+      }
+
+      keyboard.push(row);
+    }
+
+    // Add pagination controls if needed
+    if (totalPages > 1) {
+      const paginationRow: any[] = [];
+
+      if (page > 0) {
+        paginationRow.push(
+          Markup.button.callback(
+            '⬅ Назад',
+            `prev_${operatorName.toLowerCase()}_page_${page - 1}_${userId}`,
+          ),
+        );
+      }
+
+      if (page < totalPages - 1) {
+        paginationRow.push(
+          Markup.button.callback(
+            'Вперед ➡',
+            `next_${operatorName.toLowerCase()}_page_${page + 1}_${userId}`,
+          ),
+        );
+      }
+
+      if (paginationRow.length > 0) {
+        keyboard.push(paginationRow);
+      }
+    }
+
+    // Add exit button
+    keyboard.push([
+      Markup.button.callback('Выйти', `back_to_operators_${userId}`),
+    ]);
+
+    return Markup.inlineKeyboard(keyboard);
+  }
+
+  // Generic pagination handler
+  async handleOperatorPagination(
+    ctx: any,
+    callbackData: string,
+    operatorName: string,
+    games: Array<{ id: string; name: string }>,
+  ) {
+    // Always answer callback query first to prevent timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      // Ignore callback query errors (already answered or expired)
+      console.log('Callback query already answered or expired');
+    }
+
+    try {
+      const parts = callbackData.split('_');
+      const page = parseInt(parts[2]);
+      const userId = parseInt(parts[3]);
+
+      if (!userId || ctx.from.id !== userId) {
+        await ctx.answerCbQuery('⚠ Это действие недоступно', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      const text = `<blockquote><b>🎰 Выберите игру ${operatorName}:</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_1.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: this.buildOperatorGamesKeyboard(
+          page,
+          userId,
+          operatorName,
+          games,
+        ).reply_markup,
+      });
+
+      this.currentPage.set(userId, page);
+    } catch (error) {
+      console.error(`Error in handle${operatorName}Pagination:`, error);
+    }
+  }
+
+  // Back to operators handler
+  async backToOperators(ctx: any, callbackData: string) {
+    // Always answer callback query first to prevent timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      // Ignore callback query errors (already answered or expired)
+      console.log('Callback query already answered or expired');
+    }
+
+    try {
+      const userId = this.validateUserAndExtractId(ctx, callbackData);
+      if (!userId) {
+        await ctx.answerCbQuery('⚠ Это действие недоступно', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      this.userStates.set(userId, {
+        ...this.getUserState(userId),
+        state: 'select_operator',
+      });
+
+      const text = `<blockquote><b>🎰 Выберите оператора:</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_1.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: this.buildOperatorKeyboard(userId).reply_markup,
+      });
+    } catch (error) {
+      console.error('Error in backToOperators:', error);
+    }
+  }
+
+  // Build operator keyboard
+  private buildOperatorKeyboard(userId: number) {
+    return Markup.inlineKeyboard([
+      [Markup.button.callback('🔥Популярные🔥', `popular_pp_${userId}`)],
+      [
+        Markup.button.callback('Pragmatic Play', `operator_pp_${userId}`),
+        Markup.button.callback('NetEnt', `operator_netent_${userId}`),
+      ],
+      [
+        Markup.button.callback('Novomatic', `operator_novomatic_${userId}`),
+        Markup.button.callback('PlaynGo', `operator_playngo_${userId}`),
+      ],
+      [
+        Markup.button.callback('PushGaming', `operator_push_${userId}`),
+        Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
+      ],
+      [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
+      [Markup.button.callback('🔙 Назад', 'slotsB2B')],
+    ]);
+  }
+
+  // Game selection handlers
+  async handleGameSelection(
+    ctx: any,
+    callbackData: string,
+    gameId: string,
+    gameName: string,
+    operatorName: string,
+  ) {
+    // Always answer callback query first to prevent timeout
+    try {
+      await ctx.answerCbQuery();
+    } catch (error) {
+      // Ignore callback query errors (already answered or expired)
+      console.log('Callback query already answered or expired');
+    }
+
+    try {
+      const userId = this.validateUserAndExtractId(ctx, callbackData);
+      if (!userId) {
+        await ctx.answerCbQuery('⚠ Это действие недоступно', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      const userState = this.getUserState(userId);
+      const chosenBalance = userState.chosenBalance || 'main';
+      console.log(chosenBalance);
+
+      const operatorId = 40272;
+      const currency = 'RUB';
+      const language = 'RU';
+      const authToken = this.generateUserAuthToken(userId);
+
+      const baseUrl = `https://icdnchannel.com/gamesbycode/${gameId}.gamecode`;
+      const params = {
+        operator_id: operatorId,
+        user_id: String(userId),
+        auth_token: authToken,
+        currency: currency,
+        language: language,
+      };
+
+      const queryString = Object.entries(params)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('&');
+      const webAppUrl = `${baseUrl}?${queryString}`;
+
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.webApp(`🎮 Играть в ${gameName}`, webAppUrl)],
+        [
+          Markup.button.callback(
+            '⬅ Назад к списку игр',
+            `operator_${operatorName.toLowerCase()}_${userId}`,
+          ),
+          Markup.button.callback(
+            '🔙 Назад к операторам',
+            `back_to_operators_${userId}`,
+          ),
+        ],
+      ]);
+
+      const caption =
+        `<blockquote>🎰 Вы выбрали игру: ${gameName}</blockquote>\n` +
+        `<blockquote><b>Нажмите кнопку ниже, чтобы начать играть</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_1.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: caption,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: keyboard.reply_markup,
+      });
+
+      console.log(`Game URL generated for user ${userId}: ${webAppUrl}`);
+    } catch (error) {
+      console.error(`Error in handleGameSelection for ${operatorName}:`, error);
+    }
+  }
+
+  // Specific game selection handlers for each operator
+  async handlePragmaticGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.PRAGMATIC_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'PragmaticPlay',
+      );
+    }
+  }
+
+  async handleNetEntGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.NETENT_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'NetEnt',
+      );
+    }
+  }
+
+  async handleNovomaticGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.NOVOMATIC_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'Novomatic',
+      );
+    }
+  }
+
+  async handlePlaynGoGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.PLAYNGO_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'PlaynGo',
+      );
+    }
+  }
+
+  async handlePushGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.PUSH_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'PushGaming',
+      );
+    }
+  }
+
+  async handleBetinhellGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.BETINHELL_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'BetInHell',
+      );
+    }
+  }
+
+  async handlePlayTechGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.PLAYTECH_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'PlayTech',
+      );
+    }
+  }
+
+  async handlePopularGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.POPULAR_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'Popular',
+      );
+    }
+  }
 
   async donate(ctx: any) {
     const text = `
@@ -823,42 +1524,6 @@ export class BikBetService {
           Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
           Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
         ],
-        [Markup.button.callback('⬅️ Назад', 'start')],
-      ]).reply_markup,
-    });
-  }
-
-  async slotb2b(ctx: any) {
-    const text = `<b>🎰 B2B Slots</b>
-
-<blockquote><b>🎮 Добро пожаловать в раздел B2B Slots!</b></blockquote>
-
-<blockquote><b>🎯 Доступные слоты:
-• 🎰 Классические слоты
-• 🍒 Фруктовые автоматы
-• 💎 Драгоценные камни
-• 🎪 Цирковые слоты
-• 🏰 Средневековые слоты
-• 🚀 Космические приключения</b></blockquote>
-
-<blockquote><b>💰 Минимальная ставка: 10 RUB
-🎁 Максимальный выигрыш: 100,000 RUB</b></blockquote>
-
-<blockquote><b>🎲 Крути барабаны и выигрывай крупные суммы!</b></blockquote>`;
-
-    const filePath = this.getImagePath('bik_bet_4.jpg');
-    const media: any = {
-      type: 'photo',
-      media: { source: fs.readFileSync(filePath) },
-      caption: text,
-      parse_mode: 'HTML',
-    };
-
-    await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🎰 Играть в слоты', 'play_slots')],
-        [Markup.button.callback('📊 Статистика', 'slots_stats')],
-        [Markup.button.callback('🏆 Топ выигрышей', 'slots_top')],
         [Markup.button.callback('⬅️ Назад', 'start')],
       ]).reply_markup,
     });

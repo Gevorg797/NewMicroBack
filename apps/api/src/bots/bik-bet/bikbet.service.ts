@@ -209,9 +209,7 @@ export class BikBetService {
     });
   }
 
-  async slotsB2B(ctx: any) {
-    await ctx.answerCbQuery();
-  }
+  async slotsB2B(ctx: any) {}
 
   async donate(ctx: any) {
     const text = `
@@ -825,6 +823,42 @@ export class BikBetService {
           Markup.button.callback('🎲 По кол-ву игр', 'leaderboard_games'),
           Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
         ],
+        [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async slotb2b(ctx: any) {
+    const text = `<b>🎰 B2B Slots</b>
+
+<blockquote><b>🎮 Добро пожаловать в раздел B2B Slots!</b></blockquote>
+
+<blockquote><b>🎯 Доступные слоты:
+• 🎰 Классические слоты
+• 🍒 Фруктовые автоматы
+• 💎 Драгоценные камни
+• 🎪 Цирковые слоты
+• 🏰 Средневековые слоты
+• 🚀 Космические приключения</b></blockquote>
+
+<blockquote><b>💰 Минимальная ставка: 10 RUB
+🎁 Максимальный выигрыш: 100,000 RUB</b></blockquote>
+
+<blockquote><b>🎲 Крути барабаны и выигрывай крупные суммы!</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_4.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🎰 Играть в слоты', 'play_slots')],
+        [Markup.button.callback('📊 Статистика', 'slots_stats')],
+        [Markup.button.callback('🏆 Топ выигрышей', 'slots_top')],
         [Markup.button.callback('⬅️ Назад', 'start')],
       ]).reply_markup,
     });

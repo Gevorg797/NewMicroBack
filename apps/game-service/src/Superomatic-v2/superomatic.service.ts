@@ -1,32 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SuperomaticUtilsService } from './superomatic.utils.service';
 import { SuperomaticApiService } from './superomatic.api.service';
 import { ProviderSettingsService } from './provider-settings.service';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
 import { Game, GameProvider, GameSubProvider } from '@lib/database';
+import { IExtendedGameProvider, ProviderPayload, GameLoadResult } from '../interfaces/game-provider.interface';
 
 @Injectable()
-export class SuperomaticService {
+export class SuperomaticService implements IExtendedGameProvider {
+    private readonly logger = new Logger(SuperomaticService.name);
     constructor(
         private readonly providerSettings: ProviderSettingsService,
         private readonly api: SuperomaticApiService,
         private readonly utils: SuperomaticUtilsService,
         private readonly em: EntityManager,
     ) {
-        // Initialize any dependencies here
+        this.logger.log('SuperomaticService initialized');
     }
 
-    async loadGames(payload: { siteId: number; params?: any }) {
+    async loadGames(payload: ProviderPayload): Promise<GameLoadResult> {
+        this.logger.debug(`Loading games for site: ${payload.siteId}`);
+
         const { params, siteId } = payload;
-        const { baseURL, providerId } =
-            await this.providerSettings.getProviderSettings(siteId);
+        const { baseURL, providerId } = await this.providerSettings.getProviderSettings(siteId);
 
         // Call Superomatic API with proper parameters
         const apiResponse = await this.api.getGames(baseURL, params);
 
         // Extract games from Superomatic API response
         const gamesList: Array<any> = (apiResponse?.games || apiResponse?.response || []);
+        this.logger.debug(`Retrieved ${gamesList.length} games from Superomatic API`);
 
         let loadGamesCount = 0;
         let deleteGamesCount = 0;
@@ -35,6 +39,7 @@ export class SuperomaticService {
 
         // Hard reset: delete games and sub-providers of this provider
         if (params?.isHardReset) {
+            this.logger.debug('Performing hard reset - deleting existing games');
             const subProviders = await this.em.find(GameSubProvider, { provider: providerRef });
             for (const sp of subProviders) {
                 const toDelete = await this.em.find(Game, { subProvider: sp });
@@ -43,6 +48,7 @@ export class SuperomaticService {
             }
             // Remove sub-providers after removing games
             await this.em.removeAndFlush(subProviders);
+            this.logger.debug(`Deleted ${deleteGamesCount} existing games`);
         }
 
         for (const game of gamesList) {
@@ -63,7 +69,7 @@ export class SuperomaticService {
                     image: game.icon,
                     subProvider,
                     metadata: { provider: game.provider, isEnabled: game.is_enabled },
-                },);
+                });
                 await this.em.flush();
             } else {
                 const newGame = new Game();
@@ -81,38 +87,39 @@ export class SuperomaticService {
                     image: game.icon,
                     subProvider,
                     metadata: { provider: game.provider, isEnabled: game.is_enabled },
-                },);
+                });
                 await this.em.persistAndFlush(newGame);
             }
 
             loadGamesCount++;
         }
 
-        // Return raw data expected by ResponseInterceptor
-        return {
+        const result: GameLoadResult = {
             loadGamesCount,
             deleteGamesCount,
             totalGames: gamesList.length,
             games: gamesList.slice(0, 10) // Return first 10 games as sample
         };
+
+        this.logger.debug(`Successfully loaded ${loadGamesCount} games from Superomatic`);
+        return result;
     }
 
-    async getCurrencies(payload: { userId: number; siteId: number }) {
-        const { baseURL } = await this.providerSettings.getProviderSettings(
-            payload.siteId,
-        );
+    async getCurrencies(payload: ProviderPayload): Promise<any> {
+        this.logger.debug(`Getting currencies for site: ${payload.siteId}`);
+
+        const { baseURL } = await this.providerSettings.getProviderSettings(payload.siteId);
         const response = await this.api.getCurrenciesList(baseURL);
+
+        this.logger.debug('Successfully retrieved currencies from Superomatic');
         return response;
     }
 
-    async initGameDemoSession(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
+    async initGameDemoSession(payload: ProviderPayload): Promise<any> {
+        this.logger.debug(`Initializing demo session for game: ${payload.params.gameId}`);
+
         const { params, siteId } = payload;
-        const { baseURL, key } =
-            await this.providerSettings.getProviderSettings(siteId);
+        const { baseURL, key } = await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format according to API docs
         const superomaticParams = {
@@ -131,17 +138,16 @@ export class SuperomaticService {
             ...superomaticParams,
             sign,
         });
+
+        this.logger.debug('Successfully initialized demo session with Superomatic');
         return response;
     }
 
-    async initGameSession(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
+    async initGameSession(payload: ProviderPayload): Promise<any> {
+        this.logger.debug(`Initializing game session for game: ${payload.params.gameId}`);
+
         const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
+        const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
@@ -157,17 +163,16 @@ export class SuperomaticService {
             ...superomaticParams,
             sign,
         });
+
+        this.logger.debug('Successfully initialized game session with Superomatic');
         return response;
     }
 
-    async gamesFreeRoundsInfo(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
+    async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {
+        this.logger.debug(`Getting free rounds info for game: ${payload.params.gameId}`);
+
         const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
+        const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
@@ -182,252 +187,21 @@ export class SuperomaticService {
             ...superomaticParams,
             sign,
         });
+
+        this.logger.debug('Successfully retrieved free rounds info from Superomatic');
         return response;
     }
 
-    async checkBalance(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
+    async closeSession(payload: ProviderPayload): Promise<any> {
+        this.logger.debug(`Closing session for site: ${payload.siteId}`);
+
         const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
+        const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
         // Transform params to Superomatic format
         const superomaticParams = {
             'partner.alias': partnerAlias || params.partnerAlias,
             'partner.session': params.partnerSession,
-            'currency': params.currency,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/balance.check');
-        const response = await this.api.checkBalance(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async getGameHistory(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'game.id': params.gameId,
-            'currency': params.currency,
-            ...(params.from && { 'from.date': params.from }),
-            ...(params.to && { 'to.date': params.to }),
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/games.history');
-        const response = await this.api.getGameHistory(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async getGameStatistics(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'game.id': params.gameId,
-            'currency': params.currency,
-            ...(params.from && { 'from.date': params.from }),
-            ...(params.to && { 'to.date': params.to }),
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/games.statistics');
-        const response = await this.api.getGameStatistics(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async getProviderInfo(payload: {
-        userId: number;
-        siteId: number;
-        params?: any;
-    }) {
-        const { siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || payload.params?.partnerAlias,
-            'partner.session': payload.params?.partnerSession,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/provider.info');
-        const response = await this.api.getProviderInfo(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async cancelTransaction(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'trx.id': params.trxId,
-            'currency': params.currency,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/trx.cancel');
-        const response = await this.api.cancelTransaction(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async completeTransaction(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'trx.id': params.trxId,
-            'currency': params.currency,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/trx.complete');
-        const response = await this.api.completeTransaction(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async checkSession(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'session.id': params.sessionId,
-            'currency': params.currency,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/check.session');
-        const response = await this.api.checkSession(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async withdrawBet(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'trx.id': params.trxId,
-            'amount': Math.round(params.amount * 100), // Convert to cents
-            'currency': params.currency,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/withdraw.bet');
-        const response = await this.api.withdrawBet(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-    async depositWin(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'trx.id': params.trxId,
-            'amount': Math.round(params.amount * 100), // Convert to cents
-            'currency': params.currency,
-        };
-
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/deposit.win');
-        const response = await this.api.depositWin(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
-        return response;
-    }
-
-
-    async closeSession(payload: {
-        userId: number;
-        siteId: number;
-        params: any;
-    }) {
-        const { params, siteId } = payload;
-        const { baseURL, key, partnerAlias } =
-            await this.providerSettings.getProviderSettings(siteId);
-
-        // Transform params to Superomatic format
-        const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'currency': params.currency,
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/session.close');
@@ -435,6 +209,11 @@ export class SuperomaticService {
             ...superomaticParams,
             sign,
         });
+
+        this.logger.debug('Successfully closed session with Superomatic');
         return response;
     }
+
+
+
 }

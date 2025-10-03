@@ -4,7 +4,6 @@ import { GameProviderSetting } from '@lib/database';
 import { ProviderSettings } from '../interfaces/game-provider.interface';
 import {
   ProviderSettingsNotFoundException,
-  ProviderConfigurationException
 } from '../exceptions/game-service.exceptions';
 
 @Injectable()
@@ -18,11 +17,8 @@ export class B2BSlotsProviderSettingsService {
   async getProviderSettings(siteId: number): Promise<ProviderSettings> {
     this.logger.debug(`Getting B2BSlots provider settings for site: ${siteId}`);
 
-    const providerId = Number(process.env.B2BSLOTS_PROVIDER_ID || '0');
-    if (!providerId) {
-      this.logger.error('B2BSLOTS_PROVIDER_ID environment variable is not set');
-      throw new ProviderConfigurationException('B2BSLOTS_PROVIDER_ID');
-    }
+    const providerId = 2;
+
 
     const setting = await this.em.findOne(GameProviderSetting, {
       provider: providerId as any,

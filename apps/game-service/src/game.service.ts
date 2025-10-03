@@ -1,140 +1,148 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/postgresql';
-import { Game, GameProvider } from '@lib/database';
-import { SuperomaticService } from './Superomatic-v2/superomatic.service';
-import { B2BSlotsService } from './B2BSlots-v1/b2bslots.service';
-
-/**
- * Payload interface for session-related requests that require gameId-based routing
- */
-export interface SessionPayload {
-    userId: number;
-    siteId: number;
-    gameId: number; // This is the key field used for provider routing
-    params: any;
-}
+import { Injectable, Logger } from '@nestjs/common';
+import { ProviderStrategyFactory } from './strategies/provider-strategy.factory';
+import { SessionPayload, ProviderPayload, LoadGamesPayload } from './interfaces/game-provider.interface';
 
 /**
  * Main Game Service that routes requests to appropriate providers based on gameId
  * 
- * This service acts as a router that:
+ * This service acts as a unified gateway that:
  * 1. Receives requests with gameId
- * 2. Queries the database to determine which provider the game belongs to
- * 3. Routes the request to the appropriate provider service (Superomatic or B2BSlots)
+ * 2. Determines the appropriate provider using the strategy factory
+ * 3. Routes the request to the correct provider service implementation
+ * 
+ * Features:
+ * - Strategy pattern for provider routing (eliminates switch statements)
+ * - Comprehensive error handling with custom exceptions
+ * - Structured logging for debugging and monitoring
+ * - Type-safe interfaces for all operations
  * 
  * Usage:
- * - For session creation requests, use the unified message patterns:
- *   - 'game.initGameSession' instead of 'superomatic.initGameSession' or 'b2bslots.initGameSession'
- *   - 'game.initGameDemoSession' instead of provider-specific patterns
- *   - 'game.gamesFreeRoundsInfo' instead of provider-specific patterns
- *   - 'game.closeSession' instead of provider-specific patterns
- * 
- * - The payload must include gameId which will be used to determine the provider
- * - The gameId will be removed from the payload before forwarding to provider services
+ * - Use unified message patterns: 'game.initGameSession', 'game.initGameDemoSession', etc.
+ * - The payload must include gameId which determines the provider routing
+ * - The gameId is transformed to provider-specific format before forwarding
  */
 @Injectable()
 export class GameService {
+    private readonly logger = new Logger(GameService.name);
+
     constructor(
-        private readonly em: EntityManager,
-        private readonly superomaticService: SuperomaticService,
-        private readonly b2bSlotsService: B2BSlotsService,
-    ) { }
+        private readonly providerStrategyFactory: ProviderStrategyFactory,
+    ) {
+        this.logger.log('GameService initialized with strategy pattern');
+    }
 
     /**
-     * Determines which provider a game belongs to based on gameId
+     * Helper method to prepare provider payload from session payload
      */
-    async getGameProvider(gameId: number) {
-        const game = await this.em.findOne(
-            Game,
-            { id: gameId },
-            { populate: ['subProvider.provider'] }
-        );
+    private async prepareProviderPayload(sessionPayload: SessionPayload): Promise<ProviderPayload> {
+        this.logger.debug(`Preparing provider payload for game: ${sessionPayload.gameId}`);
 
-        if (!game) {
-            throw new BadRequestException(`Game with ID ${gameId} not found`);
-        }
+        const providerInfo = await this.providerStrategyFactory.getGameProvider(sessionPayload.gameId);
 
-        const providerName = game.subProvider.provider.name.toLowerCase();
-        const gameIdStr = game.uuid.toString();
+        // Transform gameId to provider-specific format
+        const providerPayload: ProviderPayload = {
+            userId: sessionPayload.userId,
+            siteId: sessionPayload.siteId,
+            params: {
+                ...sessionPayload.params,
+                gameId: providerInfo.gameIdStr,
+            },
+        };
 
-        // Map provider names to service identifiers
-        if (providerName.includes('superomatic')) {
-            return { providerName, gameIdStr };
-        } else if (providerName.includes('b2b') || providerName.includes('b2bslots')) {
-            return { providerName, gameIdStr };
-        }
+        this.logger.debug(`Provider payload prepared for: ${providerInfo.providerName}`);
+        return providerPayload;
+    }
 
-        throw new BadRequestException(`Unknown provider for game ${gameId}: ${providerName}`);
+    /**
+     * Generic method to execute provider operations
+     */
+    private async executeProviderOperation<T>(
+        sessionPayload: SessionPayload,
+        operation: string,
+        providerMethod: (provider: any, payload: ProviderPayload) => Promise<T>
+    ): Promise<T> {
+        this.logger.debug(`Executing ${operation} for game: ${sessionPayload.gameId}`);
+
+        const providerPayload = await this.prepareProviderPayload(sessionPayload);
+        const providerInfo = await this.providerStrategyFactory.getGameProvider(sessionPayload.gameId);
+        const provider = this.providerStrategyFactory.getProviderStrategy(providerInfo.providerName);
+
+        const result = await providerMethod(provider, providerPayload);
+        this.logger.debug(`${operation} completed successfully for provider: ${providerInfo.providerName}`);
+        return result;
     }
 
     /**
      * Routes session creation requests to the appropriate provider
      */
-    async initGameSession(payload: SessionPayload) {
-        const provider = await this.getGameProvider(payload.gameId);
-        payload.params.gameId = provider.gameIdStr;
-
-
-        switch (provider.providerName) {
-            case 'superomatic':
-                return this.superomaticService.initGameSession(payload);
-            case 'b2bslots':
-                return this.b2bSlotsService.initGameSession(payload);
-            default:
-                throw new BadRequestException(`Unsupported provider: ${provider}`);
-        }
+    async initGameSession(payload: SessionPayload): Promise<any> {
+        return this.executeProviderOperation(
+            payload,
+            'initGameSession',
+            (provider, providerPayload) => provider.initGameSession(providerPayload)
+        );
     }
 
     /**
      * Routes demo session creation requests to the appropriate provider
      */
-    async initGameDemoSession(payload: SessionPayload) {
-        const provider = await this.getGameProvider(payload.gameId);
-        payload.params.gameId = provider.gameIdStr;
-
-
-        switch (provider.providerName) {
-            case 'superomatic':
-                return this.superomaticService.initGameDemoSession(payload);
-            case 'b2bslots':
-                return this.b2bSlotsService.initGameDemoSession(payload);
-            default:
-                throw new BadRequestException(`Unsupported provider: ${provider}`);
-        }
+    async initGameDemoSession(payload: SessionPayload): Promise<any> {
+        return this.executeProviderOperation(
+            payload,
+            'initGameDemoSession',
+            (provider, providerPayload) => provider.initGameDemoSession(providerPayload)
+        );
     }
 
     /**
      * Routes free rounds info requests to the appropriate provider
      */
-    async gamesFreeRoundsInfo(payload: SessionPayload) {
-        const provider = await this.getGameProvider(payload.gameId);
-        payload.params.gameId = provider.gameIdStr;
-
-        switch (provider.providerName) {
-            case 'superomatic':
-                return this.superomaticService.gamesFreeRoundsInfo(payload);
-            case 'b2bslots':
-                return this.b2bSlotsService.gamesFreeRoundsInfo(payload);
-            default:
-                throw new BadRequestException(`Unsupported provider: ${provider}`);
-        }
+    async gamesFreeRoundsInfo(payload: SessionPayload): Promise<any> {
+        return this.executeProviderOperation(
+            payload,
+            'gamesFreeRoundsInfo',
+            (provider, providerPayload) => provider.gamesFreeRoundsInfo(providerPayload)
+        );
     }
 
     /**
      * Routes close session requests to the appropriate provider
      */
-    async closeSession(payload: SessionPayload) {
-        const provider = await this.getGameProvider(payload.gameId);
-        payload.params.gameId = provider.gameIdStr;
+    async closeSession(payload: SessionPayload): Promise<any> {
+        return this.executeProviderOperation(
+            payload,
+            'closeSession',
+            (provider, providerPayload) => provider.closeSession(providerPayload)
+        );
+    }
 
+    /**
+     * Routes load games requests to the appropriate provider using provider name
+     */
+    async loadGames(payload: LoadGamesPayload): Promise<any> {
+        this.logger.debug(`Loading games for provider: ${payload.providerName}, site: ${payload.siteId}`);
 
-        switch (provider.providerName) {
-            case 'superomatic':
-                return this.superomaticService.closeSession(payload);
-            case 'b2bslots':
-                return this.b2bSlotsService.closeSession(payload);
-            default:
-                throw new BadRequestException(`Unsupported provider: ${provider}`);
-        }
+        const provider = this.providerStrategyFactory.getProviderStrategy(payload.providerName);
+
+        const providerPayload: ProviderPayload = {
+            userId: 0, // System operation, no specific user
+            siteId: payload.siteId,
+            params: payload.params || {},
+        };
+
+        const result = await provider.loadGames(providerPayload);
+        this.logger.debug(`loadGames completed successfully for provider: ${payload.providerName}`);
+        return result;
+    }
+
+    /**
+     * Routes get currencies requests to the appropriate provider
+     */
+    async getCurrencies(payload: SessionPayload): Promise<any> {
+        return this.executeProviderOperation(
+            payload,
+            'getCurrencies',
+            (provider, providerPayload) => provider.getCurrencies(providerPayload)
+        );
     }
 }

@@ -3,6 +3,9 @@ import { B2BSlotsProviderSettingsService } from './provider-settings.service';
 import { B2BSlotsApiService } from './b2bslots.api.service';
 import { B2BSlotsUtilsService } from './b2bslots.utils.service';
 import { IGameProvider, ProviderPayload, GameLoadResult } from '../interfaces/game-provider.interface';
+import { EntityManager } from '@mikro-orm/postgresql';
+import { wrap } from '@mikro-orm/core';
+import { Game, GameProvider, GameSubProvider } from '@lib/database';
 
 @Injectable()
 export class B2BSlotsService implements IGameProvider {
@@ -11,6 +14,7 @@ export class B2BSlotsService implements IGameProvider {
     private readonly settings: B2BSlotsProviderSettingsService,
     private readonly api: B2BSlotsApiService,
     private readonly utils: B2BSlotsUtilsService,
+    private readonly em: EntityManager,
   ) {
     this.logger.log('B2BSlotsService initialized');
   }
@@ -18,22 +22,116 @@ export class B2BSlotsService implements IGameProvider {
   async loadGames(payload: ProviderPayload): Promise<GameLoadResult> {
     this.logger.debug(`Loading games for site: ${payload.siteId}`);
 
-    const { baseURL, token } = await this.settings.getProviderSettings(payload.siteId);
+    const { baseURL, token, providerId } = await this.settings.getProviderSettings(payload.siteId);
 
     // Use the B2BSlots games list API with operator ID
     const games = await this.api.getGames(baseURL, token);
 
-    this.logger.debug(`Retrieved ${Array.isArray(games) ? games.length : 0} games from B2BSlots for operator ${token}`);
+    if (!Array.isArray(games) || games.length === 0) {
+      this.logger.warn('No games received from B2BSlots API');
+      return {
+        loadGamesCount: 0,
+        deleteGamesCount: 0,
+        totalGames: 0,
+        games: [],
+      };
+    }
 
-    // TODO: map and insert games from B2BSlots format
+    // Get or create the main provider
+    let provider = await this.em.findOne(GameProvider, { id: providerId }) || undefined;
+    if (!provider) {
+      provider = new GameProvider();
+      wrap(provider).assign({
+        name: 'B2BSlots',
+      });
+      await this.em.persistAndFlush(provider);
+    }
+
+    // Track unique subproviders
+    const subProviderMap = new Map<string, GameSubProvider>();
+    let loadGamesCount = 0;
+
+    // Process each game
+    for (const gameData of games) {
+      try {
+        // Get or create subprovider
+        const subProviderName = gameData.subProvider || 'Unknown';
+        let subProvider = subProviderMap.get(subProviderName);
+
+        if (!subProvider) {
+          subProvider = await this.em.findOne(GameSubProvider, {
+            name: subProviderName,
+            provider: provider
+          }) || undefined;
+
+          if (!subProvider) {
+            subProvider = new GameSubProvider();
+            wrap(subProvider).assign({
+              name: subProviderName,
+              provider,
+            });
+            await this.em.persistAndFlush(subProvider);
+          }
+          subProviderMap.set(subProviderName, subProvider);
+        }
+
+        // Check if game already exists
+        let existingGame = await this.em.findOne(Game, {
+          uuid: gameData.uuid,
+          subProvider
+        });
+
+        if (existingGame) {
+          // Update existing game
+          wrap(existingGame).assign({
+            name: gameData.name,
+            type: gameData.type,
+            technology: gameData.technology,
+            isHasLobby: gameData.isHasLobby,
+            isMobile: gameData.isMobile,
+            isHasFreeSpins: gameData.isHasFreeSpins,
+            isHasTables: gameData.isHasTables,
+            isFreeSpinValidUntilFullDay: gameData.isFreeSpinValidUntilFullDay,
+            isDesktop: gameData.isDesktop,
+            image: gameData.image,
+            metadata: gameData.metadata,
+          });
+          await this.em.flush();
+        } else {
+          // Create new game
+          const newGame = new Game();
+          wrap(newGame).assign({
+            name: gameData.name,
+            uuid: gameData.uuid,
+            type: gameData.type,
+            technology: gameData.technology,
+            isHasLobby: gameData.isHasLobby,
+            isMobile: gameData.isMobile,
+            isHasFreeSpins: gameData.isHasFreeSpins,
+            isHasTables: gameData.isHasTables,
+            isFreeSpinValidUntilFullDay: gameData.isFreeSpinValidUntilFullDay,
+            isDesktop: gameData.isDesktop,
+            image: gameData.image,
+            subProvider,
+            metadata: gameData.metadata,
+          });
+          await this.em.persistAndFlush(newGame);
+        }
+
+        loadGamesCount++;
+      } catch (error) {
+        this.logger.error(`Failed to process game ${gameData.name}:`, error.message);
+      }
+    }
+
     const result: GameLoadResult = {
-      loadGamesCount: Array.isArray(games) ? games.length : 0,
+      loadGamesCount,
       deleteGamesCount: 0,
-      totalGames: Array.isArray(games) ? games.length : 0,
-      games: Array.isArray(games) ? games.slice(0, 10) : [],
+      totalGames: games.length,
+      games: games.slice(0, 10),
     };
 
-    this.logger.debug(`Loaded ${result.loadGamesCount} games from B2BSlots`);
+    this.logger.debug(`Successfully loaded ${result.loadGamesCount} games from B2BSlots`);
     return result;
   }
 

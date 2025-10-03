@@ -6,17 +6,21 @@ import { B2BSlotsService } from './b2bslots.service';
 import { B2BSlotsApiService } from './b2bslots.api.service';
 import { B2BSlotsUtilsService } from './b2bslots.utils.service';
 import { B2BSlotsProviderSettingsService } from './provider-settings.service';
+import { B2BSlotsWebhookController } from './b2bslots.webhook.controller';
+import { B2BSlotsWebhookService } from './b2bslots.webhook.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MikroOrmModule.forFeature([GameProviderSetting]),
   ],
+  controllers: [B2BSlotsWebhookController],
   providers: [
     B2BSlotsService,
     B2BSlotsApiService,
     B2BSlotsUtilsService,
     B2BSlotsProviderSettingsService,
+    B2BSlotsWebhookService,
   ],
   exports: [B2BSlotsService],
 })

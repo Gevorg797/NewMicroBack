@@ -36,6 +36,7 @@ export class B2BSlotsProviderSettingsService {
       baseURL: setting.baseURL || '',
       key: setting.key || '',
       providerId,
+      token: setting.token, // B2BSlots operator ID for games list API
     };
   }
 }

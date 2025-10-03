@@ -18,10 +18,14 @@ export class B2BSlotsService implements IGameProvider {
   async loadGames(payload: ProviderPayload): Promise<GameLoadResult> {
     this.logger.debug(`Loading games for site: ${payload.siteId}`);
 
-    const { baseURL } = await this.settings.getProviderSettings(payload.siteId);
-    const games = await this.api.getGames(baseURL);
+    const { baseURL, token } = await this.settings.getProviderSettings(payload.siteId);
 
-    // TODO: map and insert
+    // Use the B2BSlots games list API with operator ID
+    const games = await this.api.getGames(baseURL, token);
+
+    this.logger.debug(`Retrieved ${Array.isArray(games) ? games.length : 0} games from B2BSlots for operator ${operatorId}`);
+
+    // TODO: map and insert games from B2BSlots format
     const result: GameLoadResult = {
       loadGamesCount: Array.isArray(games) ? games.length : 0,
       deleteGamesCount: 0,

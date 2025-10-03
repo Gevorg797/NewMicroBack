@@ -31,7 +31,7 @@ export interface ProviderSettings {
     key: string;
     providerId: number;
     partnerAlias?: string;
-    token?: string;
+    token?: string; // For B2BSlots operator ID
 }
 
 export interface GameLoadResult {

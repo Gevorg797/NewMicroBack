@@ -10,6 +10,9 @@ const ACTIVATE_FEATURES_API = '/do-activate-features-user-ingame';
 const UPDATE_FEATURES_API = '/do-update-features-user-ingame';
 const END_FEATURES_API = '/do-end-features-user-ingame';
 
+// B2BSlots Games List API
+const GET_GAMES_BY_OPERATOR = '/frontendsrv/apihandler.api';
+
 // Legacy endpoints for compatibility
 const GET_GAMES = '/games';
 const GET_CURRENCIES = '/currencies';
@@ -76,9 +79,26 @@ export class B2BSlotsApiService {
     return data;
   }
 
+  /**
+   * Get games list by operator ID (B2BSlots Games List API)
+   */
+  async getGamesByOperator(baseURL: string, operatorId: number | string) {
+    const cmd = JSON.stringify({
+      api: 'ls-games-by-operator-idget',
+      operator_id: operatorId.toString()
+    });
+
+    const url = `${baseURL}${GET_GAMES_BY_OPERATOR}?cmd=${encodeURIComponent(cmd)}`;
+    const { data } = await axios.get(url);
+    return data;
+  }
+
   // Legacy methods for compatibility with current interface
-  async getGames(baseURL: string) {
-    // B2BSlots doesn't have a games list API - games are accessed via direct URLs
+  async getGames(baseURL: string, operatorId?: number | string) {
+    if (operatorId !== undefined) {
+      return this.getGamesByOperator(baseURL, operatorId);
+    }
+    // Fallback to empty array if no operator ID provided
     return [];
   }
 

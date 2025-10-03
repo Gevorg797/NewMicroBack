@@ -121,7 +121,7 @@ export class SuperomaticService implements IExtendedGameProvider {
         const { params, siteId } = payload;
         const { baseURL, key } = await this.providerSettings.getProviderSettings(siteId);
 
-        // Transform params to Superomatic format according to API docs
+        // Transform unified payload to Superomatic-specific format
         const superomaticParams = {
             'game.id': params.gameId,
             'balance': Math.round(params.balance * 100), // Convert to cents

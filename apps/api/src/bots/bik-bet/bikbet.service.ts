@@ -993,7 +993,10 @@ export class BikBetService {
         [Markup.button.callback('От 50р:', 'ignore_game')],
         [
           Markup.button.callback('💎 CryptoBot', 'payment:crypto'),
-          Markup.button.callback('👛 FKwallet', 'paymentSystem_fkwallet_'),
+          Markup.button.callback(
+            '👛 FKwallet',
+            `paymentSystem_fkwallet_${amount}`,
+          ),
         ],
         [
           Markup.button.callback(
@@ -1129,6 +1132,47 @@ export class BikBetService {
     });
   }
 
+  async withdrawAmount(ctx: any, amount: number) {
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['balance'] },
+    );
+
+    if (!user || !user.balance) {
+      await ctx.answerCbQuery('⚠ Пользователь не найден. Нажмите /start', {
+        show_alert: true,
+      });
+      return;
+    }
+
+    if (user.balance?.balance < amount) {
+      await ctx.answerCbQuery('Недостаточно средств для вывода данной суммы.');
+      return;
+    }
+
+    const text = `
+<blockquote><b>💳 Вывод средств</b></blockquote>
+<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
+<blockquote><b>✅ Заявка на вывод ${amount} RUB создана!</b></blockquote>
+<blockquote><b>⏱ Ожидайте обработки заявки</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Назад к выводу', 'withdraw')],
+        [Markup.button.callback('🏠 Главное меню', 'start')],
+      ]).reply_markup,
+    });
+  }
+
   async withdrawCustom(ctx: any) {
     const text = `
 <blockquote><b>💰 Введите сумму вывода</b></blockquote>
@@ -1149,6 +1193,34 @@ export class BikBetService {
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('⬅️ Назад', 'withdraw')],
+      ]).reply_markup,
+    });
+  }
+
+  async fkwalletPayment(ctx: any, amount: number) {
+    const text = `
+<blockquote><b>👛 FKwallet Payment</b></blockquote>
+<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
+<blockquote><b>🔗 Перейдите по ссылке для оплаты через FKwallet</b></blockquote>
+<blockquote><b>✅ После оплаты средства поступят на ваш баланс</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_1.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.url(
+            '👛 Оплатить через FKwallet',
+            `https://fkwallet.com/pay?amount=${amount}&user=${ctx.from.id}`,
+          ),
+        ],
+        [Markup.button.callback('🔙 Назад к пополнению', 'donate_menu')],
       ]).reply_markup,
     });
   }

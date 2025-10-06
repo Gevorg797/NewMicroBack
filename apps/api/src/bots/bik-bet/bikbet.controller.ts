@@ -37,6 +37,37 @@ export class BikBetController {
       await this.bikbetService.depositAmount(ctx, amount);
     });
 
+    // Dynamic withdraw amount handler: withdraw:<amount>
+    this.bot.action(/withdraw:(.+)/, async (ctx) => {
+      const match = (ctx as any).match?.[1];
+
+      // Handle custom withdraw
+      if (match === 'custom') {
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawCustom(ctx);
+        return;
+      }
+
+      // Handle specific amounts
+      const amount = Number(match);
+      if (!Number.isFinite(amount)) {
+        await ctx.answerCbQuery('Некорректная сумма');
+        return;
+      }
+      await this.bikbetService.withdrawAmount(ctx, amount);
+    });
+
+    // FKwallet payment handler: paymentSystem_fkwallet_<amount>
+    this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
+      const amount = Number((ctx as any).match?.[1]);
+      if (!Number.isFinite(amount)) {
+        await ctx.answerCbQuery('Некорректная сумма');
+        return;
+      }
+      await ctx.answerCbQuery();
+      await this.bikbetService.fkwalletPayment(ctx, amount);
+    });
+
     // Game button click handler
     this.bot.action('games', async (ctx) => {
       await ctx.answerCbQuery();
@@ -1977,11 +2008,7 @@ export class BikBetController {
 
     // (moved earlier) dynamic deposit handler above
 
-    // Withdraw Custom button click handler
-    this.bot.action('withdraw:custom', async (ctx) => {
-      await ctx.answerCbQuery();
-      await this.bikbetService.withdrawCustom(ctx);
-    });
+    // Withdraw Custom handler is now handled by the dynamic withdraw handler above
 
     //My Bounses button click handler
     this.bot.action('myBonuses', async (ctx) => {

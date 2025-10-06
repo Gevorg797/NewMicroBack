@@ -60,7 +60,6 @@ export class SuperomaticApiService {
 
   async getGameSession(baseURL: string, requestBody: Record<string, any>) {
     const url = `${baseURL}${GET_GAME_SESSION}`;
-    console.log('Superomatic getGameSession requestBody:', requestBody, url); // --- IGNORE ---
     try {
       const { data } = await axios.get(url, {
         params: requestBody,

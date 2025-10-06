@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Headers } from '@nestjs/common';
 import { PartnerWebhooksService } from './partner-webhooks.service';
 
-@Controller('partner-webhooks')
+@Controller('webhooks/superomatic')
 export class PartnerWebhooksController {
     constructor(private readonly partnerWebhooksService: PartnerWebhooksService) { }
 

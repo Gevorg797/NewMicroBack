@@ -17,7 +17,7 @@ import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 const fAdapter = new FastifyAdapter({
   logger: false,
   querystringParser: (str: string) => qs.parse(str),
-  pluginTimeout: 60000,
+  pluginTimeout: 600000,
   bodyLimit: 1048576 * 5,
 });
 
@@ -63,7 +63,7 @@ async function bootstrap() {
     origin: '*',
   });
 
-  await app.listen(Number(process.env.ADMIN_PORT), 'localhost');
+  await app.listen(Number(process.env.ADMIN_PORT), '0.0.0.0');
 }
 
 void bootstrap();

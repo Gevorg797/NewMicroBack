@@ -54,6 +54,49 @@
         "tsConfigPath": "apps/game-service/tsconfig.app.json"
       }
     },
+    "file-service": {
+      "type": "application",
+      "root": "apps/file-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/file-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/file-service/tsconfig.app.json"
+      }
+    },
+    "cronjobs": {
+      "type": "application",
+      "root": "apps/cronjobs",
+      "entryFile": "main",
+      "sourceRoot": "apps/cronjobs/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/cronjobs/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "**/token.json",
+            "watchAssets": true
+          }
+        ]
+      }
+    },
+    "senders": {
+      "type": "application",
+      "root": "apps/senders",
+      "entryFile": "main",
+      "sourceRoot": "apps/senders/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/senders/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "**/*.hbs",
+            "watchAssets": true
+          },
+          {
+            "include": "**/*.png",
+            "watchAssets": true
+          }
+        ]
+      }
+    },
     "database": {
       "type": "library",
       "root": "libs/database",

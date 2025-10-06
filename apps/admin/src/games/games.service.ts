@@ -15,38 +15,49 @@ export class GamesService {
     return this.msGameService.loadSuperomaticGames(data);
   }
 
-  async getCurrencies(data: { userId: number; siteId: number }) {
-    return this.msGameService.superomaticGetCurrencies(data);
+  async loadB2BSlotsGames(data: { siteId: number; params?: any }) {
+    return this.msGameService.loadB2BSlotsGames(data);
   }
 
+  // Note: These methods now use unified routing based on gameId from params
   async initGameDemoSession(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticInitDemo(data);
+    const { gameId, ...otherParams } = data.params;
+    return this.msGameService.initGameDemoSession({
+      userId: data.userId,
+      siteId: data.siteId,
+      gameId,
+      params: otherParams
+    });
   }
 
   async initGameSession(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticInitSession(data);
+    const { gameId, ...otherParams } = data.params;
+    return this.msGameService.initGameSession({
+      userId: data.userId,
+      siteId: data.siteId,
+      gameId,
+      params: otherParams
+    });
   }
 
   async gamesFreeRoundsInfo(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticFreeRoundsInfo(data);
+    const { gameId, ...otherParams } = data.params;
+    return this.msGameService.gamesFreeRoundsInfo({
+      userId: data.userId,
+      siteId: data.siteId,
+      gameId,
+      params: otherParams
+    });
   }
-
-
-  async getGameHistory(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticGetGameHistory(data);
-  }
-
-  async getGameStatistics(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticGetGameStatistics(data);
-  }
-
-  async getProviderInfo(data: { userId: number; siteId: number; params?: any }) {
-    return this.msGameService.superomaticGetProviderInfo(data);
-  }
-
 
   async closeSession(data: { userId: number; siteId: number; params: any }) {
-    return this.msGameService.superomaticCloseSession(data);
+    const { gameId, ...otherParams } = data.params;
+    return this.msGameService.closeSession({
+      userId: data.userId,
+      siteId: data.siteId,
+      gameId,
+      params: otherParams
+    });
   }
 
   async getGames(query: PaginateQuery): Promise<PaginateResult<Game>> {

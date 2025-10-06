@@ -46,6 +46,8 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
+  app.setGlobalPrefix('api');
+
   const docs = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,
   });
@@ -54,6 +56,6 @@ async function bootstrap() {
 
   app.enableCors({ origin: '*' });
 
-  await app.listen(Number(process.env.APP_PORT), 'localhost');
+  await app.listen(Number(process.env.APP_PORT), '0.0.0.0');
 }
 void bootstrap();

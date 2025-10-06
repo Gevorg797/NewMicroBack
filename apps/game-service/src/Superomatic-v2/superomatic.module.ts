@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { SuperomaticController } from './superomatic.controller';
 import { SuperomaticService } from './superomatic.service';
 import { PartnerWebhooksController } from './partner-webhooks.controller';
 import { PartnerWebhooksService } from './partner-webhooks.service';
@@ -15,7 +14,7 @@ import { SuperomaticUtilsService } from './superomatic.utils.service';
         ConfigModule.forRoot({ isGlobal: true }),
         MikroOrmModule.forFeature([GameProviderSetting, Game, GameSubProvider, GameProvider, User]),
     ],
-    controllers: [SuperomaticController, PartnerWebhooksController],
+    controllers: [PartnerWebhooksController],
     providers: [
         SuperomaticService,
         PartnerWebhooksService,

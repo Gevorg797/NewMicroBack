@@ -8,11 +8,13 @@ import { ProviderSettingsService } from './provider-settings.service';
 import { GameProviderSetting, Game, GameSubProvider, GameProvider, User } from '@lib/database';
 import { SuperomaticApiService } from './superomatic.api.service';
 import { SuperomaticUtilsService } from './superomatic.utils.service';
+import { RepositoryModule } from '../repository/repository.module';
 
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         MikroOrmModule.forFeature([GameProviderSetting, Game, GameSubProvider, GameProvider, User]),
+        RepositoryModule,
     ],
     controllers: [PartnerWebhooksController],
     providers: [

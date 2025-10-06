@@ -6,16 +6,7 @@ export class CreatePayinProcessDto {
     amount: number
 
     @IsNumber()
-    providerId: number
-
-    @IsNumber()
-    siteId: number
-
-    @IsNumber()
     methodId: number
-
-    @IsNumber()
-    currencyId: number
 
     @IsNumber()
     userId: number

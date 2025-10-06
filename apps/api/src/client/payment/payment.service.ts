@@ -1,13 +1,11 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { CreatePayinProcessDto } from './dto/create-payin-process.dto';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   Currency,
-  FinanceProviderMethods,
   FinanceProviderSettings,
   FinanceTransactions,
   User,
@@ -20,179 +18,192 @@ import {
 } from '@lib/database/entities/finance-provider-transactions.entity';
 import { MsFinanceService } from 'libs/microservices-clients/ms-finance/ms-finance.service';
 import { CreatePayoutProcessDto } from './dto/create-payout-process.dto';
+import { FinanceProviderSubMethods } from '@lib/database/entities/finance-provider-sub-method.entity';
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly msFinanceService: MsFinanceService,
-    @InjectRepository(FinanceProviderMethods)
-    readonly fiananceProviderMethodsRepo: EntityRepository<FinanceProviderMethods>,
+    @InjectRepository(FinanceProviderSubMethods)
+    readonly fiananceProviderSubMethodsRepo: EntityRepository<FinanceProviderSubMethods>,
     @InjectRepository(FinanceProviderSettings)
     readonly financeProviderSettingsRepo: EntityRepository<FinanceProviderSettings>,
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionsRepo: EntityRepository<FinanceTransactions>,
     @InjectRepository(User)
     readonly userRepo: EntityRepository<User>,
-  ) {}
+  ) { }
 
   async payin(body: CreatePayinProcessDto) {
-    const { providerId, siteId, currencyId, methodId, amount, userId } = body;
+    const { methodId, amount, userId } = body;
 
-    // const method = await this.fiananceProviderMethodsRepo.findOne({ id: methodId })
+    const subMethod = await this.fiananceProviderSubMethodsRepo.findOne(
+      { id: methodId },
+      { populate: ['method.providerSettings', 'method.providerSettings.provider'] }
+    );
 
-    // if (!method) {
-    //     throw new Error('Method not found');
-    // }
+    const user = await this.userRepo.findOne({ id: userId }, {
+      populate: ['balance.currency']
+    })
 
-    // if (method.minAmount > amount) {
-    //     throw new Error(`minAmount ${method.minAmount}`);
-    // }
+    if (!user) {
+      throw new Error('User not found')
+    }
 
-    // if (method.maxAmount < amount) {
-    //     throw new Error(`maxAmount ${method.maxAmount}`);
-    // }
+    if (!subMethod) {
+      throw new Error('Method not found');
+    }
 
-    // const providerSettings = await this.financeProviderSettingsRepo.findOne({
-    //     site: { id: siteId },
-    //     provider: { id: providerId }
-    // }, {
-    //     populate: ['provider']
-    // })
+    if (subMethod.minAmount > amount) {
+      throw new Error(`minAmount ${subMethod.minAmount}`);
+    }
 
-    // if (!providerSettings) {
-    //     throw new Error('Provider not found');
-    // }
+    if (subMethod.maxAmount < amount) {
+      throw new Error(`maxAmount ${subMethod.maxAmount}`);
+    }
 
-    // if (!providerSettings.provider.isEnabled) {
-    //     throw new Error('Provider is not available')
-    // }
+    if (!subMethod.method.providerSettings) {
+      throw new Error('Provider not found');
+    }
 
-    // const transaction = this.financeTransactionsRepo.create({
-    //     amount,
-    //     type: PaymentTransactionType.PAYIN,
-    //     method,
-    //     user: this.financeTransactionsRepo.getEntityManager().getReference(User, userId),
-    //     currency: this.financeTransactionsRepo.getEntityManager().getReference(Currency, currencyId),
-    //     status: PaymentTransactionStatus.PENDING,
-    //     userResponseStatus: PaymentTransactionUserResponseStatus.PENDING
-    // });
+    if (!subMethod.isEnabled) {
+      throw new Error('method is not available')
+    }
 
-    // await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
+    const transaction = this.financeTransactionsRepo.create({
+      amount,
+      type: PaymentTransactionType.PAYIN,
+      subMethod,
+      user: this.financeTransactionsRepo
+        .getEntityManager()
+        .getReference(User, userId),
+      currency: this.financeTransactionsRepo
+        .getEntityManager()
+        .getReference(Currency, user.balance?.currency.id as number),
+      status: PaymentTransactionStatus.PENDING,
+      userResponseStatus: PaymentTransactionUserResponseStatus.PENDING
+    });
 
-    // const reqBody = {
-    //     providerSettingsId: providerSettings.id as number,
-    //     transactionId: transaction.id as number,
-    //     amount,
-    //     currencyId
-    // }
+    await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
 
-    // let response: any;
+    const reqBody = {
+      transactionId: transaction.id as number,
+      amount,
+    }
 
-    // try {
-    //     switch (providerSettings.provider.name) {
-    //         case 'Freekassa':
-    //             response = this.msFinanceService.freekassaCreatePayin(reqBody)
-    //             break;
-    //         case 'Cryptobot':
-    //             response = this.msFinanceService.cryptobotCreatePayin(reqBody)
-    //             break;
-    //         default:
-    //             break;
-    //     }
+    let response: any;
 
-    //     return response
-    // } catch (error) {
-    //     transaction.status = PaymentTransactionStatus.FAILED;
-    //     await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
+    try {
+      switch (subMethod.method.providerSettings.provider.name) {
+        case 'Freekassa':
+          response = await this.msFinanceService.freekassaCreatePayin(reqBody)
+          break;
+        case 'Cryptobot':
+          response = await this.msFinanceService.cryptobotCreatePayin(reqBody)
+          break;
+        case 'Yoomoney':
+          response = await this.msFinanceService.yoomoneyCreatePayin(reqBody)
+        default:
+          break;
+      }
 
-    //     throw new BadRequestException(error.message);
-    // }
+      return response
+    } catch (error) {
+      transaction.status = PaymentTransactionStatus.FAILED;
+      await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
+
+      throw new BadRequestException(error.message);
+    }
   }
 
   async payout(body: CreatePayoutProcessDto) {
-    const { currencyId, methodId, amount, userId } = body;
+    const { methodId, amount, userId, requisite } = body;
 
-    // const method = await this.fiananceProviderMethodsRepo.findOne(
-    //   { id: methodId },
-    //   {
-    //     populate: ['providerSettings', 'providerSettings.provider'],
-    //   },
-    // );
+    const subMethod = await this.fiananceProviderSubMethodsRepo.findOne(
+      { id: methodId },
+      { populate: ['method.providerSettings', 'method.providerSettings.provider'] }
+    );
 
-    // if (!method) {
-    //   throw new Error('Method not found');
-    // }
+    if (!subMethod) {
+      throw new Error('Method not found');
+    }
 
-    // if (method.minAmount > amount) {
-    //   throw new Error(`minAmount ${method.minAmount}`);
-    // }
+    if (subMethod.minAmount > amount) {
+      throw new Error(`minAmount ${subMethod.minAmount}`);
+    }
 
-    // if (method.maxAmount < amount) {
-    //   throw new Error(`maxAmount ${method.maxAmount}`);
-    // }
+    if (subMethod.maxAmount < amount) {
+      throw new Error(`maxAmount ${subMethod.maxAmount}`);
+    }
 
-    // if (!method.providerSettings) {
-    //   throw new Error('Provider not found');
-    // }
+    if (!subMethod.isEnabled) {
+      throw new Error('Method is not available');
+    }
 
-    // if (!method.providerSettings.provider.isEnabled) {
-    //   throw new Error('Provider is not available');
-    // }
+    const user = await this.userRepo.findOne(
+      { id: userId },
+      {
+        populate: ['balance', 'balance.currency'],
+      },
+    );
 
-    // const user = await this.userRepo.findOne(
-    //   { id: userId },
-    //   {
-    //     populate: ['balance'],
-    //   },
-    // );
+    if (!user) {
+      throw new Error('User not found')
+    }
 
-    // if (user && (user.balance?.balance as number) - amount < 0) {
-    //   throw new Error('Not enough balance');
-    // }
+    if ((user.balance?.balance as number) - amount < 0) {
+      throw new Error('Not enough balance');
+    }
 
-    // const transaction = this.financeTransactionsRepo.create({
-    //   amount,
-    //   type: PaymentTransactionType.PAYOUT,
-    //   method,
-    //   user: this.financeTransactionsRepo
-    //     .getEntityManager()
-    //     .getReference(User, userId),
-    //   currency: this.financeTransactionsRepo
-    //     .getEntityManager()
-    //     .getReference(Currency, currencyId),
-    //   status: PaymentTransactionStatus.PENDING,
-    //   userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
-    // });
+    const transaction = this.financeTransactionsRepo.create({
+      amount,
+      type: PaymentTransactionType.PAYOUT,
+      subMethod,
+      user: this.financeTransactionsRepo
+        .getEntityManager()
+        .getReference(User, userId),
+      currency: this.financeTransactionsRepo
+        .getEntityManager()
+        .getReference(Currency, user.balance?.currency.id as number),
+      status: PaymentTransactionStatus.PENDING,
+      userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
+    });
 
-    // await this.financeTransactionsRepo
-    //   .getEntityManager()
-    //   .persistAndFlush(transaction);
+    await this.financeTransactionsRepo
+      .getEntityManager()
+      .persistAndFlush(transaction);
 
-    // const reqBody = {
-    //   transactionId: transaction.id as number,
-    //   amount,
-    //   currencyId,
-    // };
+    const reqBody = {
+      transactionId: transaction.id as number,
+      amount,
+    };
 
-    // let response: any;
+    let response: any;
 
-    // try {
-    //   switch (method.providerSettings.provider.name) {
-    //     case 'Cryptobot':
-    //       response = await this.msFinanceService.cryptobotCreatePayout(reqBody);
-    //       break;
-    //     default:
-    //       break;
-    //   }
+    try {
+      switch (subMethod.method.providerSettings.provider.name) {
+        case 'Cryptobot':
+          response = await this.msFinanceService.cryptobotCreatePayout(reqBody);
+          break;
+        case 'Yoomoney':
+          Object.assign(reqBody, {
+            to: requisite
+          });
 
-    //   return response;
-    // } catch (error) {
-    //   transaction.status = PaymentTransactionStatus.FAILED;
-    //   await this.financeTransactionsRepo
-    //     .getEntityManager()
-    //     .persistAndFlush(transaction);
+          response = await this.msFinanceService.yoomoneyCreatePayout(reqBody)
+          break;
+        default:
+          break;
+      }
 
-    //   throw new BadRequestException(error.message);
-    // }
+      return response;
+    } catch (error) {
+      transaction.status = PaymentTransactionStatus.FAILED;
+      await this.financeTransactionsRepo
+        .getEntityManager()
+        .persistAndFlush(transaction);
+
+      throw new BadRequestException(error.message);
+    }
   }
 }

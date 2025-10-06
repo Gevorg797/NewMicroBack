@@ -1,4 +1,4 @@
-import { Currency, FinanceTransactions } from "@lib/database";
+import { Currency, FinanceProviderSettings, FinanceTransactions } from "@lib/database";
 import { PaymentTransactionStatus } from "@lib/database/entities/finance-provider-transactions.entity";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { EntityRepository } from "@mikro-orm/postgresql";
@@ -9,26 +9,22 @@ import { createHash, createHmac } from "crypto";
 @Injectable()
 export class CryptobotService {
     constructor(
+        @InjectRepository(FinanceProviderSettings)
+        readonly fiananceProviderSettingsRepository: EntityRepository<FinanceProviderSettings>,
         @InjectRepository(Currency)
         readonly currencyRepository: EntityRepository<Currency>,
         @InjectRepository(FinanceTransactions)
         readonly financeTransactionsRepo: EntityRepository<FinanceTransactions>,
-
     ) { }
 
     async createPayinOrder(body: any) {
-        const { currencyId, transactionId, amount } = body
-
-        const currency = await this.currencyRepository.findOne({ id: currencyId })
-
-        if (!currency) {
-            throw new Error('Currency not found')
-        }
+        const { transactionId, amount } = body
 
         const transaction = await this.financeTransactionsRepo.findOne({ id: transactionId }, {
             populate: [
-                'method',
-                'method.providerSettings',
+                'subMethod.method',
+                'currency',
+                'subMethod.method.providerSettings',
             ],
         })
 
@@ -36,58 +32,62 @@ export class CryptobotService {
             amount,
         }
 
+        const providerSettings = transaction?.subMethod.method.providerSettings
+
+        if (!providerSettings) {
+            throw new NotFoundException('Provider settings not found');
+        }
+
         let availableСurrencies: any
 
-        if (transaction?.method.name === 'fiat') {
+        if (transaction?.subMethod.method.value === 'fiat') {
             availableСurrencies = ['USD', 'EUR', 'RUB', 'BYN', 'UAH', 'GBP', 'CNY', 'KZT', 'UZS', 'GEL', 'TRY', 'AMD', 'THB', 'INR', 'BRL', 'IDR', 'AZN', 'AED', 'PLN', 'ILS']
 
-            if (!availableСurrencies.includes(currency.name)) {
-                throw new NotFoundException(`Currency ${currency.name} is not supported in method ${transaction?.method.name}`);
+            if (!availableСurrencies.includes(transaction.currency.name)) {
+                throw new NotFoundException(`Currency ${transaction.currency.name} is not supported in method ${transaction?.subMethod.method.value}`);
             }
 
-            reqBody.fiat = currency.name
-        } else if (transaction?.method.name === 'crypto') {
+            reqBody.fiat = transaction.currency.name
+        } else if (transaction?.subMethod.method.value === 'crypto') {
             availableСurrencies = ['USDT', 'TON', 'BTC', 'ETH', 'LTC', 'BNB', 'TRX', 'USDC']
 
-            if (!availableСurrencies.includes(currency.name)) {
-                throw new NotFoundException(`Currency ${currency.name} is not supported in method ${transaction?.method.name}`);
+            if (!availableСurrencies.includes(transaction.currency.name)) {
+                throw new NotFoundException(`Currency ${transaction.currency.name} is not supported in method ${transaction?.subMethod.method.value}`);
             }
 
-            reqBody.asset = currency.name
+            reqBody.asset = transaction.currency.name
         }
 
         try {
-            const response = await axios.post(`${(transaction?.method.providerSettings.baseURL as string)}createInvoice`, reqBody, {
+            const response = await axios.post(`${(providerSettings.baseURL as string)}createInvoice`, reqBody, {
                 headers: {
-                    'Crypto-Pay-API-Token': transaction?.method.providerSettings.apiKey
+                    'Crypto-Pay-API-Token': providerSettings.apiKey
                 },
             })
-
-
 
             return response.data
         } catch (error) {
             const providerMessage = error.response?.data?.message || error.message;
-            throw new NotFoundException(`Cryptobot request failed: ${providerMessage}`);
+            throw new BadRequestException(`Cryptobot request failed: ${providerMessage}`);
         }
     }
 
     async createPayoutProcess(body: any) {
-        const { transactionId, amount, currencyId } = body
-
-        const currency = await this.currencyRepository.findOne({ id: currencyId })
-
-        if (!currency) {
-            throw new NotFoundException('Currency not found')
-        }
+        const { transactionId, amount } = body
 
         const transaction = await this.financeTransactionsRepo.findOne({ id: transactionId }, {
             populate: [
-                'method',
-                'method.providerSettings',
-                'user'
+                'subMethod.method',
+                'currency',
+                'subMethod.method.providerSettings',
             ],
         })
+
+        const providerSettings = transaction?.subMethod.method.providerSettings
+
+        if (!providerSettings) {
+            throw new NotFoundException('Provider settings not found');
+        }
 
         if (!transaction) {
             throw new NotFoundException('transaction not found')
@@ -95,30 +95,25 @@ export class CryptobotService {
 
         const reqBody = {
             user_id: transaction?.user.telegramId,
-            asset: currency.name,
+            asset: transaction.currency.name,
             amount,
             spend_id: transaction.id
         }
 
-
         try {
             const response = await axios.post(`
-                ${(transaction?.method.providerSettings.baseURL as string)}transfer`,
+                ${(transaction?.subMethod.method.providerSettings.baseURL as string)}transfer`,
                 reqBody, {
                 headers: {
-                    'Crypto-Pay-API-Token': transaction?.method.providerSettings.apiKey
+                    'Crypto-Pay-API-Token': transaction?.subMethod.method.providerSettings.apiKey
                 },
             })
 
             transaction.paymentTransactionId = response.data.invoice_id
             await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
 
-
-
             return response.data
         } catch (error) {
-            console.log(error.response.data.error);
-
             const providerMessage = error.response.data.error.name || error.message;
             throw new NotFoundException(`Cryptobot request failed: ${providerMessage}`);
         }
@@ -127,11 +122,11 @@ export class CryptobotService {
     async handleCallback(body: any, headers: any) {
         const { payload } = body
 
-
         const transaction = await this.financeTransactionsRepo.findOne({ paymentTransactionId: payload.invoice_id }, {
             populate: [
-                'method',
-                'method.providerSettings',
+                'subMethod.method',
+                'subMethod.method.providerSettings',
+                'user.balance'
             ],
         })
 
@@ -139,10 +134,9 @@ export class CryptobotService {
             throw new NotFoundException('transaction not found');
         }
 
-        if (!this.checkSignature(transaction.method.providerSettings.apiKey as string, payload, headers)) {
+        if (!this.checkSignature(transaction?.subMethod.method.providerSettings.apiKey as string, payload, headers)) {
             throw new BadRequestException('hack attempt')
         }
-
 
         if (transaction.status === PaymentTransactionStatus.COMPLETED ||
             transaction.status === PaymentTransactionStatus.FAILED) {
@@ -158,6 +152,7 @@ export class CryptobotService {
         }
 
         transaction.user.balance.balance += payload.amount
+        transaction.status = PaymentTransactionStatus.COMPLETED
 
         await this.financeTransactionsRepo.getEntityManager().persistAndFlush([
             transaction,

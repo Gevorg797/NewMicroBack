@@ -12,8 +12,16 @@ export class MsFinanceService {
     return firstValueFrom(this.client.send(FINANCE_PATTERNS.FREEKASSA_CREATE_PAYIN, data));
   }
 
+  yoomoneyCreatePayin(data: CreatePayinOrderDto) {
+    return firstValueFrom(this.client.send(FINANCE_PATTERNS.YOOMONEY_CREATE_PAYIN, data));
+  }
+
   cryptobotCreatePayin(data: any) {
     return firstValueFrom(this.client.send(FINANCE_PATTERNS.CRYPTOBOT_CREATE_PAYIN, data))
+  }
+
+  yoomoneyCreatePayout(data: any) {
+    return firstValueFrom(this.client.send(FINANCE_PATTERNS.YOOMONEY_CREATE_PAYOUT, data));
   }
 
   cryptobotCreatePayout(data: any) {

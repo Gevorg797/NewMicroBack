@@ -6,7 +6,6 @@ import {
   OneToMany,
   Property,
 } from '@mikro-orm/core';
-import { FinanceProviderSettings } from './finance-provider-settings.entity';
 import { BaseEntity } from './base.entity';
 import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { FinanceProviderMethods } from './finance-provider-methods.entity';

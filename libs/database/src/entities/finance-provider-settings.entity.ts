@@ -18,16 +18,16 @@ export class FinanceProviderSettings extends BaseEntity {
   @ManyToOne(() => Site)
   site!: Site;
 
-  @Property({ nullable: true })
-  shopId?: number;
+  @Property({ nullable: true, length: 100 })
+  shopId?: string;
 
-  @Property({ length: 100, nullable: true })
+  @Property({ type: 'text', nullable: true })
   publicKey?: string;
 
-  @Property({ length: 100, nullable: true })
+  @Property({ type: 'text', nullable: true })
   privateKey?: string;
 
-  @Property({ length: 100, nullable: true })
+  @Property({ type: 'text', nullable: true })
   apiKey?: string;
 
   @Property({ length: 200, nullable: true })

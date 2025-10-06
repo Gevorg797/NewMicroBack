@@ -3,7 +3,6 @@ import { CreatePayinOrderDto } from "./dto/create-payin-order.dto";
 import { EntityRepository } from "@mikro-orm/postgresql";
 import { Currency, FinanceProviderSettings, FinanceTransactions } from "@lib/database";
 import * as crypto from "crypto";
-import axios from "axios";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { PaymentTransactionStatus } from "@lib/database/entities/finance-provider-transactions.entity";
 
@@ -19,25 +18,25 @@ export class FreekassaService {
     ) { }
 
     async createPayinOrder(body: CreatePayinOrderDto) {
-        const { transactionId, amount, currencyId, providerSettingsId } = body
+        const { transactionId, amount } = body
 
-        const currency = await this.currencyRepository.findOne({ id: currencyId })
+        const transaction = await this.financeTransactionRepo.findOne({ id: transactionId }, {
+            populate: ['currency', 'subMethod.method.providerSettings']
+        })
 
-        if (!currency) {
-            throw new Error('Currency not found')
+        if (!transaction) {
+            throw new NotFoundException('transaction not found')
         }
 
-        const provider = await this.fiananceProviderSettingsRepository.findOne({ id: providerSettingsId })
-
-        if (!provider) {
+        if (!transaction.subMethod.method.providerSettings) {
             throw new NotFoundException('Provider not found');
         }
 
-        const shopId = (provider.shopId as number).toString()
+        const shopId = transaction.subMethod.method.providerSettings.shopId as string
         const orderId = transactionId.toString();
         const orderAmount = amount.toString();
-        const currencyCode = currency.name;
-        const secretWord = provider.publicKey as string;
+        const currencyCode = transaction.currency.name;
+        const secretWord = transaction.subMethod.method.providerSettings.publicKey as string;
 
         const sign = this.generateFormSignature(
             shopId,
@@ -48,7 +47,7 @@ export class FreekassaService {
         );
 
 
-        const url = `${provider.paymentFormLink}?m=${shopId}&oa=${orderAmount}&o=${orderId}&s=${sign}&currency=${currencyCode}`;
+        const url = `${transaction.subMethod.method.providerSettings.paymentFormLink}?m=${shopId}&oa=${orderAmount}&o=${orderId}&s=${sign}&currency=${currencyCode}`;
 
         return { url }
     }
@@ -79,8 +78,6 @@ export class FreekassaService {
     async handleCallback(body: any, ipAddress: string) {
         const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN, intid } = body;
 
-        console.log(ipAddress, 'ipAddress');
-
         const allowedIps = [
             "168.119.157.136",
             "168.119.60.227",
@@ -94,9 +91,7 @@ export class FreekassaService {
 
         const transaction = await this.financeTransactionRepo.findOne({ id: Number(MERCHANT_ORDER_ID) }, {
             populate: [
-                'method',
-                'method.providerSettings',
-                'user',
+                'subMethod.method.providerSettings',
                 'user.balance',
                 'currency'
             ],
@@ -118,7 +113,7 @@ export class FreekassaService {
         const generateSign = this.generateFormSignature(
             MERCHANT_ID,
             AMOUNT,
-            transaction.method.providerSettings.publicKey as string,
+            transaction.subMethod.method.providerSettings.publicKey as string,
             transaction.currency.name,
             (transaction.id as number).toString()
         )

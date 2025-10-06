@@ -10,12 +10,4 @@ export class CreatePayinOrderDto {
     @IsNumber()
     @Min(0)
     amount: number;
-
-    @ApiProperty({ description: 'Currency ID' })
-    @IsNumber()
-    currencyId: number;
-
-    @ApiProperty({ description: 'Finance provider ID' })
-    @IsNumber()
-    providerSettingsId: number;
 }

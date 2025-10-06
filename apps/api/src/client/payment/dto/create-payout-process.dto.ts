@@ -1,4 +1,4 @@
-import { IsNumber, Min } from "class-validator";
+import { IsNumber, IsOptional, IsString, Min } from "class-validator";
 
 export class CreatePayoutProcessDto {
     @IsNumber()
@@ -9,8 +9,9 @@ export class CreatePayoutProcessDto {
     methodId: number
 
     @IsNumber()
-    currencyId: number
-
-    @IsNumber()
     userId: number
+
+    @IsOptional()
+    @IsString()
+    requisite?: string
 }

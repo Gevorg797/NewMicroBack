@@ -14,7 +14,6 @@ export class PaymentController {
         return this.paymentService.payin(body)
     }
 
-
     @Post('payout')
     async payout(@Body() body: CreatePayoutProcessDto) {
         return this.paymentService.payout(body)

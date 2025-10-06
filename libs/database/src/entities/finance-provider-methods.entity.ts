@@ -5,11 +5,9 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
-  Property,
 } from '@mikro-orm/core';
 import { FinanceProviderSettings } from './finance-provider-settings.entity';
 import { BaseEntity } from './base.entity';
-import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { FinanceProviderSubMethods } from './finance-provider-sub-method.entity';
 import { PaymentMethodImage } from './finance-provider-image-method.entity';
 
@@ -38,6 +36,10 @@ export enum MethodEnum {
   CARD_RU_RAND_CARD = 'card_ru_rand_card',
   SBP_RU_RAND = 'sbp_ru_rand',
   MONEYRUB_GTLIMIT = 'MoneyRUB_Gtlimit',
+  FIAT = 'fiat',
+  CRYPTO = 'crypto',
+  PC = 'PC',
+  AC = 'AC'
 }
 
 export enum MethodNameEnum {

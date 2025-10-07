@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { B2BSlotsProviderSettingsService } from './provider-settings.service';
 import { B2BSlotsApiService } from './b2bslots.api.service';
 import { B2BSlotsUtilsService } from './b2bslots.utils.service';
+import { SessionManagerService } from '../repository/session-manager.service';
 import { IGameProvider, ProviderPayload, GameLoadResult } from '../interfaces/game-provider.interface';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
@@ -14,6 +15,7 @@ export class B2BSlotsService implements IGameProvider {
     private readonly settings: B2BSlotsProviderSettingsService,
     private readonly api: B2BSlotsApiService,
     private readonly utils: B2BSlotsUtilsService,
+    private readonly sessionManager: SessionManagerService,
     private readonly em: EntityManager,
   ) {
     this.logger.log('B2BSlotsService initialized');
@@ -172,21 +174,41 @@ export class B2BSlotsService implements IGameProvider {
 
     const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
 
-    // Transform Superomatic-style payload to B2BSlots format
+    // Create database session first - generates our session ID
+    const sessionResult = await this.sessionManager.createRealSession({
+      userId: payload.userId,
+      gameId: payload.params.gameId,
+      denomination: payload.params.denomination?.toString() || '1.00',
+      providerName: 'B2BSlots',
+    });
+
+    // Send our session ID to provider
     const b2bPayload = {
       user_id: payload.userId.toString(),
       user_ip: payload.params.userIp || '127.0.0.1',
-      user_auth_token: payload.params.partnerSession || payload.params.authToken,
-      currency: payload.params.currency || 'USD',
-      game_code: parseInt(payload.params.gameId) || 0,
+      user_auth_token: sessionResult.sessionId, // Send our session ID
+      currency: sessionResult.currency, // Use currency from user balance
+      game_code: parseInt(sessionResult.gameUuid) || 0,
       game_name: payload.params.gameName || 'Game'
     };
 
     const sign = this.utils.sign(b2bPayload, key);
-    const result = await this.api.initSession(baseURL, { ...b2bPayload, sign });
+    const providerResult = await this.api.initSession(baseURL, { ...b2bPayload, sign });
+
+    // Update session with provider response (launch URL, etc.)
+    await this.sessionManager.updateSessionWithProviderResponse(
+      sessionResult.sessionId,
+      providerResult
+    );
 
     this.logger.debug('Successfully initialized game session with B2BSlots');
-    return result;
+
+    return {
+      ...providerResult,
+      sessionId: sessionResult.sessionId,
+      gameUuid: sessionResult.gameUuid,
+      currency: sessionResult.currency,
+    };
   }
 
   async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {
@@ -194,21 +216,41 @@ export class B2BSlotsService implements IGameProvider {
 
     const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
 
-    // Transform Superomatic-style payload to B2BSlots format
+    // Create database session first - generates our session ID
+    const sessionResult = await this.sessionManager.createRealSession({
+      userId: payload.userId,
+      gameId: payload.params.gameId,
+      denomination: payload.params.denomination?.toString() || '1.00',
+      providerName: 'B2BSlots',
+    });
+
+    // Send our session ID to provider
     const b2bPayload = {
       user_id: payload.userId.toString(),
       user_ip: payload.params.userIp || '127.0.0.1',
-      user_game_token: payload.params.gameToken || payload.params.userGameToken,
-      currency: payload.params.currency || 'USD',
-      game_code: parseInt(payload.params.gameId) || 0,
+      user_game_token: sessionResult.sessionId, // Send our session ID
+      currency: sessionResult.currency, // Use currency from user balance
+      game_code: parseInt(sessionResult.gameUuid) || 0,
       game_name: payload.params.gameName || 'Game'
     };
 
     const sign = this.utils.sign(b2bPayload, key);
-    const result = await this.api.freeRoundsInfo(baseURL, { ...b2bPayload, sign });
+    const providerResult = await this.api.freeRoundsInfo(baseURL, { ...b2bPayload, sign });
+
+    // Update session with provider response
+    await this.sessionManager.updateSessionWithProviderResponse(
+      sessionResult.sessionId,
+      providerResult
+    );
 
     this.logger.debug('Successfully retrieved free rounds info from B2BSlots');
-    return result;
+
+    return {
+      ...providerResult,
+      sessionId: sessionResult.sessionId,
+      gameUuid: sessionResult.gameUuid,
+      currency: sessionResult.currency,
+    };
   }
 
   async closeSession(payload: ProviderPayload): Promise<any> {
@@ -226,6 +268,11 @@ export class B2BSlotsService implements IGameProvider {
 
     const sign = this.utils.sign(b2bPayload, key);
     const result = await this.api.closeSession(baseURL, { ...b2bPayload, sign });
+
+    // Close our database session if we have the session ID
+    if (payload.params.sessionId) {
+      await this.sessionManager.closeSession(payload.params.sessionId);
+    }
 
     this.logger.debug('Successfully closed session with B2BSlots');
     return result;

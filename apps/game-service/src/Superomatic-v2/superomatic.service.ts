@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SuperomaticUtilsService } from './superomatic.utils.service';
 import { SuperomaticApiService } from './superomatic.api.service';
 import { ProviderSettingsService } from './provider-settings.service';
+import { SessionManagerService } from '../repository/session-manager.service';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
 import { Game, GameProvider, GameSubProvider } from '@lib/database';
@@ -14,6 +15,7 @@ export class SuperomaticService implements IExtendedGameProvider {
         private readonly providerSettings: ProviderSettingsService,
         private readonly api: SuperomaticApiService,
         private readonly utils: SuperomaticUtilsService,
+        private readonly sessionManager: SessionManagerService,
         private readonly em: EntityManager,
     ) {
         this.logger.log('SuperomaticService initialized');
@@ -146,50 +148,92 @@ export class SuperomaticService implements IExtendedGameProvider {
     async initGameSession(payload: ProviderPayload): Promise<any> {
         this.logger.debug(`Initializing game session for game: ${payload.params.gameId}`);
 
-        const { params, siteId } = payload;
+        const { params, siteId, userId } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
-        // Transform params to Superomatic format
+        // Create database session first - generates our session ID
+        const sessionResult = await this.sessionManager.createRealSession({
+            userId,
+            gameId: params.gameId,
+            denomination: params.denomination?.toString() || '1.00',
+            providerName: 'Superomatic',
+        });
+
+        console.log('Created session:', sessionResult);
+
+        // Send our session ID to provider
         const superomaticParams = {
             'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'game.id': params.gameId,
-            'currency': params.currency,
+            'partner.session': sessionResult.sessionId, // Send our session ID
+            'game.id': sessionResult.gameUuid,
+            'currency': sessionResult.currency, // Use currency from user balance
             ...(params.freeroundsId && { 'freerounds.id': params.freeroundsId }),
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/init.session');
-        const response = await this.api.getGameSession(baseURL, {
+        const providerResponse = await this.api.getGameSession(baseURL, {
             ...superomaticParams,
             sign,
         });
 
+        // Update session with provider response (launch URL, etc.)
+        await this.sessionManager.updateSessionWithProviderResponse(
+            sessionResult.sessionId,
+            providerResponse
+        );
+
         this.logger.debug('Successfully initialized game session with Superomatic');
-        return response;
+
+        return {
+            ...providerResponse,
+            sessionId: sessionResult.sessionId,
+            gameUuid: sessionResult.gameUuid,
+            currency: sessionResult.currency,
+        };
     }
 
     async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {
         this.logger.debug(`Getting free rounds info for game: ${payload.params.gameId}`);
 
-        const { params, siteId } = payload;
+        const { params, siteId, userId } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
-        // Transform params to Superomatic format
+        // Create database session first - generates our session ID
+        const sessionResult = await this.sessionManager.createRealSession({
+            userId,
+            gameId: params.gameId,
+            denomination: params.denomination?.toString() || '1.00',
+            providerName: 'Superomatic',
+        });
+
+        // Send our session ID to provider
         const superomaticParams = {
             'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
-            'game.id': params.gameId,
-            'currency': params.currency,
+            'partner.session': sessionResult.sessionId, // Send our session ID
+            'game.id': sessionResult.gameUuid,
+            'currency': sessionResult.currency, // Use currency from user balance
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/freerounds-info');
-        const response = await this.api.gamesFreeRoundsInfo(baseURL, {
+        const providerResponse = await this.api.gamesFreeRoundsInfo(baseURL, {
             ...superomaticParams,
             sign,
         });
 
+        // Update session with provider response
+        await this.sessionManager.updateSessionWithProviderResponse(
+            sessionResult.sessionId,
+            providerResponse
+        );
+
         this.logger.debug('Successfully retrieved free rounds info from Superomatic');
-        return response;
+
+        return {
+            ...providerResponse,
+            sessionId: sessionResult.sessionId,
+            gameUuid: sessionResult.gameUuid,
+            currency: sessionResult.currency,
+        };
     }
 
     async closeSession(payload: ProviderPayload): Promise<any> {
@@ -209,6 +253,11 @@ export class SuperomaticService implements IExtendedGameProvider {
             ...superomaticParams,
             sign,
         });
+
+        // Close our database session if we have the session ID
+        if (params.sessionId) {
+            await this.sessionManager.closeSession(params.sessionId);
+        }
 
         this.logger.debug('Successfully closed session with Superomatic');
         return response;

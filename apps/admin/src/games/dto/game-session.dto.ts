@@ -7,9 +7,9 @@ class GameSessionParamsDto {
     @IsNumber()
     gameId: number;
 
-    @ApiProperty({ description: 'Currency code', example: 'RUB' })
-    @IsString()
-    currency: string;
+    // @ApiProperty({ description: 'Currency code', example: 'RUB' })
+    // @IsString()
+    // currency: string;
 
     // For demo session
     @ApiProperty({ description: 'Demo balance', example: 1000.00, required: false })

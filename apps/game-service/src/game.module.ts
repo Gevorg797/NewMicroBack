@@ -6,9 +6,10 @@ import { HealthModule } from './health/health.module';
 import { GameController } from './game.controller';
 import { GameService } from './game.service';
 import { ProviderStrategyFactory } from './strategies/provider-strategy.factory';
+import { RepositoryModule } from './repository/repository.module';
 
 @Module({
-  imports: [DatabaseModule, SuperomaticModule, B2BSlotsModule, HealthModule],
+  imports: [DatabaseModule, RepositoryModule, SuperomaticModule, B2BSlotsModule, HealthModule],
   controllers: [GameController],
   providers: [GameService, ProviderStrategyFactory],
   exports: [GameService, ProviderStrategyFactory],

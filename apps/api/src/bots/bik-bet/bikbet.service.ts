@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/core';
-import { User, Currency, Balances, Site } from '@lib/database';
-import { CurrencyType } from '@lib/database/entities/currency.entity';
+import { User, Currency, Balances, CurrencyType, Site } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -132,23 +131,31 @@ export class BikBetService {
         await this.userRepository.getEntityManager().persistAndFlush(user);
       }
 
-      // Ensure a balance exists for the user with default RUB currency
-      let balance = await this.balancesRepository.findOne({ user });
-      if (!balance) {
-        const rub = await this.currencyRepository.findOne({
-          name: CurrencyType.RUB,
-        });
-        if (rub) {
-          balance = this.balancesRepository.create({
-            user,
-            currency: rub,
-            balance: 0,
-            bonusBalance: 0,
-          } as any);
-          await this.balancesRepository
-            .getEntityManager()
-            .persistAndFlush(balance);
-        }
+      // Ensure balances exist for the user with default RUB currency (main and bonus)
+      const existingBalances = await this.balancesRepository.find({ user });
+      const rub = await this.currencyRepository.findOne({
+        name: CurrencyType.RUB,
+      });
+
+      if (rub && existingBalances.length === 0) {
+        // Create both main and bonus balances
+        const mainBalance = this.balancesRepository.create({
+          user,
+          currency: rub,
+          balance: 0,
+          type: BalanceType.MAIN,
+        } as any);
+
+        const bonusBalance = this.balancesRepository.create({
+          user,
+          currency: rub,
+          balance: 0,
+          type: BalanceType.BONUS,
+        } as any);
+
+        await this.balancesRepository
+          .getEntityManager()
+          .persistAndFlush([mainBalance, bonusBalance]);
       }
 
       const text = `
@@ -1028,14 +1035,23 @@ export class BikBetService {
     let bonusValue = 0;
     let currencyCode = 'N/A';
     if (user) {
-      const balance = await this.balancesRepository.findOne(
-        { user },
+      // Get main balance
+      const mainBalance = await this.balancesRepository.findOne(
+        { user, type: BalanceType.MAIN },
         { populate: ['currency'] },
       );
-      if (balance) {
-        balanceValue = balance.balance ?? 0;
-        bonusValue = balance.bonusBalance ?? 0;
-        currencyCode = balance.currency?.name ?? 'N/A';
+      // Get bonus balance
+      const bonusBalance = await this.balancesRepository.findOne(
+        { user, type: BalanceType.BONUS },
+        { populate: ['currency'] },
+      );
+
+      if (mainBalance) {
+        balanceValue = mainBalance.balance ?? 0;
+        currencyCode = mainBalance.currency?.name ?? 'N/A';
+      }
+      if (bonusBalance) {
+        bonusValue = bonusBalance.balance ?? 0;
       }
     }
 
@@ -1136,17 +1152,21 @@ export class BikBetService {
     const telegramId = String(ctx.from.id);
     let user = await this.userRepository.findOne(
       { telegramId },
-      { populate: ['balance'] },
+      { populate: ['balances'] },
     );
 
-    if (!user || !user.balance) {
+    if (!user || !user.balances || user.balances.length === 0) {
       await ctx.answerCbQuery('⚠ Пользователь не найден. Нажмите /start', {
         show_alert: true,
       });
       return;
     }
 
-    if (user.balance?.balance < amount) {
+    // Get the main balance
+    const mainBalance = user.balances
+      .getItems()
+      .find((b) => b.type === BalanceType.MAIN);
+    if (!mainBalance || mainBalance.balance < amount) {
       await ctx.answerCbQuery('Недостаточно средств для вывода данной суммы.');
       return;
     }

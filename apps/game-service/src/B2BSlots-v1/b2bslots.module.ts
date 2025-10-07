@@ -8,11 +8,13 @@ import { B2BSlotsUtilsService } from './b2bslots.utils.service';
 import { B2BSlotsProviderSettingsService } from './provider-settings.service';
 import { B2BSlotsWebhookController } from './b2bslots.webhook.controller';
 import { B2BSlotsWebhookService } from './b2bslots.webhook.service';
+import { RepositoryModule } from '../repository/repository.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MikroOrmModule.forFeature([GameProviderSetting, Game, GameProvider, GameSubProvider]),
+    RepositoryModule,
   ],
   controllers: [B2BSlotsWebhookController],
   providers: [

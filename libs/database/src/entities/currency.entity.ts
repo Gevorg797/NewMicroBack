@@ -3,6 +3,7 @@ import { Collection, Entity, OneToMany, Property, Enum } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { GamesProviderSettingGroup } from './game-provider-settings-group.entity';
 import { Balances } from './balances.entity';
+import { FinanceTransactions } from './finance-provider-transactions.entity';
 
 export enum CurrencyType {
   RUB = 'RUB',
@@ -47,6 +48,14 @@ export enum CurrencyType {
   GEL = 'GEL',
   AZN = 'AZN',
   MDL = 'MDL',
+  USDT = 'USDT',
+  TON = 'TON',
+  BTC = 'BTC',
+  ETH = 'ETH',
+  LTC = 'LTC',
+  BNB = 'BNB',
+  TRX = 'TRX',
+  USDC = 'USDC'
 }
 
 @Entity({ tableName: 'currencies' })
@@ -65,4 +74,7 @@ export class Currency extends BaseEntity {
 
   @OneToMany(() => Balances, (balance) => balance.currency)
   balances = new Collection<Balances>(this);
+
+  @OneToMany(() => FinanceTransactions, (transaction) => transaction.currency)
+  financeTransactions = new Collection<FinanceTransactions>(this);
 }

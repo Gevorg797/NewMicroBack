@@ -5,9 +5,9 @@ import {
   User,
   Currency,
   Balances,
-  BalanceType,
   CurrencyType,
   Site,
+  BalanceType,
 } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';

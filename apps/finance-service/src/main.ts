@@ -7,7 +7,7 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
 import * as qs from 'qs';
 import cors from '@fastify/cors';
-
+import fastifyFormbody from '@fastify/formbody'
 import { FinanceModule } from './finance.module';
 import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 import { AppRpcExceptionFilter } from 'libs/utils/interceptors/AppRpcExceptionFilter';
@@ -20,13 +20,13 @@ const fAdapter = new FastifyAdapter({
 });
 
 async function bootstrap() {
-  await fAdapter.register(cors, { origin: '*' });
-
   const app = await NestFactory.create<NestFastifyApplication>(
     FinanceModule,
     fAdapter,
     { logger: new LocalTimeLogger() },
   );
+
+  await app.register(cors, { origin: '*' });
 
   app.useGlobalPipes(
     new ValidationPipe({

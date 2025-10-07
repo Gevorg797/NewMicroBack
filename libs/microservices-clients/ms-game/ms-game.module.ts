@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MsGameService } from './ms-game.service';
-import { MS_GAME } from './tokens';
+import { MS_GAME } from 'libs/config';
+// import { MS_GAME } from './tokens';
 
 @Module({
   imports: [

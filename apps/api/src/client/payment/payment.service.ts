@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreatePayinProcessDto } from './dto/create-payin-process.dto';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
@@ -32,26 +29,27 @@ export class PaymentService {
     readonly financeTransactionsRepo: EntityRepository<FinanceTransactions>,
     @InjectRepository(User)
     readonly userRepo: EntityRepository<User>,
-  ) { }
+  ) {}
 
   async payin(body: CreatePayinProcessDto) {
-    const { methodId, amount, userId } = body;
+    const { methodId, amount, userId, uuId } = body;
 
     const subMethod = await this.fiananceProviderSubMethodsRepo.findOne(
       { id: methodId },
-      { populate: ['method.providerSettings', 'method.providerSettings.provider'] }
+      {
+        populate: [
+          'method.providerSettings',
+          'method.providerSettings.provider',
+        ],
+      },
     );
-
-    const user = await this.userRepo.findOne({ id: userId }, {
-      populate: ['balance.currency']
-    })
-
-    if (!user) {
-      throw new Error('User not found')
-    }
 
     if (!subMethod) {
       throw new Error('Method not found');
+    }
+
+    if (!subMethod.isEnabled) {
+      throw new Error('method is not available');
     }
 
     if (subMethod.minAmount > amount) {
@@ -66,8 +64,15 @@ export class PaymentService {
       throw new Error('Provider not found');
     }
 
-    if (!subMethod.isEnabled) {
-      throw new Error('method is not available')
+    const user = await this.userRepo.findOne(
+      { id: userId },
+      {
+        populate: ['balance.currency'],
+      },
+    );
+
+    if (!user) {
+      throw new Error('User not found');
     }
 
     const transaction = this.financeTransactionsRepo.create({
@@ -81,36 +86,40 @@ export class PaymentService {
         .getEntityManager()
         .getReference(Currency, user.balance?.currency.id as number),
       status: PaymentTransactionStatus.PENDING,
-      userResponseStatus: PaymentTransactionUserResponseStatus.PENDING
+      userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
     });
 
-    await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
+    await this.financeTransactionsRepo
+      .getEntityManager()
+      .persistAndFlush(transaction);
 
     const reqBody = {
       transactionId: transaction.id as number,
       amount,
-    }
+    };
 
     let response: any;
 
     try {
       switch (subMethod.method.providerSettings.provider.name) {
         case 'Freekassa':
-          response = await this.msFinanceService.freekassaCreatePayin(reqBody)
+          response = await this.msFinanceService.freekassaCreatePayin(reqBody);
           break;
         case 'Cryptobot':
-          response = await this.msFinanceService.cryptobotCreatePayin(reqBody)
+          response = await this.msFinanceService.cryptobotCreatePayin(reqBody);
           break;
         case 'Yoomoney':
-          response = await this.msFinanceService.yoomoneyCreatePayin(reqBody)
+          response = await this.msFinanceService.yoomoneyCreatePayin(reqBody);
         default:
           break;
       }
 
-      return response
+      return response;
     } catch (error) {
       transaction.status = PaymentTransactionStatus.FAILED;
-      await this.financeTransactionsRepo.getEntityManager().persistAndFlush(transaction);
+      await this.financeTransactionsRepo
+        .getEntityManager()
+        .persistAndFlush(transaction);
 
       throw new BadRequestException(error.message);
     }
@@ -121,7 +130,12 @@ export class PaymentService {
 
     const subMethod = await this.fiananceProviderSubMethodsRepo.findOne(
       { id: methodId },
-      { populate: ['method.providerSettings', 'method.providerSettings.provider'] }
+      {
+        populate: [
+          'method.providerSettings',
+          'method.providerSettings.provider',
+        ],
+      },
     );
 
     if (!subMethod) {
@@ -148,7 +162,7 @@ export class PaymentService {
     );
 
     if (!user) {
-      throw new Error('User not found')
+      throw new Error('User not found');
     }
 
     if ((user.balance?.balance as number) - amount < 0) {
@@ -187,10 +201,10 @@ export class PaymentService {
           break;
         case 'Yoomoney':
           Object.assign(reqBody, {
-            to: requisite
+            to: requisite,
           });
 
-          response = await this.msFinanceService.yoomoneyCreatePayout(reqBody)
+          response = await this.msFinanceService.yoomoneyCreatePayout(reqBody);
           break;
         default:
           break;

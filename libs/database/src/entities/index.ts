@@ -50,7 +50,6 @@ export {
   SiteSettings,
   Currency,
   CurrencyType,
-  Balances,
   GameProvider,
   GameSubProvider,
   GameProviderSetting,
@@ -66,4 +65,5 @@ export {
   FinanceProviderMethods,
   FinanceTransactions,
   Balances,
+  BalanceType,
 };

@@ -21,6 +21,10 @@ export class SessionManagementDto {
     @IsNumber()
     siteId: number;
 
+    @ApiProperty({ description: 'Game ID', example: 288 })
+    @IsNumber()
+    gameId: number;
+
     @ApiProperty({
         description: 'Session management parameters',
         type: SessionParamsDto

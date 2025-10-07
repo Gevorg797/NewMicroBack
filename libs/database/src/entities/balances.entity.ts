@@ -1,7 +1,8 @@
-import { Entity, Property, ManyToOne, OneToOne, Enum } from '@mikro-orm/core';
+import { Entity, Property, ManyToOne, OneToOne, OneToMany, Collection, Enum } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { Currency } from './currency.entity';
+import { GameSession } from './game-sassion.entity';
 
 export enum BalanceType {
   MAIN = 'main',
@@ -21,4 +22,7 @@ export class Balances extends BaseEntity {
 
   @Enum(() => BalanceType)
   type: BalanceType = BalanceType.MAIN;
+
+  @OneToMany(() => GameSession, (session) => session.balance)
+  gameSessions = new Collection<GameSession>(this);
 }

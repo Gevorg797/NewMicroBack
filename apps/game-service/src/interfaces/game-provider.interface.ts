@@ -1,17 +1,20 @@
 /**
  * Core interfaces for game provider abstraction
  */
+import { BalanceType } from '@lib/database';
 
 export interface SessionPayload {
     userId: number;
     siteId: number;
     gameId: number;
     params: Record<string, any>;
+    balanceType?: BalanceType; // Optional: specify which balance to use (main or bonus)
 }
 
 export interface ProviderPayload {
     userId: number;
     siteId: number;
+    balanceType?: BalanceType; // Optional: specify which balance to use (main or bonus)
     params: Record<string, any>;
 }
 

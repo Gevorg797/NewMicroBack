@@ -148,7 +148,7 @@ export class SuperomaticService implements IExtendedGameProvider {
     async initGameSession(payload: ProviderPayload): Promise<any> {
         this.logger.debug(`Initializing game session for game: ${payload.params.gameId}`);
 
-        const { params, siteId, userId } = payload;
+        const { params, siteId, userId, balanceType } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
         // Create database session first - generates our session ID
@@ -157,13 +157,14 @@ export class SuperomaticService implements IExtendedGameProvider {
             gameId: params.gameId,
             denomination: params.denomination?.toString() || '1.00',
             providerName: 'Superomatic',
+            balanceType, // Pass balance type from payload
+            metadata: { ...params }
         });
 
-        console.log('Created session:', sessionResult);
 
         // Send our session ID to provider
         const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
+            'partner.alias': partnerAlias,
             'partner.session': sessionResult.sessionId, // Send our session ID
             'game.id': sessionResult.gameUuid,
             'currency': sessionResult.currency, // Use currency from user balance
@@ -195,15 +196,17 @@ export class SuperomaticService implements IExtendedGameProvider {
     async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {
         this.logger.debug(`Getting free rounds info for game: ${payload.params.gameId}`);
 
-        const { params, siteId, userId } = payload;
+        const { params, siteId, userId, balanceType } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
+
 
         // Create database session first - generates our session ID
         const sessionResult = await this.sessionManager.createRealSession({
             userId,
             gameId: params.gameId,
             denomination: params.denomination?.toString() || '1.00',
-            providerName: 'Superomatic',
+            balanceType, // Pass balance type from payload
+            metadata: { ...params }
         });
 
         // Send our session ID to provider

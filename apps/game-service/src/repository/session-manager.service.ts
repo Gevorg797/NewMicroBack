@@ -14,11 +14,8 @@ export interface CreateSessionParams {
 
 export interface SessionResult {
     sessionId: string;
-    sessionUuid: string;
-    launchUrl?: string;
-    gameToken?: string;
-    partnerSession?: string;
-    metadata?: any;
+    gameUuid: string;
+    currency: string;
 }
 
 @Injectable()
@@ -33,73 +30,56 @@ export class SessionManagerService {
     async createRealSession(params: CreateSessionParams): Promise<SessionResult> {
         this.logger.debug(`Creating real session for user ${params.userId}, game ${params.gameId}`);
 
-        // Find the game, user, and balance entities
-        const game = await this.em.findOne(Game, { uuid: params.gameId });
+        // Fetch and validate all required entities in parallel
+        const [game, user, balance, existingAliveSession] = await Promise.all([
+            this.em.findOne(Game, { uuid: params.gameId }),
+            this.em.findOne(User, { id: params.userId }),
+            this.em.findOne(Balances, { user: { id: params.userId } }, { populate: ['currency'] }),
+            this.em.findOne(GameSession, { user: { id: params.userId }, isAlive: true }),
+        ]);
+
         if (!game) {
             throw new Error(`Game not found: ${params.gameId}`);
         }
 
-        const user = await this.em.findOne(User, { id: params.userId });
         if (!user) {
             throw new Error(`User not found: ${params.userId}`);
         }
 
-        // Check if user already has an alive session
-        const existingAliveSession = await this.em.findOne(GameSession, {
-            user: { id: params.userId },
-            isAlive: true,
-        });
+        if (!balance) {
+            throw new Error(`Balance not found for user: ${params.userId}`);
+        }
 
         if (existingAliveSession) {
             throw new Error(`User ${params.userId} already has an active session. Please close the current session first.`);
         }
 
-        const balance = await this.em.findOne(Balances, { user: { id: params.userId } });
-        if (!balance) {
-            throw new Error(`Balance not found for user: ${params.userId}`);
-        }
-
-        // Generate unique session identifiers
-        const sessionUuid = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const partnerSessionId = `partner_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        // Create the game session entity
+        // Create session using ORM to get auto-increment ID first
         const gameSession = new GameSession();
         wrap(gameSession).assign({
             user,
             game,
-            uuid: partnerSessionId, // This is the partner session ID sent to providers
+            uuid: 'temp', // Temporary, will update after flush
             balanceId: balance.id,
-            startAmount: balance.balance, // Use actual balance from user's balance record
+            startAmount: balance.balance,
             denomination: params.denomination,
-            isLive: true, // Real session
-            metadata: {
-                providerName: params.providerName,
-                currency: balance.currency.name,
-                sessionId: sessionUuid, // Internal session ID
-                partnerSessionId, // Partner session ID
-                ...params.metadata,
-            },
+            isLive: true,
             startedAt: new Date(),
         });
 
         await this.em.persistAndFlush(gameSession);
 
-        this.logger.debug(`Created game session with ID: ${gameSession.id}, UUID: ${sessionUuid}`);
+        const sessionId = gameSession.id.toString();
+
+        // Update UUID with the auto-increment ID
+        await this.em.nativeUpdate(GameSession, { id: gameSession.id }, { uuid: sessionId });
+
+        this.logger.debug(`Created game session with ID: ${sessionId}`);
 
         return {
-            sessionId: gameSession.id.toString(),
-            sessionUuid,
-            launchUrl: gameSession.launchURL,
-            gameToken: sessionUuid, // Use internal session UUID as game token
-            partnerSession: partnerSessionId, // Use partner session ID for providers
-            metadata: {
-                providerName: params.providerName,
-                currency: balance.currency.name,
-                sessionId: sessionUuid, // Internal session ID
-                partnerSessionId, // Partner session ID
-                ...params.metadata,
-            },
+            sessionId,
+            gameUuid: params.gameId,
+            currency: balance.currency.name,
         };
     }
 
@@ -107,14 +87,14 @@ export class SessionManagerService {
      * Updates session with provider response data (launch URL, etc.)
      */
     async updateSessionWithProviderResponse(
-        sessionUuid: string,
+        sessionId: string,
         providerResponse: any
     ): Promise<void> {
-        this.logger.debug(`Updating session ${sessionUuid} with provider response`);
+        this.logger.debug(`Updating session ${sessionId} with provider response`);
 
-        const session = await this.em.findOne(GameSession, { uuid: sessionUuid });
+        const session = await this.em.findOne(GameSession, { id: parseInt(sessionId) });
         if (!session) {
-            throw new Error(`Session not found: ${sessionUuid}`);
+            throw new Error(`Session not found: ${sessionId}`);
         }
 
         // Update session with provider response data
@@ -130,7 +110,7 @@ export class SessionManagerService {
         wrap(session).assign(updates);
         await this.em.flush();
 
-        this.logger.debug(`Updated session ${sessionUuid} with provider data`);
+        // this.logger.debug(`Updated session ${sessionUuid} with provider data`);
     }
 
     /**
@@ -164,12 +144,12 @@ export class SessionManagerService {
     /**
      * Closes a game session
      */
-    async closeSession(sessionUuid: string, endAmount?: number): Promise<void> {
-        this.logger.debug(`Closing session ${sessionUuid}`);
+    async closeSession(sessionId: string, endAmount?: number): Promise<void> {
+        this.logger.debug(`Closing session ${sessionId}`);
 
-        const session = await this.em.findOne(GameSession, { uuid: sessionUuid });
+        const session = await this.em.findOne(GameSession, { id: parseInt(sessionId) });
         if (!session) {
-            throw new Error(`Session not found: ${sessionUuid}`);
+            throw new Error(`Session not found: ${sessionId}`);
         }
 
         wrap(session).assign({
@@ -180,7 +160,7 @@ export class SessionManagerService {
 
         await this.em.flush();
 
-        this.logger.debug(`Closed session ${sessionUuid}`);
+        this.logger.debug(`Closed session ${sessionId}`);
     }
 
     /**

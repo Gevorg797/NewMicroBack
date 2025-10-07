@@ -6,6 +6,7 @@ import {
   FinanceProviderSettings,
   FinanceTransactions,
   User,
+  BalanceType,
 } from '@lib/database';
 import { EntityRepository } from '@mikro-orm/postgresql';
 import {
@@ -67,12 +68,20 @@ export class PaymentService {
     const user = await this.userRepo.findOne(
       { id: userId },
       {
-        populate: ['balance.currency'],
+        populate: ['balances.currency'],
       },
     );
 
     if (!user) {
       throw new Error('User not found');
+    }
+
+    // Get main balance
+    const mainBalance = user.balances
+      .getItems()
+      .find((b) => b.type === BalanceType.MAIN);
+    if (!mainBalance) {
+      throw new Error('Main balance not found');
     }
 
     const transaction = this.financeTransactionsRepo.create({
@@ -84,7 +93,7 @@ export class PaymentService {
         .getReference(User, userId),
       currency: this.financeTransactionsRepo
         .getEntityManager()
-        .getReference(Currency, user.balance?.currency.id as number),
+        .getReference(Currency, mainBalance.currency.id as number),
       status: PaymentTransactionStatus.PENDING,
       userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
     });
@@ -157,7 +166,7 @@ export class PaymentService {
     const user = await this.userRepo.findOne(
       { id: userId },
       {
-        populate: ['balance', 'balance.currency'],
+        populate: ['balances', 'balances.currency'],
       },
     );
 
@@ -165,7 +174,15 @@ export class PaymentService {
       throw new Error('User not found');
     }
 
-    if ((user.balance?.balance as number) - amount < 0) {
+    // Get main balance for payout
+    const mainBalance = user.balances
+      .getItems()
+      .find((b) => b.type === BalanceType.MAIN);
+    if (!mainBalance) {
+      throw new Error('Main balance not found');
+    }
+
+    if ((mainBalance.balance as number) - amount < 0) {
       throw new Error('Not enough balance');
     }
 
@@ -178,7 +195,7 @@ export class PaymentService {
         .getReference(User, userId),
       currency: this.financeTransactionsRepo
         .getEntityManager()
-        .getReference(Currency, user.balance?.currency.id as number),
+        .getReference(Currency, mainBalance.currency.id as number),
       status: PaymentTransactionStatus.PENDING,
       userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
     });

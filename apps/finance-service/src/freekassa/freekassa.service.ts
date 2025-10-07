@@ -5,6 +5,8 @@ import {
   Currency,
   FinanceProviderSettings,
   FinanceTransactions,
+  Balances,
+  BalanceType,
 } from '@lib/database';
 import * as crypto from 'crypto';
 import { InjectRepository } from '@mikro-orm/nestjs';
@@ -19,6 +21,8 @@ export class FreekassaService {
     readonly currencyRepository: EntityRepository<Currency>,
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
+    @InjectRepository(Balances)
+    readonly balancesRepository: EntityRepository<Balances>,
   ) {}
 
   async createPayinOrder(body: CreatePayinOrderDto) {
@@ -98,11 +102,7 @@ export class FreekassaService {
     const transaction = await this.financeTransactionRepo.findOne(
       { id: Number(MERCHANT_ORDER_ID) },
       {
-        populate: [
-          'subMethod.method.providerSettings',
-          'user.balance',
-          'currency',
-        ],
+        populate: ['subMethod.method.providerSettings', 'user', 'currency'],
       },
     );
 
@@ -135,19 +135,23 @@ export class FreekassaService {
       throw new Error('wrong sign');
     }
 
-    transaction.status = PaymentTransactionStatus.COMPLETED;
+    // Get main balance to credit the amount
+    const mainBalance = await this.balancesRepository.findOne({
+      user: transaction.user,
+      type: BalanceType.MAIN,
+    });
 
-    transaction.paymentTransactionId = intid || null;
-
-    if (!transaction.user.balance) {
-      throw new Error('Balance not found for user');
+    if (!mainBalance) {
+      throw new Error('Main balance not found for user');
     }
 
-    transaction.user.balance.balance += AMOUNT;
+    transaction.status = PaymentTransactionStatus.COMPLETED;
+    transaction.paymentTransactionId = intid || null;
+    mainBalance.balance += AMOUNT;
 
     await this.financeTransactionRepo
       .getEntityManager()
-      .persistAndFlush([transaction, transaction.user.balance]);
+      .persistAndFlush([transaction, mainBalance]);
 
     return 'YES';
   }

@@ -110,7 +110,7 @@ export class SessionManagerService {
         wrap(session).assign(updates);
         await this.em.flush();
 
-        this.logger.debug(`Updated session ${sessionId} with provider data`);
+        this.logger.debug(`Updated session with ${sessionId} with provider data`);
     }
 
     /**

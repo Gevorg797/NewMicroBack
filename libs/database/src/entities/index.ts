@@ -18,6 +18,7 @@ import { GameCategory } from './game-category.entity';
 import { FinanceProvider } from './finance-provider.entity';
 import { FinanceProviderSettings } from './finance-provider-settings.entity';
 import { FinanceProviderMethods } from './finance-provider-methods.entity';
+import { FinanceProviderSubMethods } from './finance-provider-sub-method.entity';
 import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { SiteSettings } from './site-settings.entity';
 import { Balances, BalanceType } from './balances.entity';
@@ -40,6 +41,7 @@ export const ENTITIES = [
   FinanceProvider,
   FinanceProviderSettings,
   FinanceProviderMethods,
+  FinanceProviderSubMethods,
   FinanceTransactions,
   Balances,
 ];
@@ -63,6 +65,7 @@ export {
   FinanceProvider,
   FinanceProviderSettings,
   FinanceProviderMethods,
+  FinanceProviderSubMethods,
   FinanceTransactions,
   Balances,
   BalanceType,

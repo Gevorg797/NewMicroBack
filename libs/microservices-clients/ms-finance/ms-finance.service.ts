@@ -1,40 +1,67 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { CreatePayinOrderDto } from 'apps/finance-service/src/freekassa/dto/create-payin-order.dto';
-import { FINANCE_PATTERNS, MS_FINANCE } from 'libs/config';
+import { MS_FINANCE_SERVICE } from './tokens';
 import { firstValueFrom } from 'rxjs';
+
+export interface CreatePayinDto {
+  userId: number;
+  amount: number;
+  methodId: number;
+  uuId?: string;
+}
+
+export interface CreatePayoutDto {
+  userId: number;
+  amount: number;
+  methodId: number;
+  requisite?: string;
+}
 
 @Injectable()
 export class MsFinanceService {
-  constructor(@Inject(MS_FINANCE) private readonly client: ClientProxy) {}
+  private readonly logger = new Logger(MsFinanceService.name);
 
-  freekassaCreatePayin(data: CreatePayinOrderDto) {
-    return firstValueFrom(
-      this.client.send(FINANCE_PATTERNS.FREEKASSA_CREATE_PAYIN, data),
-    );
+  constructor(
+    @Inject(MS_FINANCE_SERVICE) private readonly client: ClientProxy,
+  ) {}
+
+  /**
+   * Create payin (deposit) order
+   */
+  async createPayin(data: CreatePayinDto): Promise<any> {
+    try {
+      const result = await firstValueFrom(
+        this.client.send('finance.payin.create', data),
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Payin failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error(`Payin request failed: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
-  yoomoneyCreatePayin(data: CreatePayinOrderDto) {
-    return firstValueFrom(
-      this.client.send(FINANCE_PATTERNS.YOOMONEY_CREATE_PAYIN, data),
-    );
-  }
+  /**
+   * Create payout (withdrawal) order
+   */
+  async createPayout(data: CreatePayoutDto): Promise<any> {
+    try {
+      const result = await firstValueFrom(
+        this.client.send('finance.payout.create', data),
+      );
 
-  cryptobotCreatePayin(data: any) {
-    return firstValueFrom(
-      this.client.send(FINANCE_PATTERNS.CRYPTOBOT_CREATE_PAYIN, data),
-    );
-  }
+      if (!result.success) {
+        throw new Error(result.error || 'Payout failed');
+      }
 
-  yoomoneyCreatePayout(data: any) {
-    return firstValueFrom(
-      this.client.send(FINANCE_PATTERNS.YOOMONEY_CREATE_PAYOUT, data),
-    );
-  }
-
-  cryptobotCreatePayout(data: any) {
-    return firstValueFrom(
-      this.client.send(FINANCE_PATTERNS.CRYPTOBOT_CREATE_PAYOUT, data),
-    );
+      return result.data;
+    } catch (error) {
+      this.logger.error(`Payout request failed: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 }

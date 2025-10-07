@@ -119,50 +119,117 @@ export class BikBetService {
 
       // Ensure user exists and has default RUB balance
       const telegramId = String(ctx.from.id);
+
+      // Use transaction to prevent race conditions
+      const em = this.userRepository.getEntityManager();
+
       let user = await this.userRepository.findOne({ telegramId });
+
       if (!user) {
-        const fallbackName = (
-          (ctx.from.first_name ?? '') +
-          ' ' +
-          (ctx.from.last_name ?? '')
-        ).trim();
-        const derivedName = (ctx.from.username ?? fallbackName) || undefined;
-        const siteId = 1;
-        const em = this.userRepository.getEntityManager();
-        let siteRef = await em.findOne(Site, { id: siteId });
-        user = this.userRepository.create({
-          telegramId,
-          name: derivedName,
-          site: siteRef,
-        } as any);
-        await this.userRepository.getEntityManager().persistAndFlush(user);
+        try {
+          await em.transactional(async (em) => {
+            // Double-check user doesn't exist inside transaction
+            user = await em.findOne(User, { telegramId });
+
+            if (!user) {
+              const fallbackName = (
+                (ctx.from.first_name ?? '') +
+                ' ' +
+                (ctx.from.last_name ?? '')
+              ).trim();
+              const derivedName =
+                (ctx.from.username ?? fallbackName) || undefined;
+              const siteId = 1;
+              const siteRef = await em.findOne(Site, { id: siteId });
+
+              if (!siteRef) {
+                throw new Error('Default site not found');
+              }
+
+              user = em.create(User, {
+                telegramId,
+                name: derivedName,
+                site: siteRef,
+              } as any);
+
+              await em.persistAndFlush(user);
+
+              // Create balances in the same transaction
+              const rub = await em.findOne(Currency, {
+                name: CurrencyType.RUB,
+              });
+
+              if (rub) {
+                const mainBalance = em.create(Balances, {
+                  user,
+                  currency: rub,
+                  balance: 0,
+                  type: BalanceType.MAIN,
+                });
+
+                const bonusBalance = em.create(Balances, {
+                  user,
+                  currency: rub,
+                  balance: 0,
+                  type: BalanceType.BONUS,
+                });
+
+                await em.persistAndFlush([mainBalance, bonusBalance]);
+              }
+            }
+          });
+        } catch (error) {
+          // If user was created by another request, fetch it
+          if (error.code === '23505') {
+            user = await this.userRepository.findOne({ telegramId });
+          } else {
+            throw error;
+          }
+        }
       }
 
-      // Ensure balances exist for the user with default RUB currency (main and bonus)
-      const existingBalances = await this.balancesRepository.find({ user });
-      const rub = await this.currencyRepository.findOne({
-        name: CurrencyType.RUB,
-      });
+      // Ensure balances exist (in case user existed but balances didn't)
+      if (user) {
+        const existingBalances = await this.balancesRepository.find({ user });
 
-      if (rub && existingBalances.length === 0) {
-        // Create both main and bonus balances
-        const mainBalance = this.balancesRepository.create({
-          user,
-          currency: rub,
-          balance: 0,
-          type: BalanceType.MAIN,
-        } as any);
+        if (existingBalances.length === 0) {
+          const rub = await this.currencyRepository.findOne({
+            name: CurrencyType.RUB,
+          });
 
-        const bonusBalance = this.balancesRepository.create({
-          user,
-          currency: rub,
-          balance: 0,
-          type: BalanceType.BONUS,
-        } as any);
+          if (rub && user) {
+            try {
+              await em.transactional(async (em) => {
+                // Double-check balances don't exist
+                const check = await em.find(Balances, { user: user! });
 
-        await this.balancesRepository
-          .getEntityManager()
-          .persistAndFlush([mainBalance, bonusBalance]);
+                if (check.length === 0) {
+                  const mainBalance = em.create(Balances, {
+                    user: user!,
+                    currency: rub,
+                    balance: 0,
+                    type: BalanceType.MAIN,
+                  } as any);
+
+                  const bonusBalance = em.create(Balances, {
+                    user: user!,
+                    currency: rub,
+                    balance: 0,
+                    type: BalanceType.BONUS,
+                  } as any);
+
+                  await em.persistAndFlush([mainBalance, bonusBalance]);
+                }
+              });
+            } catch (error) {
+              // Balances might have been created by another request
+              console.log(
+                'Balance creation conflict, ignoring:',
+                error.message,
+              );
+            }
+          }
+        }
       }
 
       const text = `

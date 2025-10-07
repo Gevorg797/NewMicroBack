@@ -1,9 +1,8 @@
 import {
+  BalanceType,
   Currency,
   FinanceProviderSettings,
   FinanceTransactions,
-  Balances,
-  BalanceType,
 } from '@lib/database';
 import { PaymentTransactionStatus } from '@lib/database/entities/finance-provider-transactions.entity';
 import { InjectRepository } from '@mikro-orm/nestjs';
@@ -15,9 +14,18 @@ import {
 } from '@nestjs/common';
 import axios from 'axios';
 import { createHash, createHmac } from 'crypto';
+import {
+  IPaymentProvider,
+  PaymentPayload,
+  PayoutPayload,
+  CallbackPayload,
+  PaymentResult,
+} from '../interfaces/payment-provider.interface';
+import { TransactionManagerService } from '../repository/transaction-manager.service';
 
 @Injectable()
-export class CryptobotService {
+export class CryptobotService implements IPaymentProvider {
+  balancesRepository: any;
   constructor(
     @InjectRepository(FinanceProviderSettings)
     readonly fiananceProviderSettingsRepository: EntityRepository<FinanceProviderSettings>,
@@ -25,12 +33,11 @@ export class CryptobotService {
     readonly currencyRepository: EntityRepository<Currency>,
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionsRepo: EntityRepository<FinanceTransactions>,
-    @InjectRepository(Balances)
-    readonly balancesRepository: EntityRepository<Balances>,
+    readonly transactionManager: TransactionManagerService,
   ) {}
 
-  async createPayinOrder(body: any) {
-    const { transactionId, amount } = body;
+  async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
+    const { transactionId, amount } = payload;
 
     const transaction = await this.financeTransactionsRepo.findOne(
       { id: transactionId },
@@ -127,8 +134,8 @@ export class CryptobotService {
     }
   }
 
-  async createPayoutProcess(body: any) {
-    const { transactionId, amount } = body;
+  async createPayoutProcess(payload: PayoutPayload): Promise<any> {
+    const { transactionId, amount } = payload;
 
     const transaction = await this.financeTransactionsRepo.findOne(
       { id: transactionId },
@@ -185,7 +192,8 @@ export class CryptobotService {
     }
   }
 
-  async handleCallback(body: any, headers: any) {
+  async handleCallback(callbackPayload: CallbackPayload): Promise<void> {
+    const { body, headers } = callbackPayload;
     const { payload } = body;
 
     const transaction = await this.financeTransactionsRepo.findOne(

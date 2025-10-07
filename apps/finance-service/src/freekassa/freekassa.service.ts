@@ -2,18 +2,26 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePayinOrderDto } from './dto/create-payin-order.dto';
 import { EntityRepository } from '@mikro-orm/postgresql';
 import {
+  BalanceType,
   Currency,
   FinanceProviderSettings,
   FinanceTransactions,
-  Balances,
-  BalanceType,
 } from '@lib/database';
 import * as crypto from 'crypto';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { PaymentTransactionStatus } from '@lib/database/entities/finance-provider-transactions.entity';
+import {
+  IPaymentProvider,
+  PaymentPayload,
+  PayoutPayload,
+  CallbackPayload,
+  PaymentResult,
+} from '../interfaces/payment-provider.interface';
+import { TransactionManagerService } from '../repository/transaction-manager.service';
 
 @Injectable()
-export class FreekassaService {
+export class FreekassaService implements IPaymentProvider {
+  balancesRepository: any;
   constructor(
     @InjectRepository(FinanceProviderSettings)
     readonly fiananceProviderSettingsRepository: EntityRepository<FinanceProviderSettings>,
@@ -21,12 +29,11 @@ export class FreekassaService {
     readonly currencyRepository: EntityRepository<Currency>,
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
-    @InjectRepository(Balances)
-    readonly balancesRepository: EntityRepository<Balances>,
+    readonly transactionManager: TransactionManagerService,
   ) {}
 
-  async createPayinOrder(body: CreatePayinOrderDto) {
-    const { transactionId, amount } = body;
+  async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
+    const { transactionId, amount } = payload;
 
     const transaction = await this.financeTransactionRepo.findOne(
       { id: transactionId },
@@ -59,19 +66,9 @@ export class FreekassaService {
       orderId,
     );
 
-    const url = `${transaction.subMethod.method.providerSettings.paymentFormLink}?m=${shopId}&oa=${orderAmount}&o=${orderId}&s=${sign}&currency=${currencyCode}`;
+    const paymentUrl = `${transaction.subMethod.method.providerSettings.paymentFormLink}?m=${shopId}&oa=${orderAmount}&o=${orderId}&s=${sign}&currency=${currencyCode}`;
 
-    return { url };
-  }
-
-  private generateSignature(data: any, key: string) {
-    const sortedKeys = Object.keys(data).sort();
-
-    const sortedValues = sortedKeys.map((key) => data[key]);
-
-    const signString = sortedValues.join('|');
-
-    return crypto.createHmac('sha256', key).update(signString).digest('hex');
+    return { paymentUrl };
   }
 
   private generateFormSignature(
@@ -85,7 +82,14 @@ export class FreekassaService {
     return crypto.createHash('md5').update(signString).digest('hex');
   }
 
-  async handleCallback(body: any, ipAddress: string) {
+  async createPayoutProcess(payload: PayoutPayload): Promise<any> {
+    // Freekassa doesn't support automated payouts yet
+    throw new Error('Freekassa does not support automated payouts');
+  }
+
+  async handleCallback(payload: CallbackPayload): Promise<void> {
+    const body = payload.body;
+    const ipAddress = payload.params?.ipAddress;
     const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN, intid } = body;
 
     const allowedIps = [
@@ -99,25 +103,12 @@ export class FreekassaService {
       throw new Error('hacking attempt!');
     }
 
-    const transaction = await this.financeTransactionRepo.findOne(
-      { id: Number(MERCHANT_ORDER_ID) },
-      {
-        populate: ['subMethod.method.providerSettings', 'user', 'currency'],
-      },
+    const transaction = await this.transactionManager.getTransaction(
+      Number(MERCHANT_ORDER_ID),
+      ['subMethod.method.providerSettings', 'user', 'currency'],
     );
 
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found');
-    }
-
-    if (
-      transaction.status === PaymentTransactionStatus.COMPLETED ||
-      transaction.status === PaymentTransactionStatus.FAILED
-    ) {
-      throw new NotFoundException(
-        'Transaction already processed, return early',
-      );
-    }
+    this.transactionManager.validateTransactionNotProcessed(transaction);
 
     if (transaction.amount !== parseFloat(AMOUNT)) {
       throw new Error('Amount mismatch');
@@ -135,24 +126,10 @@ export class FreekassaService {
       throw new Error('wrong sign');
     }
 
-    // Get main balance to credit the amount
-    const mainBalance = await this.balancesRepository.findOne({
-      user: transaction.user,
-      type: BalanceType.MAIN,
-    });
-
-    if (!mainBalance) {
-      throw new Error('Main balance not found for user');
-    }
-
-    transaction.status = PaymentTransactionStatus.COMPLETED;
-    transaction.paymentTransactionId = intid || null;
-    mainBalance.balance += AMOUNT;
-
-    await this.financeTransactionRepo
-      .getEntityManager()
-      .persistAndFlush([transaction, mainBalance]);
-
-    return 'YES';
+    await this.transactionManager.completePayin(
+      transaction.id as number,
+      AMOUNT,
+      intid || 'freekassa-' + transaction.id,
+    );
   }
 }

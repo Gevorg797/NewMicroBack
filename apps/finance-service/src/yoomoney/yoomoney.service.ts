@@ -9,16 +9,21 @@ import {
   Currency,
   FinanceProviderSettings,
   FinanceTransactions,
-  Balances,
-  BalanceType,
 } from '@lib/database';
 import { EntityRepository } from '@mikro-orm/postgresql';
-import { PaymentTransactionStatus } from '@lib/database/entities/finance-provider-transactions.entity';
 import * as crypto from 'crypto';
 import axios from 'axios';
+import {
+  IPaymentProvider,
+  PaymentPayload,
+  PayoutPayload,
+  CallbackPayload,
+  PaymentResult,
+} from '../interfaces/payment-provider.interface';
+import { TransactionManagerService } from '../repository/transaction-manager.service';
 
 @Injectable()
-export class YoomoneyServcie {
+export class YoomoneyServcie implements IPaymentProvider {
   constructor(
     @InjectRepository(FinanceProviderSettings)
     readonly fiananceProviderSettingsRepository: EntityRepository<FinanceProviderSettings>,
@@ -26,23 +31,16 @@ export class YoomoneyServcie {
     readonly currencyRepository: EntityRepository<Currency>,
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
-    @InjectRepository(Balances)
-    readonly balancesRepository: EntityRepository<Balances>,
+    readonly transactionManager: TransactionManagerService,
   ) {}
 
-  async createPayinOrder(body: any) {
-    const { transactionId, amount } = body;
+  async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
+    const { transactionId, amount } = payload;
 
-    const transaction = await this.financeTransactionRepo.findOne(
-      { id: transactionId },
-      {
-        populate: ['subMethod.method.providerSettings', 'subMethod.method'],
-      },
+    const transaction = await this.transactionManager.getTransaction(
+      transactionId,
+      ['subMethod.method.providerSettings', 'subMethod.method'],
     );
-
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found');
-    }
 
     const providerSettings = transaction?.subMethod.method.providerSettings;
     const url = transaction?.subMethod.method.providerSettings.paymentFormLink;
@@ -52,15 +50,14 @@ export class YoomoneyServcie {
     return { paymentUrl };
   }
 
-  async createPayoutProcess(body: any) {
-    const { transactionId, amount, to } = body;
+  async createPayoutProcess(payload: PayoutPayload): Promise<any> {
+    const { transactionId, amount, params } = payload;
+    const to = params?.to || payload.to;
 
-    const transaction = await this.financeTransactionRepo.findOne(
-      { id: transactionId },
-      { populate: ['subMethod.method.providerSettings'] },
+    const transaction = await this.transactionManager.getTransaction(
+      transactionId,
+      ['subMethod.method.providerSettings'],
     );
-
-    if (!transaction) throw new NotFoundException('Transaction not found');
 
     const providerSettings = transaction.subMethod.method.providerSettings;
     const accessToken = providerSettings.publicKey as string;
@@ -75,7 +72,7 @@ export class YoomoneyServcie {
       to: to,
       amount_due: amount.toString(),
       comment: `Withdrawal tx:${transaction.id}`,
-      label: transactionId,
+      label: transactionId.toString(),
     });
 
     try {
@@ -88,10 +85,10 @@ export class YoomoneyServcie {
       );
 
       if (requestData.status !== 'success') {
-        transaction.status = PaymentTransactionStatus.FAILED;
-        await this.financeTransactionRepo
-          .getEntityManager()
-          .persistAndFlush(transaction);
+        await this.transactionManager.failTransaction(
+          transactionId,
+          requestData.error,
+        );
         throw new BadRequestException(
           `request-payment failed: ${requestData.error}`,
         );
@@ -110,52 +107,38 @@ export class YoomoneyServcie {
       );
 
       if (processData.status === 'success') {
-        transaction.status = PaymentTransactionStatus.COMPLETED;
-        transaction.paymentTransactionId = processData.payment_id;
+        await this.transactionManager.completePayout(
+          transactionId,
+          processData.payment_id,
+        );
       } else {
         throw new BadRequestException(
           `process-payment failed: ${processData.error}`,
         );
       }
 
-      await this.financeTransactionRepo
-        .getEntityManager()
-        .persistAndFlush(transaction);
-
       return processData;
     } catch (error) {
-      transaction.status = PaymentTransactionStatus.FAILED;
-      await this.financeTransactionRepo
-        .getEntityManager()
-        .persistAndFlush(transaction);
+      await this.transactionManager.failTransaction(
+        transactionId,
+        error.message,
+      );
 
       const providerMessage = error.response?.data?.error.name || error.message;
       throw new BadRequestException(`payout req failed: ${providerMessage}`);
     }
   }
 
-  async handleCallback(body: YooMoneyCallbackDto) {
+  async handleCallback(payload: CallbackPayload): Promise<void> {
+    const body = payload.body as YooMoneyCallbackDto;
     const { operation_id, amount, sha1_hash, label } = body;
 
-    const transaction = await this.financeTransactionRepo.findOne(
-      { id: Number(label) },
-      {
-        populate: ['subMethod.method.providerSettings', 'user', 'currency'],
-      },
+    const transaction = await this.transactionManager.getTransaction(
+      Number(label),
+      ['subMethod.method.providerSettings', 'user', 'currency'],
     );
 
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found');
-    }
-
-    if (
-      transaction.status === PaymentTransactionStatus.COMPLETED ||
-      transaction.status === PaymentTransactionStatus.FAILED
-    ) {
-      throw new BadRequestException(
-        'Transaction already processed, return early',
-      );
-    }
+    this.transactionManager.validateTransactionNotProcessed(transaction);
 
     if (transaction.amount !== parseFloat(amount)) {
       throw new BadRequestException('Amount mismatch');
@@ -165,29 +148,16 @@ export class YoomoneyServcie {
       body,
       transaction.subMethod.method.providerSettings.privateKey as string,
     );
-    // const newGenerateSign = this.generateSignature(body, 'g8e45AweR+w3J7Osf6NhlkPu')
 
     if (newGenerateSign !== sha1_hash) {
       throw new BadRequestException('Hack attempt');
     }
 
-    // Get main balance to credit the amount
-    const mainBalance = await this.balancesRepository.findOne({
-      user: transaction.user,
-      type: BalanceType.MAIN,
-    });
-
-    if (!mainBalance) {
-      throw new Error('Main balance not found for user');
-    }
-
-    transaction.status = PaymentTransactionStatus.COMPLETED;
-    transaction.paymentTransactionId = operation_id;
-    mainBalance.balance += Number(amount);
-
-    await this.financeTransactionRepo
-      .getEntityManager()
-      .persistAndFlush([transaction, mainBalance]);
+    await this.transactionManager.completePayin(
+      transaction.id as number,
+      Number(amount),
+      operation_id,
+    );
   }
 
   private generateSignature(

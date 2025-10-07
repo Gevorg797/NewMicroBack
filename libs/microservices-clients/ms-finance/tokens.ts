@@ -1,0 +1,1 @@
+export const MS_FINANCE_SERVICE = 'MS_FINANCE_SERVICE';

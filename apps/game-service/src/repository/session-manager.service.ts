@@ -101,11 +101,11 @@ export class SessionManagerService {
         const sessionId = gameSession.id.toString();
 
         // Update UUID with the auto-increment ID
-        await this.em.nativeUpdate(
-            GameSession,
-            { id: gameSession.id },
-            { uuid: sessionId },
-        );
+        // await this.em.nativeUpdate(
+        //     GameSession,
+        //     { id: gameSession.id },
+        //     { uuid: sessionId },
+        // );
 
         this.logger.debug(`Created game session with ID: ${sessionId}`);
 
@@ -133,12 +133,23 @@ export class SessionManagerService {
             throw new Error(`Session not found: ${sessionId}`);
         }
 
+        // Extract launch URL based on provider response format
+        // Superomatic uses response.clientDist, others use launch_url or url
+        const launchURL =
+            providerResponse?.response?.clientDist || null;
+
+        // Extract token/uuid based on provider response format
+        // Superomatic uses response.token
+        const providerToken = providerResponse?.response?.token || null;
+
         // Update session with provider response data
         const updates: Partial<GameSession> = {
-            launchURL: providerResponse.launch_url || providerResponse.url,
+            launchURL,
+            uuid: providerToken, // Update UUID if provider gives a token
             metadata: {
                 ...(session.metadata || {}),
                 providerResponse,
+                ...(providerToken && { token: providerToken }), // Save token if available
                 updatedAt: new Date().toISOString(),
             },
         };

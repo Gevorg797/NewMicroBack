@@ -1,224 +1,182 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
-import {
-  GameSession,
-  GameTransaction,
-  GameTransactionType,
-  Game,
-  User,
-  Balances,
-  BalanceType,
-} from '@lib/database';
+import { GameSession, GameTransaction, GameTransactionType, Game, User, Balances } from '@lib/database';
 
 export interface CreateSessionParams {
-  userId: number;
-  gameId: string;
-  denomination: string;
-  providerName: string;
-  isDemo?: boolean;
-  metadata?: any;
+    userId: number;
+    gameId: string;
+    denomination: string;
+    providerName: string;
+    isDemo?: boolean;
+    metadata?: any;
 }
 
 export interface SessionResult {
-  sessionId: string;
-  sessionUuid: string;
-  launchUrl?: string;
-  gameToken?: string;
-  partnerSession?: string;
-  metadata?: any;
+    sessionId: string;
+    gameUuid: string;
+    currency: string;
 }
 
 @Injectable()
 export class SessionManagerService {
-  private readonly logger = new Logger(SessionManagerService.name);
+    private readonly logger = new Logger(SessionManagerService.name);
 
-  constructor(private readonly em: EntityManager) {}
+    constructor(private readonly em: EntityManager) { }
 
-  /**
-   * Creates a new game session in the database for real (non-demo) games
-   */
-  async createRealSession(params: CreateSessionParams): Promise<SessionResult> {
-    this.logger.debug(
-      `Creating real session for user ${params.userId}, game ${params.gameId}`,
-    );
+    /**
+     * Creates a new game session in the database for real (non-demo) games
+     */
+    async createRealSession(params: CreateSessionParams): Promise<SessionResult> {
+        this.logger.debug(`Creating real session for user ${params.userId}, game ${params.gameId}`);
 
-    // Find the game, user, and balance entities
-    const game = await this.em.findOne(Game, { uuid: params.gameId });
-    if (!game) {
-      throw new Error(`Game not found: ${params.gameId}`);
+        // Fetch and validate all required entities in parallel
+        const [game, user, balance, existingAliveSession] = await Promise.all([
+            this.em.findOne(Game, { uuid: params.gameId }),
+            this.em.findOne(User, { id: params.userId }),
+            this.em.findOne(Balances, { user: { id: params.userId } }, { populate: ['currency'] }),
+            this.em.findOne(GameSession, { user: { id: params.userId }, isAlive: true }),
+        ]);
+
+        if (!game) {
+            throw new Error(`Game not found: ${params.gameId}`);
+        }
+
+        if (!user) {
+            throw new Error(`User not found: ${params.userId}`);
+        }
+
+        if (!balance) {
+            throw new Error(`Balance not found for user: ${params.userId}`);
+        }
+
+        if (existingAliveSession) {
+            throw new Error(`User ${params.userId} already has an active session. Please close the current session first.`);
+        }
+
+        // Create session using ORM to get auto-increment ID first
+        const gameSession = new GameSession();
+        wrap(gameSession).assign({
+            user,
+            game,
+            uuid: 'temp', // Temporary, will update after flush
+            balanceId: balance.id,
+            startAmount: balance.balance,
+            denomination: params.denomination,
+            isLive: true,
+            startedAt: new Date(),
+        });
+
+        await this.em.persistAndFlush(gameSession);
+
+        const sessionId = gameSession.id.toString();
+
+        // Update UUID with the auto-increment ID
+        await this.em.nativeUpdate(GameSession, { id: gameSession.id }, { uuid: sessionId });
+
+        this.logger.debug(`Created game session with ID: ${sessionId}`);
+
+        return {
+            sessionId,
+            gameUuid: params.gameId,
+            currency: balance.currency.name,
+        };
     }
 
-    const user = await this.em.findOne(User, { id: params.userId });
-    if (!user) {
-      throw new Error(`User not found: ${params.userId}`);
+    /**
+     * Updates session with provider response data (launch URL, etc.)
+     */
+    async updateSessionWithProviderResponse(
+        sessionId: string,
+        providerResponse: any
+    ): Promise<void> {
+        this.logger.debug(`Updating session ${sessionId} with provider response`);
+
+        const session = await this.em.findOne(GameSession, { id: parseInt(sessionId) });
+        if (!session) {
+            throw new Error(`Session not found: ${sessionId}`);
+        }
+
+        // Update session with provider response data
+        const updates: Partial<GameSession> = {
+            launchURL: providerResponse.launch_url || providerResponse.url,
+            metadata: {
+                ...(session.metadata || {}),
+                providerResponse,
+                updatedAt: new Date().toISOString(),
+            },
+        };
+
+        wrap(session).assign(updates);
+        await this.em.flush();
+
+        this.logger.debug(`Updated session with ${sessionId} with provider data`);
     }
 
-    // Check if user already has an alive session
-    const existingAliveSession = await this.em.findOne(GameSession, {
-      user: { id: params.userId },
-      isAlive: true,
-    });
+    /**
+     * Creates a game transaction record
+     */
+    async createTransaction(
+        sessionUuid: string,
+        type: GameTransactionType,
+        amount: number,
+        metadata?: any
+    ): Promise<void> {
+        this.logger.debug(`Creating ${type} transaction for session ${sessionUuid}: ${amount}`);
 
-    if (existingAliveSession) {
-      throw new Error(
-        `User ${params.userId} already has an active session. Please close the current session first.`,
-      );
+        const session = await this.em.findOne(GameSession, { uuid: sessionUuid });
+        if (!session) {
+            throw new Error(`Session not found: ${sessionUuid}`);
+        }
+
+        const transaction = new GameTransaction();
+        wrap(transaction).assign({
+            session,
+            type,
+            amount,
+        });
+
+        await this.em.persistAndFlush(transaction);
+
+        this.logger.debug(`Created transaction ${transaction.id} for session ${sessionUuid}`);
     }
 
-    // Get main balance for the game session
-    const balance = await this.em.findOne(Balances, {
-      user: { id: params.userId },
-      type: BalanceType.MAIN,
-    });
-    if (!balance) {
-      throw new Error(`Main balance not found for user: ${params.userId}`);
+    /**
+     * Closes a game session
+     */
+    async closeSession(sessionId: string, endAmount?: number): Promise<void> {
+        this.logger.debug(`Closing session ${sessionId}`);
+
+        const session = await this.em.findOne(GameSession, { id: parseInt(sessionId) });
+        if (!session) {
+            throw new Error(`Session not found: ${sessionId}`);
+        }
+
+        wrap(session).assign({
+            isAlive: false,
+            endedAt: new Date(),
+            endAmount,
+        });
+
+        await this.em.flush();
+
+        this.logger.debug(`Closed session ${sessionId}`);
     }
 
-    // Generate unique session identifiers
-    const sessionUuid = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const partnerSessionId = `partner_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // Create the game session entity
-    const gameSession = new GameSession();
-    wrap(gameSession).assign({
-      user,
-      game,
-      uuid: partnerSessionId, // This is the partner session ID sent to providers
-      balanceId: balance.id,
-      startAmount: balance.balance, // Use actual balance from user's balance record
-      denomination: params.denomination,
-      isLive: true, // Real session
-      metadata: {
-        providerName: params.providerName,
-        currency: balance.currency.name,
-        sessionId: sessionUuid, // Internal session ID
-        partnerSessionId, // Partner session ID
-        ...params.metadata,
-      },
-      startedAt: new Date(),
-    });
-
-    await this.em.persistAndFlush(gameSession);
-
-    this.logger.debug(
-      `Created game session with ID: ${gameSession.id}, UUID: ${sessionUuid}`,
-    );
-
-    return {
-      sessionId: gameSession.id.toString(),
-      sessionUuid,
-      launchUrl: gameSession.launchURL,
-      gameToken: sessionUuid, // Use internal session UUID as game token
-      partnerSession: partnerSessionId, // Use partner session ID for providers
-      metadata: {
-        providerName: params.providerName,
-        currency: balance.currency.name,
-        sessionId: sessionUuid, // Internal session ID
-        partnerSessionId, // Partner session ID
-        ...params.metadata,
-      },
-    };
-  }
-
-  /**
-   * Updates session with provider response data (launch URL, etc.)
-   */
-  async updateSessionWithProviderResponse(
-    sessionUuid: string,
-    providerResponse: any,
-  ): Promise<void> {
-    this.logger.debug(`Updating session ${sessionUuid} with provider response`);
-
-    const session = await this.em.findOne(GameSession, { uuid: sessionUuid });
-    if (!session) {
-      throw new Error(`Session not found: ${sessionUuid}`);
+    /**
+     * Gets session by UUID
+     */
+    async getSession(sessionUuid: string): Promise<GameSession | null> {
+        return this.em.findOne(GameSession, { uuid: sessionUuid });
     }
 
-    // Update session with provider response data
-    const updates: Partial<GameSession> = {
-      launchURL: providerResponse.launch_url || providerResponse.url,
-      metadata: {
-        ...(session.metadata || {}),
-        providerResponse,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-
-    wrap(session).assign(updates);
-    await this.em.flush();
-
-    this.logger.debug(`Updated session ${sessionUuid} with provider data`);
-  }
-
-  /**
-   * Creates a game transaction record
-   */
-  async createTransaction(
-    sessionUuid: string,
-    type: GameTransactionType,
-    amount: number,
-    metadata?: any,
-  ): Promise<void> {
-    this.logger.debug(
-      `Creating ${type} transaction for session ${sessionUuid}: ${amount}`,
-    );
-
-    const session = await this.em.findOne(GameSession, { uuid: sessionUuid });
-    if (!session) {
-      throw new Error(`Session not found: ${sessionUuid}`);
+    /**
+     * Gets active sessions for a user
+     */
+    async getActiveSessions(userId: number): Promise<GameSession[]> {
+        return this.em.find(GameSession, {
+            user: { id: userId },
+            isAlive: true,
+        });
     }
-
-    const transaction = new GameTransaction();
-    wrap(transaction).assign({
-      session,
-      type,
-      amount,
-    });
-
-    await this.em.persistAndFlush(transaction);
-
-    this.logger.debug(
-      `Created transaction ${transaction.id} for session ${sessionUuid}`,
-    );
-  }
-
-  /**
-   * Closes a game session
-   */
-  async closeSession(sessionUuid: string, endAmount?: number): Promise<void> {
-    this.logger.debug(`Closing session ${sessionUuid}`);
-
-    const session = await this.em.findOne(GameSession, { uuid: sessionUuid });
-    if (!session) {
-      throw new Error(`Session not found: ${sessionUuid}`);
-    }
-
-    wrap(session).assign({
-      isAlive: false,
-      endedAt: new Date(),
-      endAmount,
-    });
-
-    await this.em.flush();
-
-    this.logger.debug(`Closed session ${sessionUuid}`);
-  }
-
-  /**
-   * Gets session by UUID
-   */
-  async getSession(sessionUuid: string): Promise<GameSession | null> {
-    return this.em.findOne(GameSession, { uuid: sessionUuid });
-  }
-
-  /**
-   * Gets active sessions for a user
-   */
-  async getActiveSessions(userId: number): Promise<GameSession[]> {
-    return this.em.find(GameSession, {
-      user: { id: userId },
-      isAlive: true,
-    });
-  }
 }

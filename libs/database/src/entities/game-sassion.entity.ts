@@ -10,6 +10,7 @@ import { Game } from './games.entity';
 import { GameFreeSpin } from './game-free-spins.entity';
 import { User } from './user.entity';
 import { GameTransaction } from './game-transaction.entity';
+import { Balances } from './balances.entity';
 
 @Entity({ tableName: 'gameSessions' })
 export class GameSession extends BaseEntity {
@@ -37,8 +38,8 @@ export class GameSession extends BaseEntity {
   @OneToMany(() => GameTransaction, (gt) => gt.session)
   transactions = new Collection<GameTransaction>(this);
 
-  @Property()
-  balanceId!: number; // replace with @ManyToOne(() => Balance) if exists
+  @ManyToOne(() => Balances)
+  balance!: Balances; // Relationship to Balances entity (which has type: main or bonus)
 
   @Property({ columnType: 'double precision' })
   startAmount!: number;

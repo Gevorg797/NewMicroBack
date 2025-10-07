@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { MS_GAME } from 'libs/config';
 import { firstValueFrom } from 'rxjs';
+import { BalanceType } from '@lib/database';
 // import { MS_GAME } from './tokens';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class MsGameService {
     userId: number;
     siteId: number;
     gameId: number;
+    balanceType?: BalanceType;
     params: any;
   }) {
     return firstValueFrom(this.client.send('game.initGameSession', data));
@@ -32,6 +34,7 @@ export class MsGameService {
     userId: number;
     siteId: number;
     gameId: number;
+    balanceType?: BalanceType;
     params: any;
   }) {
     return firstValueFrom(this.client.send('game.initGameDemoSession', data));
@@ -45,6 +48,7 @@ export class MsGameService {
     userId: number;
     siteId: number;
     gameId: number;
+    balanceType?: BalanceType;
     params: any;
   }) {
     return firstValueFrom(this.client.send('game.gamesFreeRoundsInfo', data));

@@ -43,6 +43,7 @@ export class GameService {
         const providerPayload: ProviderPayload = {
             userId: sessionPayload.userId,
             siteId: sessionPayload.siteId,
+            balanceType: sessionPayload.balanceType, // Pass balance type to provider
             params: {
                 ...sessionPayload.params,
                 gameId: providerInfo.gameIdStr,

@@ -1,12 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString, IsOptional, ValidateNested } from 'class-validator';
+import { IsNumber, IsString, IsOptional, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BalanceType } from '@lib/database';
 
 class GameSessionParamsDto {
-    @ApiProperty({ description: 'Game ID', example: 288 })
-    @IsNumber()
-    gameId: number;
-
     // @ApiProperty({ description: 'Currency code', example: 'RUB' })
     // @IsString()
     // currency: string;
@@ -67,6 +64,20 @@ export class GameSessionDto {
     @ApiProperty({ description: 'Site ID', example: 1 })
     @IsNumber()
     siteId: number;
+
+    @ApiProperty({ description: 'Game ID', example: 288 })
+    @IsNumber()
+    gameId: number;
+
+    @ApiProperty({
+        description: 'Balance type to use (main or bonus)',
+        enum: BalanceType,
+        example: BalanceType.MAIN,
+        required: false
+    })
+    @IsOptional()
+    @IsEnum(BalanceType)
+    balanceType?: BalanceType;
 
     @ApiProperty({
         description: 'Game session parameters',

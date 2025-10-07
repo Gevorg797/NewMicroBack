@@ -23,6 +23,8 @@ import { SiteSettings } from './site-settings.entity';
 import { Balances, BalanceType } from './balances.entity';
 
 // Export everything for convenient imports
+export * from './balances.entity';
+
 export const ENTITIES = [
   User,
   Site,

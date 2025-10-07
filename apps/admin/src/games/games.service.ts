@@ -20,43 +20,42 @@ export class GamesService {
   }
 
   // Note: These methods now use unified routing based on gameId from params
-  async initGameDemoSession(data: { userId: number; siteId: number; params: any }) {
-    const { gameId, ...otherParams } = data.params;
+  async initGameDemoSession(data: { userId: number; siteId: number; gameId: number; balanceType?: any; params: any }) {
     return this.msGameService.initGameDemoSession({
       userId: data.userId,
       siteId: data.siteId,
-      gameId,
-      params: otherParams
+      gameId: data.gameId,
+      balanceType: data.balanceType,
+      params: data.params
     });
   }
 
-  async initGameSession(data: { userId: number; siteId: number; params: any }) {
-    const { gameId, ...otherParams } = data.params;
+  async initGameSession(data: { userId: number; siteId: number; gameId: number; balanceType?: any; params: any }) {
     return this.msGameService.initGameSession({
       userId: data.userId,
       siteId: data.siteId,
-      gameId,
-      params: otherParams
+      gameId: data.gameId,
+      balanceType: data.balanceType,
+      params: data.params
     });
   }
 
-  async gamesFreeRoundsInfo(data: { userId: number; siteId: number; params: any }) {
-    const { gameId, ...otherParams } = data.params;
+  async gamesFreeRoundsInfo(data: { userId: number; siteId: number; gameId: number; balanceType?: any; params: any }) {
     return this.msGameService.gamesFreeRoundsInfo({
       userId: data.userId,
       siteId: data.siteId,
-      gameId,
-      params: otherParams
+      gameId: data.gameId,
+      balanceType: data.balanceType,
+      params: data.params
     });
   }
 
-  async closeSession(data: { userId: number; siteId: number; params: any }) {
-    const { gameId, ...otherParams } = data.params;
+  async closeSession(data: { userId: number; siteId: number; gameId: number; params: any }) {
     return this.msGameService.closeSession({
       userId: data.userId,
       siteId: data.siteId,
-      gameId,
-      params: otherParams
+      gameId: data.gameId,
+      params: data.params
     });
   }
 

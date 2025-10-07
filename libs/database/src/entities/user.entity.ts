@@ -36,8 +36,8 @@ export class User extends BaseEntity {
   @OneToMany(() => GameSession, (gs) => gs.user)
   gameSessions = new Collection<GameSession>(this);
 
-  @OneToOne(() => Balances, (b) => b.user)
-  balance?: Balances;
+  @OneToMany(() => Balances, (b) => b.user)
+  balances = new Collection<Balances>(this);
 
   @Property({ onCreate: () => new Date() })
   createdAt: Date = new Date();

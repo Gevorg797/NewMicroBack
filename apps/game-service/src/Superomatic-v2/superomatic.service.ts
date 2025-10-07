@@ -151,52 +151,44 @@ export class SuperomaticService implements IExtendedGameProvider {
         const { params, siteId, userId } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
-        // Create database session first for real games
+        // Create database session first - generates our session ID
         const sessionResult = await this.sessionManager.createRealSession({
             userId,
             gameId: params.gameId,
             denomination: params.denomination?.toString() || '1.00',
             providerName: 'Superomatic',
-            metadata: {
-                freeroundsId: params.freeroundsId,
-                partnerAlias,
-                siteId,
-            },
         });
 
-        // Get currency from session metadata (which comes from user balance)
-        const sessionCurrency = sessionResult.metadata?.currency || params.currency || 'USD';
+        console.log('Created session:', sessionResult);
 
-        // Transform params to Superomatic format using our session data
+        // Send our session ID to provider
         const superomaticParams = {
             'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': sessionResult.partnerSession, // Use our generated session ID
-            'game.id': params.gameId,
-            'currency': sessionCurrency, // Use currency from user balance
+            'partner.session': sessionResult.sessionId, // Send our session ID
+            'game.id': sessionResult.gameUuid,
+            'currency': sessionResult.currency, // Use currency from user balance
             ...(params.freeroundsId && { 'freerounds.id': params.freeroundsId }),
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/init.session');
-        const response = await this.api.getGameSession(baseURL, {
+        const providerResponse = await this.api.getGameSession(baseURL, {
             ...superomaticParams,
             sign,
         });
 
-        // Update our database session with provider response
+        // Update session with provider response (launch URL, etc.)
         await this.sessionManager.updateSessionWithProviderResponse(
-            sessionResult.sessionUuid,
-            response
+            sessionResult.sessionId,
+            providerResponse
         );
 
         this.logger.debug('Successfully initialized game session with Superomatic');
 
-        // Return response with our session information
         return {
-            ...response,
+            ...providerResponse,
             sessionId: sessionResult.sessionId,
-            sessionUuid: sessionResult.sessionUuid,
-            gameToken: sessionResult.gameToken,
-            partnerSession: sessionResult.partnerSession,
+            gameUuid: sessionResult.gameUuid,
+            currency: sessionResult.currency,
         };
     }
 
@@ -206,48 +198,41 @@ export class SuperomaticService implements IExtendedGameProvider {
         const { params, siteId, userId } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
-        // Create database session first to get session ID and currency
+        // Create database session first - generates our session ID
         const sessionResult = await this.sessionManager.createRealSession({
             userId,
             gameId: params.gameId,
             denomination: params.denomination?.toString() || '1.00',
             providerName: 'Superomatic',
-            metadata: {
-                freeroundsId: params.freeroundsId,
-                partnerAlias,
-                siteId,
-            },
         });
 
-        // Transform params to Superomatic format using our session data
+        // Send our session ID to provider
         const superomaticParams = {
             'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': sessionResult.partnerSession, // Use our generated session ID
-            'game.id': params.gameId,
-            'currency': sessionResult.metadata.currency, // Use currency from user balance
+            'partner.session': sessionResult.sessionId, // Send our session ID
+            'game.id': sessionResult.gameUuid,
+            'currency': sessionResult.currency, // Use currency from user balance
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/freerounds-info');
-        const response = await this.api.gamesFreeRoundsInfo(baseURL, {
+        const providerResponse = await this.api.gamesFreeRoundsInfo(baseURL, {
             ...superomaticParams,
             sign,
         });
 
-        // Update our database session with provider response
+        // Update session with provider response
         await this.sessionManager.updateSessionWithProviderResponse(
-            sessionResult.sessionUuid,
-            response
+            sessionResult.sessionId,
+            providerResponse
         );
 
         this.logger.debug('Successfully retrieved free rounds info from Superomatic');
 
-        // Return response with our session information
         return {
-            ...response,
+            ...providerResponse,
             sessionId: sessionResult.sessionId,
-            sessionUuid: sessionResult.sessionUuid,
-            gameToken: sessionResult.gameToken,
-            partnerSession: sessionResult.partnerSession,
+            gameUuid: sessionResult.gameUuid,
+            currency: sessionResult.currency,
         };
     }
 
@@ -269,9 +254,9 @@ export class SuperomaticService implements IExtendedGameProvider {
             sign,
         });
 
-        // Close our database session if we have the session UUID
-        if (params.sessionUuid) {
-            await this.sessionManager.closeSession(params.sessionUuid);
+        // Close our database session if we have the session ID
+        if (params.sessionId) {
+            await this.sessionManager.closeSession(params.sessionId);
         }
 
         this.logger.debug('Successfully closed session with Superomatic');

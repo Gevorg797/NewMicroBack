@@ -34,8 +34,8 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${partnerSession}`);
         }
 
-        if (!session.isAlive) {
-            throw new Error(`Session is not active: ${partnerSession}`);
+        if (!session.isLive) {
+            throw new Error(`Session is not live: ${partnerSession}`);
         }
 
         // Convert denomination from string (e.g., "1.00") to cents (e.g., 100)

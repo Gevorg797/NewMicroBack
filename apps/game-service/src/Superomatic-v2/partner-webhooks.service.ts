@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { User } from '@lib/database';
+import { User, GameSession } from '@lib/database';
 import * as crypto from 'crypto';
 import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 
@@ -13,24 +13,46 @@ export class PartnerWebhooksService {
     async checkSession(data: any, headers: any) {
         this.logger.log('Superomatic called /check-session', { data, headers });
 
-        // TODO: Implement session validation logic
-        // 1. Validate the signature from Superomatic
-        // 2. Check if session exists in your database
-        // 3. Return session status
-
-        const sessionId = data['session.id'] || data.session?.id;
+        // Extract partner.session (our session ID)
         const partnerSession = data['partner.session'] || data.partnerSession;
 
-        // Validate session exists and is active
-        // This would typically check your session table
-        const isValid = await this.validateSession(partnerSession, sessionId);
+        if (!partnerSession) {
+            throw new Error('Missing partner.session parameter');
+        }
 
+        // Find the session in the database with all required relationships
+        const session = await this.em.findOne(
+            GameSession,
+            { id: parseInt(partnerSession) },
+            {
+                populate: ['user', 'game', 'balance', 'balance.currency']
+            }
+        );
+
+        if (!session) {
+            throw new Error(`Session not found: ${partnerSession}`);
+        }
+
+        if (!session.isAlive) {
+            throw new Error(`Session is not active: ${partnerSession}`);
+        }
+
+        // Convert denomination from string (e.g., "1.00") to cents (e.g., 100)
+        const denominationInCents = Math.round(parseFloat(session.denomination || '1.00') * 100);
+
+        // Convert balance from decimal to cents
+        const balanceInCents = Math.round(session.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            session: {
-                id: sessionId,
-                valid: isValid,
-                partnerSession: partnerSession
+            method: 'check.session',
+            status: 200,
+            response: {
+                id_player: session.user.id, // immutable player id
+                game_id: parseInt(session.game.uuid), // Superomatic's game id
+                currency: session.balance.currency.name, // currency code
+                balance: balanceInCents, // balance in cents
+                denomination: denominationInCents // denomination in cents
             }
         };
     }
@@ -154,13 +176,6 @@ export class PartnerWebhooksService {
     }
 
     // Helper methods for database operations
-    private async validateSession(partnerSession: string, sessionId: string): Promise<boolean> {
-        // TODO: Implement session validation
-        // Check if session exists and is active in your database
-        this.logger.log(`Validating session: ${partnerSession}, ${sessionId}`);
-        return true; // Placeholder
-    }
-
     private async getUserBalance(partnerSession: string, currency: string): Promise<number> {
         // TODO: Implement balance retrieval
         // Get user balance from database based on partnerSession

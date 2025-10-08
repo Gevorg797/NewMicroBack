@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { User } from '@lib/database';
+import { User, GameSession, GameTransaction, GameTransactionType } from '@lib/database';
+import { wrap } from '@mikro-orm/core';
 import * as crypto from 'crypto';
 import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 
@@ -13,24 +14,46 @@ export class PartnerWebhooksService {
     async checkSession(data: any, headers: any) {
         this.logger.log('Superomatic called /check-session', { data, headers });
 
-        // TODO: Implement session validation logic
-        // 1. Validate the signature from Superomatic
-        // 2. Check if session exists in your database
-        // 3. Return session status
-
-        const sessionId = data['session.id'] || data.session?.id;
+        // Extract partner.session (our session ID)
         const partnerSession = data['partner.session'] || data.partnerSession;
 
-        // Validate session exists and is active
-        // This would typically check your session table
-        const isValid = await this.validateSession(partnerSession, sessionId);
+        if (!partnerSession) {
+            throw new Error('Missing partner.session parameter');
+        }
 
+        // Find the session in the database with all required relationships
+        const session = await this.em.findOne(
+            GameSession,
+            { id: parseInt(partnerSession) },
+            {
+                populate: ['user', 'game', 'balance', 'balance.currency']
+            }
+        );
+
+        if (!session) {
+            throw new Error(`Session not found: ${partnerSession}`);
+        }
+
+        if (!session.isLive) {
+            throw new Error(`Session is not live: ${partnerSession}`);
+        }
+
+        // Convert denomination from string (e.g., "1.00") to cents (e.g., 100)
+        const denominationInCents = Math.round(parseFloat(session.denomination || '1.00') * 100);
+
+        // Convert balance from decimal to cents
+        const balanceInCents = Math.round(session.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            session: {
-                id: sessionId,
-                valid: isValid,
-                partnerSession: partnerSession
+            method: 'check.session',
+            status: 200,
+            response: {
+                id_player: session.user.id, // immutable player id
+                game_id: parseInt(session.game.uuid), // Superomatic's game id
+                currency: session.balance.currency.name, // currency code
+                balance: balanceInCents, // balance in cents
+                denomination: denominationInCents // denomination in cents
             }
         };
     }
@@ -38,22 +61,52 @@ export class PartnerWebhooksService {
     async checkBalance(data: any, headers: any) {
         this.logger.log('Superomatic called /check-balance', { data, headers });
 
-        // TODO: Implement balance checking logic
-        // 1. Validate the signature from Superomatic
-        // 2. Get player balance from your database
-        // 3. Return current balance
+        // Extract required parameters
+        const session = data['@session'] || data.session;
+        const currency = data['@currency'] || data.currency;
+        const sign = data['@sign'] || data.sign;
+        const meta = data['@meta'] || data.meta;
 
-        const partnerSession = data['partner.session'] || data.partnerSession;
-        const currency = data.currency || 'RUB';
+        if (!session) {
+            throw new Error('Missing @session parameter');
+        }
 
-        // Get user balance from database
-        const balance = await this.getUserBalance(partnerSession, currency);
+        if (!currency) {
+            throw new Error('Missing @currency parameter');
+        }
 
+        // Find the session in the database with balance relationship
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { id: parseInt(session) },
+            {
+                populate: ['balance', 'balance.currency']
+            }
+        );
+
+        if (!gameSession) {
+            throw new Error(`Session not found: ${session}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new Error(`Session is not active: ${session}`);
+        }
+
+        // Verify currency matches the session's currency
+        if (gameSession.balance.currency.name !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        }
+
+        // Convert balance from decimal to cents (Long format)
+        const balanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            balance: {
-                amount: balance, // Balance in cents
-                currency: currency
+            method: 'check.balance',
+            status: 200,
+            response: {
+                currency: currency,           // requested currency
+                balance: balanceInCents       // player's balance in cents
             }
         };
     }
@@ -61,25 +114,105 @@ export class PartnerWebhooksService {
     async withdrawBet(data: any, headers: any) {
         this.logger.log('Superomatic called /withdraw-bet', { data, headers });
 
-        // TODO: Implement bet withdrawal logic
-        // 1. Validate the signature from Superomatic
-        // 2. Check if player has sufficient balance
-        // 3. Withdraw the bet amount from player's balance
-        // 4. Return updated balance
+        // Extract required parameters
+        const session = data['@session'] || data.session;
+        const currency = data['@currency'] || data.currency;
+        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
+        const trxId = data['@trx_id'] || data.trx_id;
+        const sign = data['@sign'] || data.sign;
+        const turnId = data['@turn_id'] || data.turn_id;
+        const meta = data['@meta'] || data.meta;
 
-        const partnerSession = data['partner.session'] || data.partnerSession;
-        const trxId = data['trx.id'] || data.trxId;
-        const amount = data.amount || 0;
-        const currency = data.currency || 'RUB';
+        if (!session) {
+            throw new Error('Missing @session parameter');
+        }
 
-        // Withdraw bet from user balance
-        const newBalance = await this.withdrawFromBalance(partnerSession, amount, currency, trxId);
+        if (!currency) {
+            throw new Error('Missing @currency parameter');
+        }
 
+        if (!amountInCents || amountInCents <= 0) {
+            throw new Error('Invalid @amount parameter');
+        }
+
+        if (!trxId) {
+            throw new Error('Missing @trx_id parameter');
+        }
+
+        // Find the session in the database with balance relationship
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { id: parseInt(session) },
+            {
+                populate: ['balance', 'balance.currency']
+            }
+        );
+
+        if (!gameSession) {
+            throw new Error(`Session not found: ${session}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new Error(`Session is not active: ${session}`);
+        }
+
+        // Verify currency matches the session's currency
+        if (gameSession.balance.currency.name !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        }
+
+        // Convert amount from cents to decimal
+        const amountInDecimal = amountInCents / 100;
+
+        // Check if player has sufficient balance
+        if (gameSession.balance.balance < amountInDecimal) {
+            throw new Error(`Insufficient balance. Available: ${gameSession.balance.balance}, Required: ${amountInDecimal}`);
+        }
+
+        // Check for duplicate transaction
+        const existingTransaction = await this.em.findOne(GameTransaction, {
+            // Assuming we store trx_id in metadata or add it as a field
+            // For now, we'll check by amount and session to prevent duplicates
+            session: gameSession,
+            amount: amountInDecimal,
+            type: GameTransactionType.WITHDRAW
+        });
+
+        if (existingTransaction) {
+            this.logger.warn(`Duplicate transaction detected: ${trxId}`);
+            throw new Error(`Transaction ${trxId} already processed`);
+        }
+
+        // Start transaction to ensure atomicity
+        await this.em.transactional(async (em) => {
+            // Create game transaction record
+            const transaction = new GameTransaction();
+            wrap(transaction).assign({
+                session: gameSession,
+                type: GameTransactionType.WITHDRAW,
+                amount: amountInDecimal
+            });
+            await em.persistAndFlush(transaction);
+
+            // Update player's balance
+            wrap(gameSession.balance).assign({
+                balance: gameSession.balance.balance - amountInDecimal
+            });
+            await em.flush();
+
+            this.logger.log(`Successfully withdrew ${amountInDecimal} from session ${session}. Transaction ID: ${transaction.id}`);
+        });
+
+        // Get updated balance in cents
+        const updatedBalanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            balance: {
-                amount: newBalance,
-                currency: currency
+            method: 'withdraw.bet',
+            status: 200,
+            response: {
+                currency: currency,           // requested currency
+                balance: updatedBalanceInCents // player's balance in cents after withdrawal
             }
         };
     }
@@ -87,24 +220,99 @@ export class PartnerWebhooksService {
     async depositWin(data: any, headers: any) {
         this.logger.log('Superomatic called /deposit-win', { data, headers });
 
-        // TODO: Implement winnings deposit logic
-        // 1. Validate the signature from Superomatic
-        // 2. Add winnings to player's balance
-        // 3. Return updated balance
+        // Extract required parameters
+        const session = data['@session'] || data.session;
+        const currency = data['@currency'] || data.currency;
+        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
+        const trxId = data['@trx_id'] || data.trx_id;
+        const sign = data['@sign'] || data.sign;
+        const turnId = data['@turn_id'] || data.turn_id;
+        const meta = data['@meta'] || data.meta;
 
-        const partnerSession = data['partner.session'] || data.partnerSession;
-        const trxId = data['trx.id'] || data.trxId;
-        const amount = data.amount || 0;
-        const currency = data.currency || 'RUB';
+        if (!session) {
+            throw new Error('Missing @session parameter');
+        }
 
-        // Deposit winnings to user balance
-        const newBalance = await this.depositToBalance(partnerSession, amount, currency, trxId);
+        if (!currency) {
+            throw new Error('Missing @currency parameter');
+        }
 
+        if (!amountInCents || amountInCents <= 0) {
+            throw new Error('Invalid @amount parameter');
+        }
+
+        if (!trxId) {
+            throw new Error('Missing @trx_id parameter');
+        }
+
+        // Find the session in the database with balance relationship
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { id: parseInt(session) },
+            {
+                populate: ['balance', 'balance.currency']
+            }
+        );
+
+        if (!gameSession) {
+            throw new Error(`Session not found: ${session}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new Error(`Session is not active: ${session}`);
+        }
+
+        // Verify currency matches the session's currency
+        if (gameSession.balance.currency.name !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        }
+
+        // Convert amount from cents to decimal
+        const amountInDecimal = amountInCents / 100;
+
+        // Check for duplicate transaction
+        const existingTransaction = await this.em.findOne(GameTransaction, {
+            // Check by amount and session to prevent duplicates
+            session: gameSession,
+            amount: amountInDecimal,
+            type: GameTransactionType.DEPOSIT
+        });
+
+        if (existingTransaction) {
+            this.logger.warn(`Duplicate transaction detected: ${trxId}`);
+            throw new Error(`Transaction ${trxId} already processed`);
+        }
+
+        // Start transaction to ensure atomicity
+        await this.em.transactional(async (em) => {
+            // Create game transaction record
+            const transaction = new GameTransaction();
+            wrap(transaction).assign({
+                session: gameSession,
+                type: GameTransactionType.DEPOSIT,
+                amount: amountInDecimal
+            });
+            await em.persistAndFlush(transaction);
+
+            // Update player's balance
+            wrap(gameSession.balance).assign({
+                balance: gameSession.balance.balance + amountInDecimal
+            });
+            await em.flush();
+
+            this.logger.log(`Successfully deposited ${amountInDecimal} to session ${session}. Transaction ID: ${transaction.id}`);
+        });
+
+        // Get updated balance in cents
+        const updatedBalanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            balance: {
-                amount: newBalance,
-                currency: currency
+            method: 'deposit.win',
+            status: 200,
+            response: {
+                currency: currency,           // requested currency
+                balance: updatedBalanceInCents // player's balance in cents after deposit
             }
         };
     }
@@ -154,13 +362,6 @@ export class PartnerWebhooksService {
     }
 
     // Helper methods for database operations
-    private async validateSession(partnerSession: string, sessionId: string): Promise<boolean> {
-        // TODO: Implement session validation
-        // Check if session exists and is active in your database
-        this.logger.log(`Validating session: ${partnerSession}, ${sessionId}`);
-        return true; // Placeholder
-    }
-
     private async getUserBalance(partnerSession: string, currency: string): Promise<number> {
         // TODO: Implement balance retrieval
         // Get user balance from database based on partnerSession

@@ -5,32 +5,32 @@ import { PartnerWebhooksService } from './partner-webhooks.service';
 export class PartnerWebhooksController {
     constructor(private readonly partnerWebhooksService: PartnerWebhooksService) { }
 
-    @Post('check-session')
+    @Post('check.session')
     async checkSession(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.checkSession(data, headers);
     }
 
-    @Post('check-balance')
+    @Post('check.balance')
     async checkBalance(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.checkBalance(data, headers);
     }
 
-    @Post('withdraw-bet')
+    @Post('withdraw.bet')
     async withdrawBet(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.withdrawBet(data, headers);
     }
 
-    @Post('deposit-win')
+    @Post('deposit.win')
     async depositWin(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.depositWin(data, headers);
     }
 
-    @Post('trx-cancel')
+    @Post('trx.cancel')
     async cancelTransaction(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.cancelTransaction(data, headers);
     }
 
-    @Post('trx-complete')
+    @Post('trx.complete')
     async completeTransaction(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.completeTransaction(data, headers);
     }

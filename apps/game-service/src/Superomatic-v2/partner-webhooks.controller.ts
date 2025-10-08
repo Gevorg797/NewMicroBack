@@ -14,6 +14,46 @@ export class PartnerWebhooksController {
         return { status: 'ok', timestamp: new Date().toISOString() };
     }
 
+    // Test endpoint to verify controller is working
+    @Post('test')
+    async test(@Body() data: any, @Headers() headers: any, @Req() req: any) {
+        this.logger.log('=== TEST ENDPOINT CALLED ===');
+        this.logger.log(`Method: ${req.method}`);
+        this.logger.log(`URL: ${req.url}`);
+        this.logger.log(`Headers:`, headers);
+        this.logger.log(`Body:`, data);
+        this.logger.log('=============================');
+
+        return {
+            message: 'Test endpoint working!',
+            received: {
+                method: req.method,
+                url: req.url,
+                headers,
+                body: data
+            }
+        };
+    }
+
+    // Root endpoint to catch any request to /webhooks/superomatic
+    @All()
+    async root(@Body() data: any, @Headers() headers: any, @Req() req: any) {
+        this.logger.log('=== ROOT WEBHOOK ENDPOINT HIT ===');
+        this.logger.log(`Method: ${req.method}`);
+        this.logger.log(`URL: ${req.url}`);
+        this.logger.log(`Full URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`);
+        this.logger.log(`Headers:`, headers);
+        this.logger.log(`Body:`, data);
+        this.logger.log('===================================');
+
+        return {
+            message: 'Root webhook endpoint working!',
+            path: req.url,
+            method: req.method,
+            timestamp: new Date().toISOString()
+        };
+    }
+
     // Catch-all route for debugging - log ALL requests to this controller
     @All('*')
     async catchAll(@Body() data: any, @Headers() headers: any, @Req() req: any) {
@@ -45,33 +85,28 @@ export class PartnerWebhooksController {
         }
     }
 
-    @Post('check.session')
-    async checkSession(@Body() data: any, @Headers() headers: any) {
+    // Individual route handlers (called by catchAll)
+    private async checkSession(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.checkSession(data, headers);
     }
 
-    @Post('check.balance')
-    async checkBalance(@Body() data: any, @Headers() headers: any) {
+    private async checkBalance(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.checkBalance(data, headers);
     }
 
-    @Post('withdraw.bet')
-    async withdrawBet(@Body() data: any, @Headers() headers: any) {
+    private async withdrawBet(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.withdrawBet(data, headers);
     }
 
-    @Post('deposit.win')
-    async depositWin(@Body() data: any, @Headers() headers: any) {
+    private async depositWin(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.depositWin(data, headers);
     }
 
-    @Post('trx.cancel')
-    async cancelTransaction(@Body() data: any, @Headers() headers: any) {
+    private async cancelTransaction(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.cancelTransaction(data, headers);
     }
 
-    @Post('trx.complete')
-    async completeTransaction(@Body() data: any, @Headers() headers: any) {
+    private async completeTransaction(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.completeTransaction(data, headers);
     }
 }

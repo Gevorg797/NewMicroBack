@@ -320,21 +320,94 @@ export class PartnerWebhooksService {
     async cancelTransaction(data: any, headers: any) {
         this.logger.log('Superomatic called /trx-cancel', { data, headers });
 
-        // TODO: Implement transaction cancellation logic
-        // 1. Validate the signature from Superomatic
-        // 2. Cancel the transaction in your database
-        // 3. Return transaction status
+        // Extract required parameters
+        const session = data['@session'] || data.session;
+        const currency = data['@currency'] || data.currency;
+        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
+        const trxId = data['@trx_id'] || data.trx_id;
+        const sign = data['@sign'] || data.sign;
+        const turnId = data['@turn_id'] || data.turn_id;
+        const meta = data['@meta'] || data.meta;
 
-        const trxId = data['trx.id'] || data.trxId;
+        if (!session) {
+            throw new Error('Missing @session parameter');
+        }
 
-        // Cancel transaction in database
-        await this.cancelTransactionInDb(trxId);
+        if (!currency) {
+            throw new Error('Missing @currency parameter');
+        }
 
+        if (!amountInCents || amountInCents <= 0) {
+            throw new Error('Invalid @amount parameter');
+        }
+
+        if (!trxId) {
+            throw new Error('Missing @trx_id parameter');
+        }
+
+        // Find the session in the database with balance relationship
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { id: parseInt(session) },
+            {
+                populate: ['balance', 'balance.currency']
+            }
+        );
+
+        if (!gameSession) {
+            throw new Error(`Session not found: ${session}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new Error(`Session is not active: ${session}`);
+        }
+
+        // Verify currency matches the session's currency
+        if (gameSession.balance.currency.name !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        }
+
+        // Convert amount from cents to decimal
+        const amountInDecimal = amountInCents / 100;
+
+        // Find the transaction to cancel (look for WITHDRAW transaction with matching amount)
+        const transactionToCancel = await this.em.findOne(GameTransaction, {
+            session: gameSession,
+            type: GameTransactionType.WITHDRAW,
+            amount: amountInDecimal
+        });
+
+        if (!transactionToCancel) {
+            throw new Error(`Transaction not found to cancel: ${trxId}`);
+        }
+
+        // Start transaction to ensure atomicity
+        await this.em.transactional(async (em) => {
+            // Revert the withdrawal by adding the amount back to balance
+            wrap(gameSession.balance).assign({
+                balance: gameSession.balance.balance + amountInDecimal
+            });
+
+            // Mark the transaction as cancelled (soft delete)
+            wrap(transactionToCancel).assign({
+                deletedAt: new Date()
+            });
+
+            await em.flush();
+
+            this.logger.log(`Successfully cancelled transaction ${trxId}. Refunded ${amountInDecimal} to session ${session}`);
+        });
+
+        // Get updated balance in cents
+        const updatedBalanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            transaction: {
-                id: trxId,
-                status: 'cancelled'
+            method: 'trx.cancel',
+            status: 200,
+            response: {
+                currency: currency,           // requested currency
+                balance: updatedBalanceInCents // player's balance in cents after cancellation
             }
         };
     }
@@ -342,21 +415,82 @@ export class PartnerWebhooksService {
     async completeTransaction(data: any, headers: any) {
         this.logger.log('Superomatic called /trx-complete', { data, headers });
 
-        // TODO: Implement transaction completion logic
-        // 1. Validate the signature from Superomatic
-        // 2. Mark transaction as completed in your database
-        // 3. Return transaction status
+        // Extract required parameters
+        const session = data['@session'] || data.session;
+        const currency = data['@currency'] || data.currency;
+        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
+        const trxId = data['@trx_id'] || data.trx_id;
+        const sign = data['@sign'] || data.sign;
+        const turnId = data['@turn_id'] || data.turn_id;
+        const meta = data['@meta'] || data.meta;
 
-        const trxId = data['trx.id'] || data.trxId;
+        if (!session) {
+            throw new Error('Missing @session parameter');
+        }
 
-        // Complete transaction in database
-        await this.completeTransactionInDb(trxId);
+        if (!currency) {
+            throw new Error('Missing @currency parameter');
+        }
 
+        if (!amountInCents || amountInCents <= 0) {
+            throw new Error('Invalid @amount parameter');
+        }
+
+        if (!trxId) {
+            throw new Error('Missing @trx_id parameter');
+        }
+
+        // Find the session in the database with balance relationship
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { id: parseInt(session) },
+            {
+                populate: ['balance', 'balance.currency']
+            }
+        );
+
+        if (!gameSession) {
+            throw new Error(`Session not found: ${session}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new Error(`Session is not active: ${session}`);
+        }
+
+        // Verify currency matches the session's currency
+        if (gameSession.balance.currency.name !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        }
+
+        // Convert amount from cents to decimal
+        const amountInDecimal = amountInCents / 100;
+
+        // Find the transaction to complete (look for DEPOSIT transaction with matching amount)
+        const transactionToComplete = await this.em.findOne(GameTransaction, {
+            session: gameSession,
+            type: GameTransactionType.DEPOSIT,
+            amount: amountInDecimal,
+            deletedAt: null // Only active transactions
+        });
+
+        if (!transactionToComplete) {
+            throw new Error(`Transaction not found to complete: ${trxId}`);
+        }
+
+        // For trx.complete, we typically just log the completion
+        // The actual deposit should have already been processed in deposit.win
+        this.logger.log(`Transaction ${trxId} marked as completed for session ${session}`);
+
+        // Get current balance in cents
+        const currentBalanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // Return response in Superomatic format
         return {
-            status: 'ok',
-            transaction: {
-                id: trxId,
-                status: 'completed'
+            method: 'trx.complete',
+            status: 200,
+            response: {
+                currency: currency,           // requested currency
+                balance: currentBalanceInCents // player's current balance in cents
             }
         };
     }

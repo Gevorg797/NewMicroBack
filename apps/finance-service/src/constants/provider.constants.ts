@@ -9,8 +9,8 @@ export const PAYMENT_PROVIDER_NAMES = {
 } as const;
 
 export const PAYMENT_PROVIDER_IDENTIFIERS = {
-  YOOMONEY: ['yoomoney', 'youmoney', 'yandex'],
-  FREEKASSA: ['freekassa', 'free kassa'],
+  YOOMONEY: ['yoomoney', 'youmoney', 'yumani', 'yandex'],
+  FREEKASSA: ['freekassa', 'freekasa', 'free kassa'],
   CRYPTOBOT: ['cryptobot', 'crypto bot'],
 } as const;
 

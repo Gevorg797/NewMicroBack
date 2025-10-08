@@ -39,7 +39,9 @@ export enum MethodEnum {
   FIAT = 'fiat',
   CRYPTO = 'crypto',
   PC = 'PC',
-  AC = 'AC'
+  AC = 'AC',
+  FREEKASSA = 'freekasa',
+  YUMANI = 'PC&',
 }
 
 export enum MethodNameEnum {

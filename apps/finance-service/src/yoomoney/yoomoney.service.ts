@@ -45,7 +45,7 @@ export class YoomoneyServcie implements IPaymentProvider {
     const providerSettings = transaction?.subMethod.method.providerSettings;
     const url = transaction?.subMethod.method.providerSettings.paymentFormLink;
 
-    const paymentUrl = `${url}?receiver=${providerSettings.shopId}&quickpay-form=button&paymentType=${transaction.subMethod.method.value}&sum=${amount}&label=${transaction.id}`;
+    const paymentUrl = `${url}?receiver=${providerSettings.shopId}&quickpay-form=shop&paymentType=${transaction.subMethod.method.value}&sum=${amount}&label=${transaction.id}`;
 
     return { paymentUrl };
   }
@@ -69,7 +69,7 @@ export class YoomoneyServcie implements IPaymentProvider {
 
     const reqParams = new URLSearchParams({
       pattern_id: 'p2p',
-      to: to,
+      to: to || '',
       amount_due: amount.toString(),
       comment: `Withdrawal tx:${transaction.id}`,
       label: transactionId.toString(),
@@ -77,7 +77,7 @@ export class YoomoneyServcie implements IPaymentProvider {
 
     try {
       const { data: requestData } = await axios.post(
-        `${providerSettings.baseURL}request-payment`,
+        `${providerSettings.baseURL}?request-payment`,
         reqParams,
         {
           headers,

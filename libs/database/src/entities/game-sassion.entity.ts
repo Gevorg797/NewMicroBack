@@ -20,8 +20,8 @@ export class GameSession extends BaseEntity {
   @Property({ columnType: 'text', nullable: true })
   launchURL?: string;
 
-  @Property({ default: true })
-  isAlive: boolean = true;
+  @Property({ default: false })
+  isAlive: boolean = false;
 
   @Property({ columnType: 'timestamptz', defaultRaw: 'NOW()' })
   startedAt!: Date;

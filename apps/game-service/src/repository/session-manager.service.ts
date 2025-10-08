@@ -149,6 +149,7 @@ export class SessionManagerService {
         // Update session with provider response data
         const updates: Partial<GameSession> = {
             launchURL,
+            isAlive: true, // Mark session as alive when provider response is received
             ...(providerToken && { uuid: providerToken }), // Update UUID only if Superomatic provides a token
             metadata: {
                 ...(session.metadata || {}),

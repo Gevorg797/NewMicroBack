@@ -14,6 +14,7 @@ import {
   GamesProviderSettingGroup,
   GameSubProvider,
 } from '@lib/database';
+import { PaymentModule } from '../../client/payment/payment.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import {
       GamesProviderSettingGroup,
       Game,
     ]),
+    PaymentModule,
   ],
   controllers: [BikBetController],
   providers: [BikBetService],

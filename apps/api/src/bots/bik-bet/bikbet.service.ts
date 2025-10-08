@@ -24,6 +24,7 @@ import {
   PLAYTECH_GAME_NAMES_WITH_IDS,
   GameData,
 } from './games-data';
+import { PaymentService } from '../../client/payment/payment.service';
 
 @Injectable()
 export class BikBetService {
@@ -46,6 +47,7 @@ export class BikBetService {
     private readonly currencyRepository: EntityRepository<Currency>,
     @InjectRepository(Balances)
     private readonly balancesRepository: EntityRepository<Balances>,
+    private readonly paymentService: PaymentService,
   ) {}
 
   // Game data for different operators (imported from games-data.ts)
@@ -1292,11 +1294,11 @@ export class BikBetService {
   }
 
   async fkwalletPayment(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>👛 FKwallet Payment</b></blockquote>
+<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
 <blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>🔗 Перейдите по ссылке для оплаты через FKwallet</b></blockquote>
-<blockquote><b>✅ После оплаты средства поступят на ваш баланс</b></blockquote>`;
+<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
@@ -1305,18 +1307,38 @@ export class BikBetService {
       caption: text,
       parse_mode: 'HTML',
     };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
 
-    await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [
-          Markup.button.url(
-            '👛 Оплатить через FKwallet',
-            `https://fkwallet.com/pay?amount=${amount}&user=${ctx.from.id}`,
-          ),
-        ],
-        [Markup.button.callback('🔙 Назад к пополнению', 'donate_menu')],
-      ]).reply_markup,
-    });
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: 1, // FKwallet method ID
+      });
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.url(
+              '👛 Оплатить через FKwallet',
+              paymentResult.paymentUrl,
+            ),
+          ],
+          [Markup.button.callback('🔙 Назад к пополнению', 'donate_menu')],
+        ]).reply_markup,
+      });
+    } catch (error) {
+      console.error('Payment creation failed:', error);
+      await ctx.answerCbQuery('Ошибка создания платежа', { show_alert: true });
+    }
   }
 
   async myBonuses(ctx: any) {

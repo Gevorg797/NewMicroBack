@@ -50,7 +50,7 @@ export class GamesService {
     });
   }
 
-  async closeSession(data: { userId: number; siteId: number; gameId: number; params: any }) {
+  async closeSession(data: { userId: number; siteId?: number; gameId?: number; params?: any }) {
     return this.msGameService.closeSession({
       userId: data.userId,
       siteId: data.siteId,

@@ -134,9 +134,13 @@ export class SessionManagerService {
         }
 
         // Extract launch URL based on provider response format
-        // Superomatic uses response.clientDist, others use launch_url or url
+        // Superomatic uses response.clientDist
+        // B2BSlots and others use launch_url or url
         const launchURL =
-            providerResponse?.response?.clientDist || null;
+            providerResponse?.response?.clientDist ||
+            providerResponse?.launch_url ||
+            providerResponse?.url ||
+            null;
 
         // Extract token/uuid based on provider response format
         // Superomatic uses response.token
@@ -145,7 +149,7 @@ export class SessionManagerService {
         // Update session with provider response data
         const updates: Partial<GameSession> = {
             launchURL,
-            uuid: providerToken, // Update UUID if provider gives a token
+            ...(providerToken && { uuid: providerToken }), // Update UUID only if Superomatic provides a token
             metadata: {
                 ...(session.metadata || {}),
                 providerResponse,
@@ -193,23 +197,37 @@ export class SessionManagerService {
     }
 
     /**
-     * Closes a game session
+     * Closes a game session and updates user balance if endAmount is provided
      */
     async closeSession(sessionId: string, endAmount?: number): Promise<void> {
-        this.logger.debug(`Closing session ${sessionId}`);
+        this.logger.debug(`Closing session ${sessionId} with endAmount: ${endAmount || 'N/A'}`);
 
-        const session = await this.em.findOne(GameSession, {
-            id: parseInt(sessionId),
-        });
+        const session = await this.em.findOne(
+            GameSession,
+            { id: parseInt(sessionId) },
+            { populate: ['balance'] }
+        );
         if (!session) {
             throw new Error(`Session not found: ${sessionId}`);
         }
 
+        // Update session closure data
         wrap(session).assign({
             isAlive: false,
             endedAt: new Date(),
             endAmount,
         });
+
+        // Update user's balance if endAmount is provided
+        if (endAmount !== undefined && session.balance) {
+            this.logger.debug(
+                `Updating balance from ${session.balance.balance} to ${endAmount} for session ${sessionId}`
+            );
+
+            wrap(session.balance).assign({
+                balance: endAmount,
+            });
+        }
 
         await this.em.flush();
 
@@ -227,9 +245,13 @@ export class SessionManagerService {
      * Gets active sessions for a user
      */
     async getActiveSessions(userId: number): Promise<GameSession[]> {
-        return this.em.find(GameSession, {
-            user: { id: userId },
-            isAlive: true,
-        });
+        return this.em.find(
+            GameSession,
+            {
+                user: { id: userId },
+                isAlive: true,
+            },
+            { populate: ['balance', 'user.site'] }
+        );
     }
 }

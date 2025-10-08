@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { Game } from '@lib/database';
+import { Game, GameSession } from '@lib/database';
 import { IGameProvider, GameProviderInfo } from '../interfaces/game-provider.interface';
 import { SuperomaticService } from '../Superomatic-v2/superomatic.service';
 import { B2BSlotsService } from '../B2BSlots-v1/b2bslots.service';
@@ -101,6 +101,69 @@ export class ProviderStrategyFactory {
         }
 
         return null;
+    }
+
+    /**
+     * Get provider information from session ID
+     * Used for operations that don't have gameId (closeSession, gamesFreeRoundsInfo)
+     */
+    async getProviderFromSession(sessionId: string): Promise<string> {
+        this.logger.debug(`Looking up provider for session ID: ${sessionId}`);
+
+        const session = await this.em.findOne(
+            GameSession,
+            { id: parseInt(sessionId) },
+            { populate: ['game.subProvider.provider'] }
+        );
+
+        if (!session) {
+            throw new Error(`Session not found: ${sessionId}`);
+        }
+
+        const providerName = session.game.subProvider.provider.name.toLowerCase();
+        this.logger.debug(`Found provider: ${providerName} for session: ${sessionId}`);
+
+        const normalizedProviderName = this.normalizeProviderName(providerName);
+
+        if (!normalizedProviderName) {
+            this.logger.error(`Unknown provider: ${providerName} for session: ${sessionId}`);
+            throw new Error(`Unknown provider: ${providerName}`);
+        }
+
+        return normalizedProviderName;
+    }
+
+    /**
+     * Get provider information from user ID
+     * Finds user's active session and determines provider from it
+     */
+    async getProviderFromUserId(userId: number): Promise<string> {
+        this.logger.debug(`Looking up provider for user ID: ${userId}`);
+
+        const session = await this.em.findOne(
+            GameSession,
+            {
+                user: { id: userId },
+                isAlive: true
+            },
+            { populate: ['game.subProvider.provider'] }
+        );
+
+        if (!session) {
+            throw new Error(`No active session found for user: ${userId}`);
+        }
+
+        const providerName = session.game.subProvider.provider.name.toLowerCase();
+        this.logger.debug(`Found provider: ${providerName} for user: ${userId}`);
+
+        const normalizedProviderName = this.normalizeProviderName(providerName);
+
+        if (!normalizedProviderName) {
+            this.logger.error(`Unknown provider: ${providerName} for user: ${userId}`);
+            throw new Error(`Unknown provider: ${providerName}`);
+        }
+
+        return normalizedProviderName;
     }
 
     /**

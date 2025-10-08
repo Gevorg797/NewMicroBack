@@ -31,7 +31,7 @@ export class GameController {
 
     @MessagePattern('game.closeSession')
     async closeSession(@Payload() payload: SessionPayload): Promise<any> {
-        this.logger.debug(`Received closeSession request for game: ${payload.gameId}`);
+        this.logger.debug(`Received closeSession request for user: ${payload.userId}`);
         return this.gameService.closeSession(payload);
     }
 

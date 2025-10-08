@@ -17,19 +17,31 @@ export class SessionManagementDto {
     @IsNumber()
     userId: number;
 
-    @ApiProperty({ description: 'Site ID', example: 1 })
+    @ApiProperty({
+        description: 'Site ID (optional - determined from user session)',
+        example: 1,
+        required: false
+    })
     @IsNumber()
-    siteId: number;
-
-    @ApiProperty({ description: 'Game ID', example: 288 })
-    @IsNumber()
-    gameId: number;
+    @IsOptional()
+    siteId?: number;
 
     @ApiProperty({
-        description: 'Session management parameters',
-        type: SessionParamsDto
+        description: 'Game ID (optional - determined from user active session)',
+        example: 288,
+        required: false
+    })
+    @IsNumber()
+    @IsOptional()
+    gameId?: number;
+
+    @ApiProperty({
+        description: 'Session management parameters (optional)',
+        type: SessionParamsDto,
+        required: false
     })
     @ValidateNested()
     @Type(() => SessionParamsDto)
-    params: SessionParamsDto;
+    @IsOptional()
+    params?: SessionParamsDto;
 }

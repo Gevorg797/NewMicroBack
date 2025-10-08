@@ -5,9 +5,9 @@ import { BalanceType } from '@lib/database';
 
 export interface SessionPayload {
     userId: number;
-    siteId: number;
-    gameId: number;
-    params: Record<string, any>;
+    siteId?: number; // Optional for closeSession (determined from user's site)
+    gameId?: number; // Optional for closeSession (determined from active session)
+    params?: Record<string, any>;
     balanceType?: BalanceType; // Optional: specify which balance to use (main or bonus)
 }
 

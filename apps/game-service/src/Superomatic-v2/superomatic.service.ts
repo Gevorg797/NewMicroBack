@@ -194,75 +194,87 @@ export class SuperomaticService implements IExtendedGameProvider {
     }
 
     async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {
-        this.logger.debug(`Getting free rounds info for game: ${payload.params.gameId}`);
+        this.logger.debug(`Getting free rounds info for freerounds.id: ${payload.params.freeroundsId}`);
 
-        const { params, siteId, userId, balanceType } = payload;
+        const { params, siteId } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
-
-        // Create database session first - generates our session ID
-        const sessionResult = await this.sessionManager.createRealSession({
-            userId,
-            gameId: params.gameId,
-            denomination: params.denomination?.toString() || '1.00',
-            balanceType, // Pass balance type from payload
-            metadata: { ...params }
-        });
-
-        // Send our session ID to provider
+        // This endpoint only checks freeround status - no session creation needed
+        // Only requires: partner.alias, freerounds.id, and sign
         const superomaticParams = {
             'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': sessionResult.sessionId, // Send our session ID
-            'game.id': sessionResult.gameUuid,
-            'currency': sessionResult.currency, // Use currency from user balance
+            'freerounds.id': params.freeroundsId,
         };
 
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/freerounds-info');
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/games.freeroundsInfo');
         const providerResponse = await this.api.gamesFreeRoundsInfo(baseURL, {
             ...superomaticParams,
             sign,
         });
 
-        // Update session with provider response
-        await this.sessionManager.updateSessionWithProviderResponse(
-            sessionResult.sessionId,
-            providerResponse
-        );
-
         this.logger.debug('Successfully retrieved free rounds info from Superomatic');
 
-        return {
-            ...providerResponse,
-            sessionId: sessionResult.sessionId,
-            gameUuid: sessionResult.gameUuid,
-            currency: sessionResult.currency,
-        };
+        // Response contains: max_step, steps, total_win
+        return providerResponse;
     }
 
     async closeSession(payload: ProviderPayload): Promise<any> {
-        this.logger.debug(`Closing session for site: ${payload.siteId}`);
+        this.logger.debug(`Closing session for user: ${payload.userId}`);
 
-        const { params, siteId } = payload;
+        const { userId } = payload;
+
+        // Find the active session for this user (with user.site populated to get siteId)
+        const activeSessions = await this.sessionManager.getActiveSessions(userId);
+
+        if (!activeSessions || activeSessions.length === 0) {
+            this.logger.warn(`No active session found for user: ${userId}`);
+            throw new Error(`No active session found for user: ${userId}`);
+        }
+
+        // Use the first active session (assuming one session per user)
+        const session = activeSessions[0];
+
+        if (!session.id) {
+            throw new Error(`Invalid session data for user: ${userId}`);
+        }
+
+        // Get siteId from the session's user
+        const siteId = session.user?.site?.id;
+        if (!siteId) {
+            throw new Error(`Cannot determine siteId for user: ${userId}`);
+        }
+
+        const sessionId = session.id.toString(); // Our database session ID
+
+        this.logger.debug(`Found active session ${sessionId} for user ${userId} on site ${siteId}`);
+
+        // Get provider settings using siteId from user
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
-        // Transform params to Superomatic format
+        // Superomatic close.session only needs partner.alias and partner.session
+        // Send the same session ID that was sent to Superomatic during init.session
         const superomaticParams = {
-            'partner.alias': partnerAlias || params.partnerAlias,
-            'partner.session': params.partnerSession,
+            'partner.alias': partnerAlias,
+            'partner.session': sessionId, // Same ID we sent during init
         };
 
-        const sign = this.utils.generateSigniture(superomaticParams, key, '/session.close');
+        const sign = this.utils.generateSigniture(superomaticParams, key, '/close.session');
         const response = await this.api.closeSession(baseURL, {
             ...superomaticParams,
             sign,
         });
 
-        // Close our database session if we have the session ID
-        if (params.sessionId) {
-            await this.sessionManager.closeSession(params.sessionId);
-        }
+        // Get the final balance to store as endAmount
+        // Note: During close.session, Superomatic sends /check.balance and /deposit.win webhooks
+        // The balance should already be updated through those webhooks
+        const finalBalance = session.balance?.balance;
 
-        this.logger.debug('Successfully closed session with Superomatic');
+        // Close our database session with the final balance
+        await this.sessionManager.closeSession(sessionId, finalBalance);
+
+        this.logger.debug(`Successfully closed session ${sessionId} for user ${userId} with final balance: ${finalBalance}`);
+
+        // Response is just: { method: "close.session", status: 200, response: true }
         return response;
     }
 

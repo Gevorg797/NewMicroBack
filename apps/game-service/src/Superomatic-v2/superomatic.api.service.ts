@@ -16,7 +16,7 @@ const TRX_COMPLETE = '/trx.complete';
 const CHECK_SESSION = '/check.session';
 const WITHDRAW_BET = '/withdraw.bet';
 const DEPOSIT_WIN = '/deposit.win';
-const CLOSE_SESSION = '/session.close';
+const CLOSE_SESSION = '/close.session';
 
 @Injectable()
 export class SuperomaticApiService {

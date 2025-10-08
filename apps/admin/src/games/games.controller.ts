@@ -62,7 +62,10 @@ export class GamesController {
     }
 
     @Post('close-session')
-    @ApiOperation({ summary: 'Close user session' })
+    @ApiOperation({
+        summary: 'Close user session',
+        description: 'Close user active session. Only userId is required - siteId and gameId are determined automatically from the user\'s active session.'
+    })
     @ApiResponse({ status: 200, description: 'Session closed successfully' })
     @ApiResponse({ status: 400, description: 'Bad request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })

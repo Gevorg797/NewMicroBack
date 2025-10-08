@@ -37,12 +37,16 @@ export class GameService {
     private async prepareProviderPayload(sessionPayload: SessionPayload): Promise<ProviderPayload> {
         this.logger.debug(`Preparing provider payload for game: ${sessionPayload.gameId}`);
 
+        if (!sessionPayload.gameId) {
+            throw new Error('gameId is required for this operation');
+        }
+
         const providerInfo = await this.providerStrategyFactory.getGameProvider(sessionPayload.gameId);
 
         // Transform gameId to provider-specific format
         const providerPayload: ProviderPayload = {
             userId: sessionPayload.userId,
-            siteId: sessionPayload.siteId,
+            siteId: sessionPayload.siteId || 0, // Required for provider settings lookup
             balanceType: sessionPayload.balanceType, // Pass balance type to provider
             params: {
                 ...sessionPayload.params,
@@ -63,6 +67,10 @@ export class GameService {
         providerMethod: (provider: any, payload: ProviderPayload) => Promise<T>
     ): Promise<T> {
         this.logger.debug(`Executing ${operation} for game: ${sessionPayload.gameId}`);
+
+        if (!sessionPayload.gameId) {
+            throw new Error('gameId is required for this operation');
+        }
 
         const providerPayload = await this.prepareProviderPayload(sessionPayload);
         const providerInfo = await this.providerStrategyFactory.getGameProvider(sessionPayload.gameId);
@@ -108,13 +116,25 @@ export class GameService {
 
     /**
      * Routes close session requests to the appropriate provider
+     * Determines provider from user's active session (no gameId required)
      */
     async closeSession(payload: SessionPayload): Promise<any> {
-        return this.executeProviderOperation(
-            payload,
-            'closeSession',
-            (provider, providerPayload) => provider.closeSession(providerPayload)
-        );
+        this.logger.debug(`Closing session for user: ${payload.userId}`);
+
+        // Get the provider from the user's active session
+        const providerName = await this.providerStrategyFactory.getProviderFromUserId(payload.userId);
+        const provider = this.providerStrategyFactory.getProviderStrategy(providerName);
+
+        const providerPayload: ProviderPayload = {
+            userId: payload.userId,
+            siteId: payload.siteId || 0, // siteId will be determined from user's session
+            balanceType: payload.balanceType,
+            params: payload.params || {},
+        };
+
+        const result = await provider.closeSession(providerPayload);
+        this.logger.debug(`closeSession completed successfully for provider: ${providerName}`);
+        return result;
     }
 
     /**

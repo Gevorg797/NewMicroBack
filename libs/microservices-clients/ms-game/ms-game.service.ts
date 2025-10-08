@@ -55,14 +55,14 @@ export class MsGameService {
   }
 
   /**
-   * Close a game session - automatically routes to correct provider based on gameId
-   * @param data Must include gameId for provider routing
+   * Close a game session - automatically routes to correct provider based on user's active session
+   * @param data Only requires userId - siteId and gameId are determined from the active session
    */
   closeSession(data: {
     userId: number;
-    siteId: number;
-    gameId: number;
-    params: any;
+    siteId?: number; // Optional - determined from user's session
+    gameId?: number; // Optional - determined from user's active session
+    params?: any;
   }) {
     return firstValueFrom(this.client.send('game.closeSession', data));
   }

@@ -1332,7 +1332,7 @@ export class BikBetService {
               paymentResult.paymentUrl,
             ),
           ],
-          [Markup.button.callback('🔙 Назад к пополнению', 'donate_menu')],
+          [Markup.button.callback('🔙 Назад', 'donate_menu')],
         ]).reply_markup,
       });
     } catch (error) {

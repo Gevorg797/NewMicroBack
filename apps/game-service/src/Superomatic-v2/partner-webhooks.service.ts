@@ -14,8 +14,11 @@ export class PartnerWebhooksService {
     async checkSession(data: any, headers: any) {
         this.logger.log('Superomatic called /check-session', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract partner.session (our session ID)
-        const partnerSession = data['session'] || data.session;
+        const partnerSession = parsedData['session'] || parsedData.session;
 
         if (!partnerSession) {
             throw new Error('Missing partner.session parameter');
@@ -61,11 +64,14 @@ export class PartnerWebhooksService {
     async checkBalance(data: any, headers: any) {
         this.logger.log('Superomatic called /check-balance', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const sign = data['@sign'] || data.sign;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -114,14 +120,17 @@ export class PartnerWebhooksService {
     async withdrawBet(data: any, headers: any) {
         this.logger.log('Superomatic called /withdraw-bet', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -220,14 +229,17 @@ export class PartnerWebhooksService {
     async depositWin(data: any, headers: any) {
         this.logger.log('Superomatic called /deposit-win', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -320,14 +332,17 @@ export class PartnerWebhooksService {
     async cancelTransaction(data: any, headers: any) {
         this.logger.log('Superomatic called /trx-cancel', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -415,14 +430,17 @@ export class PartnerWebhooksService {
     async completeTransaction(data: any, headers: any) {
         this.logger.log('Superomatic called /trx-complete', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');

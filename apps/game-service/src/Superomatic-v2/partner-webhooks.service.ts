@@ -94,7 +94,7 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
+        if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 

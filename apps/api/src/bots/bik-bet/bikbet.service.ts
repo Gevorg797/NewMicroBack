@@ -1363,7 +1363,7 @@ export class BikBetService {
       });
     } catch (error) {
       console.error('Payment creation failed:', error);
-      await ctx.answerCbQuery('Ошибка создания платежа', { show_alert: true });
+      throw error; // Re-throw to be caught by controller
     }
   }
 
@@ -1412,9 +1412,7 @@ export class BikBetService {
       });
     } catch (error) {
       console.error('YooMoney payment creation failed:', error);
-      await ctx.answerCbQuery('Ошибка создания платежа YooMoney', {
-        show_alert: true,
-      });
+      throw error; // Re-throw to be caught by controller
     }
   }
 
@@ -1447,7 +1445,7 @@ export class BikBetService {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 3, // CryptoBot method ID
+        methodId: 4, // CryptoBot method ID
       });
 
       await ctx.editMessageMedia(media, {
@@ -1463,9 +1461,7 @@ export class BikBetService {
       });
     } catch (error) {
       console.error('CryptoBot payment creation failed:', error);
-      await ctx.answerCbQuery('Ошибка создания платежа CryptoBot', {
-        show_alert: true,
-      });
+      throw error; // Re-throw to be caught by controller
     }
   }
 

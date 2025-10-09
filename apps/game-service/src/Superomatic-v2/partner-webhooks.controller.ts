@@ -41,7 +41,6 @@ export class PartnerWebhooksController {
         this.logger.log('=== ROOT WEBHOOK ENDPOINT HIT ===');
         this.logger.log(`Method: ${req.method}`);
         this.logger.log(`URL: ${req.url}`);
-        this.logger.log(`Full URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`);
         this.logger.log(`Headers:`, headers);
         this.logger.log(`Body:`, data);
         this.logger.log('===================================');
@@ -65,7 +64,14 @@ export class PartnerWebhooksController {
         this.logger.log(`================================`);
 
         // Route to appropriate method based on URL
-        const url = req.url.replace('/webhooks/superomatic', '');
+        // Extract the endpoint by removing prefixes (/games, /webhooks/superomatic)
+        let url = req.url;
+        url = url.replace('/games/webhooks/superomatic', ''); // Full path with global prefix
+        url = url.replace('/webhooks/superomatic', ''); // Without global prefix
+        url = url.replace('/games', ''); // Direct call with just global prefix
+
+        this.logger.log(`Extracted endpoint: "${url}" from original URL: "${req.url}"`);
+
         switch (url) {
             case '/check.session':
                 return this.checkSession(data, headers);

@@ -1362,8 +1362,9 @@ export class BikBetService {
         ]).reply_markup,
       });
     } catch (error) {
-      console.error('Payment creation failed:', error);
-      throw error; // Re-throw to be caught by controller
+      const message = 'Создание платежа FK не удалось. Нажмите /start';
+      await ctx.reply(message);
+      return;
     }
   }
 
@@ -1411,8 +1412,9 @@ export class BikBetService {
         ]).reply_markup,
       });
     } catch (error) {
-      console.error('YooMoney payment creation failed:', error);
-      throw error; // Re-throw to be caught by controller
+      const message = 'Создание платежа YooMoney не удалось. Нажмите /start';
+      await ctx.reply(message);
+      return;
     }
   }
 
@@ -1460,8 +1462,9 @@ export class BikBetService {
         ]).reply_markup,
       });
     } catch (error) {
-      console.error('CryptoBot payment creation failed:', error);
-      throw error; // Re-throw to be caught by controller
+      const message = 'Создание платежа CryptoBot не удалось. Нажмите /start';
+      await ctx.reply(message);
+      return;
     }
   }
 

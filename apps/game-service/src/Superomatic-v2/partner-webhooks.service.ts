@@ -15,7 +15,7 @@ export class PartnerWebhooksService {
         this.logger.log('Superomatic called /check-session', { data, headers });
 
         // Extract partner.session (our session ID)
-        const partnerSession = data['partner.session'] || data.partnerSession;
+        const partnerSession = data['session'] || data.session;
 
         if (!partnerSession) {
             throw new Error('Missing partner.session parameter');

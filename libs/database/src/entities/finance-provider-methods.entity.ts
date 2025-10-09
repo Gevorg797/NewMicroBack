@@ -42,6 +42,7 @@ export enum MethodEnum {
   AC = 'AC',
   FREEKASSA = 'freekasa',
   YUMANI = 'PC',
+  CRYPTOBOT = 'cryptobot',
 }
 
 export enum MethodNameEnum {

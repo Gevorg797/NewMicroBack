@@ -1075,7 +1075,10 @@ export class BikBetService {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('От 50р:', 'ignore_game')],
         [
-          Markup.button.callback('💎 CryptoBot', 'payment:crypto'),
+          Markup.button.callback(
+            '💎 CryptoBot',
+            `paymentSystem_cryptobot_${amount}`,
+          ),
           Markup.button.callback(
             '👛 FKwallet',
             `paymentSystem_fkwallet_${amount}`,
@@ -1084,7 +1087,7 @@ export class BikBetService {
         [
           Markup.button.callback(
             '💳 Оплата с карты(+5% бонус)',
-            'depositYOOMONEY_',
+            `paymentSystem_yoomoney_${amount}`,
           ),
         ],
         [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
@@ -1361,6 +1364,108 @@ export class BikBetService {
     } catch (error) {
       console.error('Payment creation failed:', error);
       await ctx.answerCbQuery('Ошибка создания платежа', { show_alert: true });
+    }
+  }
+
+  async yoomoneyPayment(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
+    const text = `
+<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
+<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
+<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>
+<blockquote><b>💳 Оплата с карты (+5% бонус)</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_1.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
+
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: 2, // YooMoney method ID
+      });
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.url(
+              '💳 Оплатить через YooMoney',
+              paymentResult.paymentUrl,
+            ),
+          ],
+          [Markup.button.callback('🔙 Назад', 'donate_menu')],
+        ]).reply_markup,
+      });
+    } catch (error) {
+      console.error('YooMoney payment creation failed:', error);
+      await ctx.answerCbQuery('Ошибка создания платежа YooMoney', {
+        show_alert: true,
+      });
+    }
+  }
+
+  async cryptobotPayment(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
+    const text = `
+<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
+<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
+<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>
+<blockquote><b>💎 Оплата через CryptoBot</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_1.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
+
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: 3, // CryptoBot method ID
+      });
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.url(
+              '💎 Оплатить через CryptoBot',
+              paymentResult.paymentUrl,
+            ),
+          ],
+          [Markup.button.callback('🔙 Назад', 'donate_menu')],
+        ]).reply_markup,
+      });
+    } catch (error) {
+      console.error('CryptoBot payment creation failed:', error);
+      await ctx.answerCbQuery('Ошибка создания платежа CryptoBot', {
+        show_alert: true,
+      });
     }
   }
 

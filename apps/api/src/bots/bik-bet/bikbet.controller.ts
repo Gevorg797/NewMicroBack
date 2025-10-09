@@ -68,6 +68,28 @@ export class BikBetController {
       await this.bikbetService.fkwalletPayment(ctx, amount);
     });
 
+    // YooMoney payment handler: paymentSystem_yoomoney_<amount>
+    this.bot.action(/paymentSystem_yoomoney_(.+)/, async (ctx) => {
+      const amount = Number((ctx as any).match?.[1]);
+      if (!Number.isFinite(amount)) {
+        await ctx.answerCbQuery('Некорректная сумма');
+        return;
+      }
+      await ctx.answerCbQuery();
+      await this.bikbetService.yoomoneyPayment(ctx, amount);
+    });
+
+    // CryptoBot payment handler: paymentSystem_cryptobot_<amount>
+    this.bot.action(/paymentSystem_cryptobot_(.+)/, async (ctx) => {
+      const amount = Number((ctx as any).match?.[1]);
+      if (!Number.isFinite(amount)) {
+        await ctx.answerCbQuery('Некорректная сумма');
+        return;
+      }
+      await ctx.answerCbQuery();
+      await this.bikbetService.cryptobotPayment(ctx, amount);
+    });
+
     // Game button click handler
     this.bot.action('games', async (ctx) => {
       await ctx.answerCbQuery();

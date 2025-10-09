@@ -39,7 +39,7 @@ export class YoomoneyServcie implements IPaymentProvider {
 
     const transaction = await this.transactionManager.getTransaction(
       transactionId,
-      ['subMethod.method.providerSettings', 'subMethod.method'],
+      ['subMethod.method.providerSettings', 'subMethod.method', 'user'],
     );
 
     const providerSettings = transaction?.subMethod.method.providerSettings;

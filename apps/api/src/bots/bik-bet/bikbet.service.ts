@@ -1165,10 +1165,33 @@ export class BikBetService {
     });
   }
   async donateMenu(ctx: any) {
+    const telegramId = String(ctx.from.id);
+    const user = await this.userRepository.findOne({ telegramId });
+    let balanceValue = 0;
+    let bonusValue = 0;
+    if (user) {
+      // Get main balance
+      const mainBalance = await this.balancesRepository.findOne(
+        { user, type: BalanceType.MAIN },
+        { populate: ['currency'] },
+      );
+      // Get bonus balance
+      const bonusBalance = await this.balancesRepository.findOne(
+        { user, type: BalanceType.BONUS },
+        { populate: ['currency'] },
+      );
+
+      if (mainBalance) {
+        balanceValue = mainBalance.balance ?? 0;
+      }
+      if (bonusBalance) {
+        bonusValue = bonusBalance.balance ?? 0;
+      }
+    }
     const text = `
-<blockquote><b>🆔 ID: ${this.totalPlayers}</b></blockquote>
-<blockquote>💰 Баланс: <code>${this.totalPlayers}</code></blockquote>
-<blockquote> <b>🎁 Бонусный баланс: 0 RUB</b> </blockquote>
+<blockquote><b>🆔 ID: <code>${telegramId}</code></b></blockquote>
+<blockquote>💰 Баланс: <code>${balanceValue}</code> RUB</blockquote>
+<blockquote> <b>🎁 Бонусный баланс:  <code>${bonusValue}</code> RUB</b> </blockquote>
 `;
 
     const filePath = this.getImagePath('bik_bet_5.jpg');

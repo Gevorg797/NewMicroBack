@@ -41,7 +41,7 @@ export enum MethodEnum {
   PC = 'PC',
   AC = 'AC',
   FREEKASSA = 'freekasa',
-  YUMANI = 'PC&',
+  YUMANI = 'PC',
 }
 
 export enum MethodNameEnum {

@@ -14,8 +14,11 @@ export class PartnerWebhooksService {
     async checkSession(data: any, headers: any) {
         this.logger.log('Superomatic called /check-session', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract partner.session (our session ID)
-        const partnerSession = data['session'] || data.session;
+        const partnerSession = parsedData['session'] || parsedData.session;
 
         if (!partnerSession) {
             throw new Error('Missing partner.session parameter');
@@ -61,11 +64,14 @@ export class PartnerWebhooksService {
     async checkBalance(data: any, headers: any) {
         this.logger.log('Superomatic called /check-balance', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const sign = data['@sign'] || data.sign;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -88,7 +94,7 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
+        if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
@@ -114,14 +120,17 @@ export class PartnerWebhooksService {
     async withdrawBet(data: any, headers: any) {
         this.logger.log('Superomatic called /withdraw-bet', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -220,14 +229,17 @@ export class PartnerWebhooksService {
     async depositWin(data: any, headers: any) {
         this.logger.log('Superomatic called /deposit-win', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -237,7 +249,7 @@ export class PartnerWebhooksService {
             throw new Error('Missing @currency parameter');
         }
 
-        if (!amountInCents || amountInCents <= 0) {
+        if (amountInCents === undefined || amountInCents === null || isNaN(amountInCents) || amountInCents < 0) {
             throw new Error('Invalid @amount parameter');
         }
 
@@ -258,7 +270,7 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
+        if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
@@ -269,6 +281,21 @@ export class PartnerWebhooksService {
 
         // Convert amount from cents to decimal
         const amountInDecimal = amountInCents / 100;
+
+        // If amount is 0, just return current balance (no win scenario)
+        if (amountInCents === 0) {
+            const currentBalanceInCents = Math.round(gameSession.balance.balance * 100);
+            this.logger.log(`No win for session ${session}. Transaction ID: ${trxId}`);
+
+            return {
+                method: 'deposit.win',
+                status: 200,
+                response: {
+                    currency: currency,
+                    balance: currentBalanceInCents
+                }
+            };
+        }
 
         // Check for duplicate transaction
         const existingTransaction = await this.em.findOne(GameTransaction, {
@@ -320,14 +347,17 @@ export class PartnerWebhooksService {
     async cancelTransaction(data: any, headers: any) {
         this.logger.log('Superomatic called /trx-cancel', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -415,14 +445,17 @@ export class PartnerWebhooksService {
     async completeTransaction(data: any, headers: any) {
         this.logger.log('Superomatic called /trx-complete', { data, headers });
 
+        // Parse data if it's a string (Superomatic sends as text/plain)
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
         // Extract required parameters
-        const session = data['@session'] || data.session;
-        const currency = data['@currency'] || data.currency;
-        const amountInCents = parseInt(data['@amount'] || data.amount || '0');
-        const trxId = data['@trx_id'] || data.trx_id;
-        const sign = data['@sign'] || data.sign;
-        const turnId = data['@turn_id'] || data.turn_id;
-        const meta = data['@meta'] || data.meta;
+        const session = parsedData['@session'] || parsedData.session;
+        const currency = parsedData['@currency'] || parsedData.currency;
+        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
+        const trxId = parsedData['@trx_id'] || parsedData.trx_id;
+        const sign = parsedData['@sign'] || parsedData.sign;
+        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
+        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -432,7 +465,7 @@ export class PartnerWebhooksService {
             throw new Error('Missing @currency parameter');
         }
 
-        if (!amountInCents || amountInCents <= 0) {
+        if (amountInCents === undefined || amountInCents === null || isNaN(amountInCents) || amountInCents < 0) {
             throw new Error('Invalid @amount parameter');
         }
 
@@ -453,7 +486,7 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
+        if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
@@ -462,24 +495,10 @@ export class PartnerWebhooksService {
             throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
         }
 
-        // Convert amount from cents to decimal
-        const amountInDecimal = amountInCents / 100;
-
-        // Find the transaction to complete (look for DEPOSIT transaction with matching amount)
-        const transactionToComplete = await this.em.findOne(GameTransaction, {
-            session: gameSession,
-            type: GameTransactionType.DEPOSIT,
-            amount: amountInDecimal,
-            deletedAt: null // Only active transactions
-        });
-
-        if (!transactionToComplete) {
-            throw new Error(`Transaction not found to complete: ${trxId}`);
-        }
-
-        // For trx.complete, we typically just log the completion
+        // For trx.complete, we just acknowledge the completion
         // The actual deposit should have already been processed in deposit.win
-        this.logger.log(`Transaction ${trxId} marked as completed for session ${session}`);
+        // Amount 0 is valid (means no win)
+        this.logger.log(`Transaction ${trxId} marked as completed for session ${session} with amount ${amountInCents}`);
 
         // Get current balance in cents
         const currentBalanceInCents = Math.round(gameSession.balance.balance * 100);

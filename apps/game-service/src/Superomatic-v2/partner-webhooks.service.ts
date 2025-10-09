@@ -249,7 +249,7 @@ export class PartnerWebhooksService {
             throw new Error('Missing @currency parameter');
         }
 
-        if (!amountInCents || amountInCents <= 0) {
+        if (amountInCents === undefined || amountInCents === null || isNaN(amountInCents) || amountInCents < 0) {
             throw new Error('Invalid @amount parameter');
         }
 
@@ -270,7 +270,7 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
+        if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
@@ -281,6 +281,21 @@ export class PartnerWebhooksService {
 
         // Convert amount from cents to decimal
         const amountInDecimal = amountInCents / 100;
+
+        // If amount is 0, just return current balance (no win scenario)
+        if (amountInCents === 0) {
+            const currentBalanceInCents = Math.round(gameSession.balance.balance * 100);
+            this.logger.log(`No win for session ${session}. Transaction ID: ${trxId}`);
+
+            return {
+                method: 'deposit.win',
+                status: 200,
+                response: {
+                    currency: currency,
+                    balance: currentBalanceInCents
+                }
+            };
+        }
 
         // Check for duplicate transaction
         const existingTransaction = await this.em.findOne(GameTransaction, {
@@ -450,7 +465,7 @@ export class PartnerWebhooksService {
             throw new Error('Missing @currency parameter');
         }
 
-        if (!amountInCents || amountInCents <= 0) {
+        if (amountInCents === undefined || amountInCents === null || isNaN(amountInCents) || amountInCents < 0) {
             throw new Error('Invalid @amount parameter');
         }
 
@@ -471,7 +486,7 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
+        if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
@@ -480,24 +495,10 @@ export class PartnerWebhooksService {
             throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
         }
 
-        // Convert amount from cents to decimal
-        const amountInDecimal = amountInCents / 100;
-
-        // Find the transaction to complete (look for DEPOSIT transaction with matching amount)
-        const transactionToComplete = await this.em.findOne(GameTransaction, {
-            session: gameSession,
-            type: GameTransactionType.DEPOSIT,
-            amount: amountInDecimal,
-            deletedAt: null // Only active transactions
-        });
-
-        if (!transactionToComplete) {
-            throw new Error(`Transaction not found to complete: ${trxId}`);
-        }
-
-        // For trx.complete, we typically just log the completion
+        // For trx.complete, we just acknowledge the completion
         // The actual deposit should have already been processed in deposit.win
-        this.logger.log(`Transaction ${trxId} marked as completed for session ${session}`);
+        // Amount 0 is valid (means no win)
+        this.logger.log(`Transaction ${trxId} marked as completed for session ${session} with amount ${amountInCents}`);
 
         // Get current balance in cents
         const currentBalanceInCents = Math.round(gameSession.balance.balance * 100);

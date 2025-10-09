@@ -17,7 +17,7 @@ const fAdapter = new FastifyAdapter({
   logger: false,
   querystringParser: (str) => qs.parse(str),
   bodyLimit: 5 * 1024 * 1024,
-  pluginTimeout: 60000,
+  pluginTimeout: 200000,
 });
 
 fAdapter.register(multer.contentParser);

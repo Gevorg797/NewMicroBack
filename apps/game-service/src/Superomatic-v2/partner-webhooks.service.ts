@@ -178,19 +178,19 @@ export class PartnerWebhooksService {
             throw new Error(`Insufficient balance. Available: ${gameSession.balance.balance}, Required: ${amountInDecimal}`);
         }
 
-        // Check for duplicate transaction
-        const existingTransaction = await this.em.findOne(GameTransaction, {
-            // Assuming we store trx_id in metadata or add it as a field
-            // For now, we'll check by amount and session to prevent duplicates
-            session: gameSession,
-            amount: amountInDecimal,
-            type: GameTransactionType.WITHDRAW
-        });
+        // // Check for duplicate transaction
+        // const existingTransaction = await this.em.findOne(GameTransaction, {
+        //     // Assuming we store trx_id in metadata or add it as a field
+        //     // For now, we'll check by amount and session to prevent duplicates
+        //     session: gameSession,
+        //     amount: amountInDecimal,
+        //     type: GameTransactionType.WITHDRAW
+        // });
 
-        if (existingTransaction) {
-            this.logger.warn(`Duplicate transaction detected: ${trxId}`);
-            throw new Error(`Transaction ${trxId} already processed`);
-        }
+        // if (existingTransaction) {
+        //     this.logger.warn(`Duplicate transaction detected: ${trxId}`);
+        //     throw new Error(`Transaction ${trxId} already processed`);
+        // }
 
         // Start transaction to ensure atomicity
         await this.em.transactional(async (em) => {
@@ -199,7 +199,8 @@ export class PartnerWebhooksService {
             wrap(transaction).assign({
                 session: gameSession,
                 type: GameTransactionType.WITHDRAW,
-                amount: amountInDecimal
+                amount: amountInDecimal,
+                metadata: data
             });
             await em.persistAndFlush(transaction);
 
@@ -298,17 +299,17 @@ export class PartnerWebhooksService {
         }
 
         // Check for duplicate transaction
-        const existingTransaction = await this.em.findOne(GameTransaction, {
-            // Check by amount and session to prevent duplicates
-            session: gameSession,
-            amount: amountInDecimal,
-            type: GameTransactionType.DEPOSIT
-        });
+        // const existingTransaction = await this.em.findOne(GameTransaction, {
+        //     // Check by amount and session to prevent duplicates
+        //     session: gameSession,
+        //     amount: amountInDecimal,
+        //     type: GameTransactionType.DEPOSIT
+        // });
 
-        if (existingTransaction) {
-            this.logger.warn(`Duplicate transaction detected: ${trxId}`);
-            throw new Error(`Transaction ${trxId} already processed`);
-        }
+        // if (existingTransaction) {
+        //     this.logger.warn(`Duplicate transaction detected: ${trxId}`);
+        //     throw new Error(`Transaction ${trxId} already processed`);
+        // }
 
         // Start transaction to ensure atomicity
         await this.em.transactional(async (em) => {
@@ -317,7 +318,8 @@ export class PartnerWebhooksService {
             wrap(transaction).assign({
                 session: gameSession,
                 type: GameTransactionType.DEPOSIT,
-                amount: amountInDecimal
+                amount: amountInDecimal,
+                metadata: data
             });
             await em.persistAndFlush(transaction);
 

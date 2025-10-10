@@ -55,35 +55,41 @@ export class BikBetService {
     (game) => ({
       id: String(game.id),
       name: game.name,
+      provider: game.provider,
     }),
   );
 
   private readonly NETENT_GAMES = NETENT_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
+    provider: game.provider,
   }));
 
   private readonly NOVOMATIC_GAMES = NOVOMATIC_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
+      provider: game.provider,
     }),
   );
 
   private readonly PLAYNGO_GAMES = PLAYNGO_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
+    provider: game.provider,
   }));
 
   private readonly PUSH_GAMES = PUSH_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
+    provider: game.provider,
   }));
 
   private readonly BETINHELL_GAMES = BETINHELL_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
+      provider: game.provider,
     }),
   );
 
@@ -91,6 +97,7 @@ export class BikBetService {
     (game) => ({
       id: String(game.id),
       name: game.name,
+      provider: game.provider,
     }),
   );
 
@@ -798,6 +805,7 @@ export class BikBetService {
     gameId: string,
     gameName: string,
     operatorName: string,
+    providerName: string,
   ) {
     // Always answer callback query first to prevent timeout
     try {
@@ -816,22 +824,31 @@ export class BikBetService {
         return;
       }
 
+      const user = await this.userRepository.findOne({
+        telegramId: String(userId),
+      });
+
+      if (!user) {
+        const message = '⚠ Пользователь не найден. Нажмите /start';
+        await ctx.reply(message);
+        return;
+      }
+
       const userState = this.getUserState(userId);
       const chosenBalance = userState.chosenBalance || 'main';
-      console.log(chosenBalance);
+      console.log(userState);
 
       const operatorId = 40272;
       const currency = 'RUB';
       const language = 'RU';
-      const authToken = this.generateUserAuthToken(userId);
 
-      const baseUrl = `https://icdnchannel.com/gamesbycode/${gameId}.gamecode`;
+      const baseUrl = `https://dev.bik-bet.com/gamesbycode/${gameId}.gamecode`;
       const params = {
         operator_id: operatorId,
-        user_id: String(userId),
-        auth_token: authToken,
+        user_id: String(user.id),
         currency: currency,
         language: language,
+        provider: providerName,
       };
 
       const queryString = Object.entries(params)
@@ -887,6 +904,7 @@ export class BikBetService {
         game.id,
         game.name,
         'PragmaticPlay',
+        String(game.provider),
       );
     }
   }
@@ -902,6 +920,7 @@ export class BikBetService {
         game.id,
         game.name,
         'NetEnt',
+        String(game.provider),
       );
     }
   }
@@ -917,6 +936,7 @@ export class BikBetService {
         game.id,
         game.name,
         'Novomatic',
+        String(game.provider),
       );
     }
   }
@@ -932,6 +952,7 @@ export class BikBetService {
         game.id,
         game.name,
         'PlaynGo',
+        String(game.provider),
       );
     }
   }
@@ -947,6 +968,7 @@ export class BikBetService {
         game.id,
         game.name,
         'PushGaming',
+        String(game.provider),
       );
     }
   }
@@ -962,6 +984,7 @@ export class BikBetService {
         game.id,
         game.name,
         'BetInHell',
+        String(game.provider),
       );
     }
   }
@@ -977,6 +1000,7 @@ export class BikBetService {
         game.id,
         game.name,
         'PlayTech',
+        String(game.provider),
       );
     }
   }
@@ -992,6 +1016,7 @@ export class BikBetService {
         game.id,
         game.name,
         'Popular',
+        String(game.provider),
       );
     }
   }
@@ -1033,6 +1058,11 @@ export class BikBetService {
   }
 
   async depositCustom(ctx: any) {
+    const userId = ctx.from.id;
+
+    // Set user state to waiting for custom deposit amount
+    this.userStates.set(userId, { state: 'awaiting_custom_deposit' });
+
     const text = `
 <blockquote><b>💰 Введите сумму пополнения</b></blockquote>
 <blockquote><b>• Минимальная сумма: 50 RUB</b></blockquote>
@@ -1050,9 +1080,93 @@ export class BikBetService {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('⬅️ Назад', 'games')],
+        [Markup.button.callback('⬅️ Назад', 'donate_menu')],
       ]).reply_markup,
     });
+  }
+
+  async handleCustomDepositAmount(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // Check if user is in the correct state
+    if (!userState || userState.state !== 'awaiting_custom_deposit') {
+      return false; // Not waiting for custom deposit
+    }
+
+    const messageText = ctx.message?.text?.trim();
+    console.log(messageText);
+
+    if (!messageText) {
+      return false;
+    }
+
+    // Parse the amount
+    const amount = Number(messageText);
+
+    // Validate the amount
+    if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < 50) {
+      await ctx.reply(
+        '❌ Некорректная сумма. Пожалуйста, введите целое число не менее 50 RUB.',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Назад к пополнению', 'donate_menu')],
+        ]),
+      );
+      return true;
+    }
+
+    // Clear the state
+    this.userStates.delete(userId);
+
+    // Show payment methods for this amount
+    const text = `
+<blockquote><b>💰 Выберите способ оплаты</b></blockquote>
+<blockquote><b>• Сумма: ${amount} RUB</b></blockquote>
+<blockquote><b>• Выберите удобный способ оплаты</b></blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_1.jpg');
+
+    await ctx.replyWithPhoto(
+      { source: fs.readFileSync(filePath) },
+      {
+        caption: text,
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('От 50р:', 'ignore_game')],
+          [
+            Markup.button.callback(
+              '💎 CryptoBot',
+              `paymentSystem_cryptobot_${amount}`,
+            ),
+            Markup.button.callback(
+              '👛 FKwallet',
+              `paymentSystem_fkwallet_${amount}`,
+            ),
+          ],
+          [
+            Markup.button.callback(
+              '💳 Оплата с карты(+5% бонус)',
+              `paymentSystem_yoomoney_${amount}`,
+            ),
+          ],
+          [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
+          [Markup.button.callback('📷 СБП', `paymentSystem_platega_${amount}`)],
+          [Markup.button.callback('От 250р:', 'ignore_game')],
+          [
+            Markup.button.callback(
+              '🛡 Криптовалюты',
+              `paymentSystem_cryptocloud_${amount}`,
+            ),
+          ],
+          [Markup.button.callback('От 500р до 100 000р', 'ignore_game')],
+          [Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`)],
+          [Markup.button.callback('⬅️ Назад', 'donate_menu')],
+        ]).reply_markup,
+      },
+    );
+
+    return true;
   }
 
   async depositAmount(ctx: any, amount: number) {
@@ -1296,6 +1410,11 @@ export class BikBetService {
   }
 
   async withdrawCustom(ctx: any) {
+    const userId = ctx.from.id;
+
+    // Set user state to waiting for custom withdraw amount
+    this.userStates.set(userId, { state: 'awaiting_custom_withdraw' });
+
     const text = `
 <blockquote><b>💰 Введите сумму вывода</b></blockquote>
 <blockquote><b>• Минимальная сумма: 200 RUB</b></blockquote>
@@ -1317,6 +1436,44 @@ export class BikBetService {
         [Markup.button.callback('⬅️ Назад', 'withdraw')],
       ]).reply_markup,
     });
+  }
+
+  async handleCustomWithdrawAmount(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // Check if user is in the correct state
+    if (!userState || userState.state !== 'awaiting_custom_withdraw') {
+      return false; // Not waiting for custom withdraw
+    }
+
+    const messageText = ctx.message?.text?.trim();
+
+    if (!messageText) {
+      return false;
+    }
+
+    // Parse the amount
+    const amount = Number(messageText);
+
+    // Validate the amount
+    if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < 200) {
+      await ctx.reply(
+        '❌ Некорректная сумма. Пожалуйста, введите целое число не менее 200 RUB.',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Назад к выводу', 'withdraw')],
+        ]),
+      );
+      return true;
+    }
+
+    // Clear the state
+    this.userStates.delete(userId);
+
+    // Call the withdrawAmount method with the custom amount
+    await this.withdrawAmount(ctx, amount);
+
+    return true;
   }
 
   async fkwalletPayment(ctx: any, amount: number) {

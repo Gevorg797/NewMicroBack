@@ -28,7 +28,17 @@ export class BikBetController {
 
     // Dynamic deposit amount handler: deposit:<amount>
     this.bot.action(/deposit:(.+)/, async (ctx) => {
-      const amount = Number((ctx as any).match?.[1]);
+      const match = (ctx as any).match?.[1];
+
+      // Handle custom deposit
+      if (match === 'custom') {
+        await ctx.answerCbQuery();
+        await this.bikbetService.depositCustom(ctx);
+        return;
+      }
+
+      // Handle specific amounts
+      const amount = Number(match);
       if (!Number.isFinite(amount)) {
         await ctx.answerCbQuery('Некорректная сумма');
         return;
@@ -2049,20 +2059,39 @@ export class BikBetController {
       await this.bikbetService.withdraw(ctx);
     });
 
-    // Desposit Custom button click handler
-    this.bot.action('deposit:custom', async (ctx) => {
-      await ctx.answerCbQuery();
-      await this.bikbetService.depositCustom(ctx);
-    });
-
-    // (moved earlier) dynamic deposit handler above
-
+    // Deposit Custom handler is now handled by the dynamic deposit handler above
     // Withdraw Custom handler is now handled by the dynamic withdraw handler above
 
     //My Bounses button click handler
     this.bot.action('myBonuses', async (ctx) => {
       await ctx.answerCbQuery();
       await this.bikbetService.myBonuses(ctx);
+    });
+
+    // Handle text messages for custom deposit/withdraw amounts
+    this.bot.on('text', async (ctx) => {
+      try {
+        // Check if user is waiting to enter a custom deposit amount
+        const handledDeposit =
+          await this.bikbetService.handleCustomDepositAmount(ctx);
+        if (handledDeposit) {
+          return;
+        }
+
+        // Check if user is waiting to enter a custom withdraw amount
+        const handledWithdraw =
+          await this.bikbetService.handleCustomWithdrawAmount(ctx);
+        if (handledWithdraw) {
+          return;
+        }
+
+        // If not handled by any custom amount handler, you can add default behavior here if needed
+      } catch (error) {
+        console.error('Text message handler error:', error);
+        await ctx.reply(
+          '❌ Произошла ошибка. Попробуйте снова или вернитесь в главное меню /start',
+        );
+      }
     });
 
     this.bot.launch();

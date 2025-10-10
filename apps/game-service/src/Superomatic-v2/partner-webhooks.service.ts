@@ -200,7 +200,8 @@ export class PartnerWebhooksService {
                 session: gameSession,
                 type: GameTransactionType.WITHDRAW,
                 amount: amountInDecimal,
-                metadata: data
+                trxId: trxId,
+                metadata: { ...parsedData }
             });
             await em.persistAndFlush(transaction);
 
@@ -318,8 +319,9 @@ export class PartnerWebhooksService {
             wrap(transaction).assign({
                 session: gameSession,
                 type: GameTransactionType.DEPOSIT,
+                trxId: trxId,
                 amount: amountInDecimal,
-                metadata: data
+                metadata: { ...parsedData }
             });
             await em.persistAndFlush(transaction);
 
@@ -405,8 +407,8 @@ export class PartnerWebhooksService {
         // Find the transaction to cancel (look for WITHDRAW transaction with matching amount)
         const transactionToCancel = await this.em.findOne(GameTransaction, {
             session: gameSession,
-            type: GameTransactionType.WITHDRAW,
-            amount: amountInDecimal
+            amount: amountInDecimal,
+            trxId: trxId,
         });
 
         if (!transactionToCancel) {
@@ -422,7 +424,8 @@ export class PartnerWebhooksService {
 
             // Mark the transaction as cancelled (soft delete)
             wrap(transactionToCancel).assign({
-                deletedAt: new Date()
+                deletedAt: new Date(),
+                isCanceled: true
             });
 
             await em.flush();

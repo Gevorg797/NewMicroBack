@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Headers, Logger, All, Req } from '@nestjs/common';
+import { Controller, Body, Headers, Logger, All, Req } from '@nestjs/common';
 import { PartnerWebhooksService } from './partner-webhooks.service';
 
 @Controller('webhooks/superomatic')
@@ -7,70 +7,13 @@ export class PartnerWebhooksController {
 
     constructor(private readonly partnerWebhooksService: PartnerWebhooksService) { }
 
-    // Health check endpoint
-    @Post('health')
-    async health() {
-        this.logger.log('Health check endpoint called');
-        return { status: 'ok', timestamp: new Date().toISOString() };
-    }
-
-    // Test endpoint to verify controller is working
-    @Post('test')
-    async test(@Body() data: any, @Headers() headers: any, @Req() req: any) {
-        this.logger.log('=== TEST ENDPOINT CALLED ===');
-        this.logger.log(`Method: ${req.method}`);
-        this.logger.log(`URL: ${req.url}`);
-        this.logger.log(`Headers:`, headers);
-        this.logger.log(`Body:`, data);
-        this.logger.log('=============================');
-
-        return {
-            message: 'Test endpoint working!',
-            received: {
-                method: req.method,
-                url: req.url,
-                headers,
-                body: data
-            }
-        };
-    }
-
-    // Root endpoint to catch any request to /webhooks/superomatic
-    @All()
-    async root(@Body() data: any, @Headers() headers: any, @Req() req: any) {
-        this.logger.log('=== ROOT WEBHOOK ENDPOINT HIT ===');
-        this.logger.log(`Method: ${req.method}`);
-        this.logger.log(`URL: ${req.url}`);
-        this.logger.log(`Headers:`, headers);
-        this.logger.log(`Body:`, data);
-        this.logger.log('===================================');
-
-        return {
-            message: 'Root webhook endpoint working!',
-            path: req.url,
-            method: req.method,
-            timestamp: new Date().toISOString()
-        };
-    }
-
-    // Catch-all route for debugging - log ALL requests to this controller
     @All('*')
     async catchAll(@Body() data: any, @Headers() headers: any, @Req() req: any) {
-        this.logger.log(`=== WEBHOOK REQUEST RECEIVED ===`);
-        this.logger.log(`Method: ${req.method}`);
-        this.logger.log(`URL: ${req.url}`);
-        this.logger.log(`Headers:`, headers);
-        this.logger.log(`Body:`, data);
-        this.logger.log(`================================`);
-
-        // Route to appropriate method based on URL
-        // Extract the endpoint by removing prefixes (/games, /webhooks/superomatic)
+        // Extract the endpoint by removing prefixes
         let url = req.url;
-        url = url.replace('/games/webhooks/superomatic', ''); // Full path with global prefix
-        url = url.replace('/webhooks/superomatic', ''); // Without global prefix
-        url = url.replace('/games', ''); // Direct call with just global prefix
-
-        this.logger.log(`Extracted endpoint: "${url}" from original URL: "${req.url}"`);
+        url = url.replace('/games/webhooks/superomatic', '');
+        url = url.replace('/webhooks/superomatic', '');
+        url = url.replace('/games', '');
 
         switch (url) {
             case '/check.session':
@@ -91,7 +34,6 @@ export class PartnerWebhooksController {
         }
     }
 
-    // Individual route handlers (called by catchAll)
     private async checkSession(@Body() data: any, @Headers() headers: any) {
         return this.partnerWebhooksService.checkSession(data, headers);
     }

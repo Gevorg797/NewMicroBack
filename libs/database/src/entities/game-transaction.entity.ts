@@ -20,6 +20,9 @@ export class GameTransaction extends BaseEntity {
   @Property({ columnType: 'numeric' })
   amount!: number; // MikroORM maps `numeric` best as string
 
+  @Property({ columnType: 'jsonb', nullable: true })
+  metadata?: unknown;
+
   @Property({ columnType: 'timestamptz', nullable: true })
   deletedAt?: Date;
 }

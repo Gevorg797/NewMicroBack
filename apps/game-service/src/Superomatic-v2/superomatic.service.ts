@@ -186,7 +186,7 @@ export class SuperomaticService implements IExtendedGameProvider {
         this.logger.debug('Successfully initialized game session with Superomatic');
 
         return {
-            ...providerResponse,
+            launchUrl: `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`, // Construct full launch URL
             sessionId: sessionResult.sessionId,
             gameUuid: sessionResult.gameUuid,
             currency: sessionResult.currency,

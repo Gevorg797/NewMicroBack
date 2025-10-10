@@ -59,35 +59,62 @@ export class BikBetController {
 
     // FKwallet payment handler: paymentSystem_fkwallet_<amount>
     this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
-      const amount = Number((ctx as any).match?.[1]);
-      if (!Number.isFinite(amount)) {
-        await ctx.answerCbQuery('Некорректная сумма');
-        return;
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.fkwalletPayment(ctx, amount);
+      } catch (error) {
+        console.error('FKwallet payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
       }
-      await ctx.answerCbQuery();
-      await this.bikbetService.fkwalletPayment(ctx, amount);
     });
 
     // YooMoney payment handler: paymentSystem_yoomoney_<amount>
     this.bot.action(/paymentSystem_yoomoney_(.+)/, async (ctx) => {
-      const amount = Number((ctx as any).match?.[1]);
-      if (!Number.isFinite(amount)) {
-        await ctx.answerCbQuery('Некорректная сумма');
-        return;
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.yoomoneyPayment(ctx, amount);
+      } catch (error) {
+        console.error('YooMoney payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
       }
-      await ctx.answerCbQuery();
-      await this.bikbetService.yoomoneyPayment(ctx, amount);
     });
 
     // CryptoBot payment handler: paymentSystem_cryptobot_<amount>
     this.bot.action(/paymentSystem_cryptobot_(.+)/, async (ctx) => {
-      const amount = Number((ctx as any).match?.[1]);
-      if (!Number.isFinite(amount)) {
-        await ctx.answerCbQuery('Некорректная сумма');
-        return;
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.cryptobotPayment(ctx, amount);
+      } catch (error) {
+        console.error('CryptoBot payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
       }
-      await ctx.answerCbQuery();
-      await this.bikbetService.cryptobotPayment(ctx, amount);
     });
 
     // Game button click handler

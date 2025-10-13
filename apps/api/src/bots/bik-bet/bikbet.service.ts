@@ -836,7 +836,6 @@ export class BikBetService {
 
       const userState = this.getUserState(userId);
       const chosenBalance = userState.chosenBalance || 'main';
-      console.log(userState);
 
       const operatorId = 40272;
       const currency = 'RUB';
@@ -849,6 +848,7 @@ export class BikBetService {
         currency: currency,
         language: language,
         provider: providerName,
+        balanceType: chosenBalance,
       };
 
       const queryString = Object.entries(params)

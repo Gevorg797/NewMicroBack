@@ -16,6 +16,12 @@ export class GameTransaction extends BaseEntity {
   @Enum(() => GameTransactionType)
   type!: GameTransactionType;
 
+  @Property({ nullable: true })
+  trxId?: string;
+
+  @Property({ default: false, nullable: true })
+  isCanceled?: boolean = false
+
   // Assuming `user_balance` is a custom PostgreSQL domain/type based on numeric/decimal
   @Property({ columnType: 'numeric' })
   amount!: number; // MikroORM maps `numeric` best as string

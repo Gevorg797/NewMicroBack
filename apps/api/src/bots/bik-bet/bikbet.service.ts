@@ -250,25 +250,44 @@ export class BikBetService {
 ⤷ <code>${this.totalBets}</code></blockquote>
 `;
 
-      await ctx.replyWithPhoto(
-        { source: fs.createReadStream(this.getImagePath('bik_bet_8.jpg')) },
-        {
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎰 Играть!', 'games')],
+        [
+          Markup.button.callback('💰 Баланс', 'donate_menu'),
+          Markup.button.callback('⚙️ Профиль', 'profile'),
+        ],
+        [
+          Markup.button.callback('🏆 Топы', 'leaderboard_wins'),
+          Markup.button.callback('📚 Информация', 'info'),
+        ],
+        [Markup.button.callback('🎁 Бонусы', 'bonuses')],
+      ]);
+
+      // Check if this is a callback query (button click) or a text message
+      if (ctx.callbackQuery) {
+        // It's a callback query, we can edit the message
+        const filePath = this.getImagePath('bik_bet_8.jpg');
+        const media: any = {
+          type: 'photo',
+          media: { source: fs.readFileSync(filePath) },
           caption: text,
           parse_mode: 'HTML',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🎰 Играть!', 'games')],
-            [
-              Markup.button.callback('💰 Баланс', 'donate_menu'),
-              Markup.button.callback('⚙️ Профиль', 'profile'),
-            ],
-            [
-              Markup.button.callback('🏆 Топы', 'leaderboard_wins'),
-              Markup.button.callback('📚 Информация', 'info'),
-            ],
-            [Markup.button.callback('🎁 Бонусы', 'bonuses')],
-          ]).reply_markup,
-        },
-      );
+        };
+
+        await ctx.editMessageMedia(media, {
+          reply_markup: keyboard.reply_markup,
+        });
+      } else {
+        // It's a text message (like /start), send a new reply with photo
+        await ctx.replyWithPhoto(
+          { source: fs.createReadStream(this.getImagePath('bik_bet_8.jpg')) },
+          {
+            caption: text,
+            parse_mode: 'HTML',
+            reply_markup: keyboard.reply_markup,
+          },
+        );
+      }
     } catch (error) {
       console.error('Subscription check error:', error);
       await this.sendSubscriptionPrompt(ctx, link, true);
@@ -284,13 +303,39 @@ export class BikBetService {
       ? `❌ Не удалось проверить подписку. Пожалуйста, подпишитесь на канал:\n${link}`
       : `❗️Для использования бота необходимо подписаться на канал!\nДальше отправьте команду /start, либо же нажмите кнопку ниже`;
 
-    await ctx.reply(
-      message,
-      Markup.inlineKeyboard([
-        [Markup.button.url('📢 Подписаться', link)],
-        [Markup.button.callback('🔄 Проверить подписку', 'check_subscription')],
-      ]),
-    );
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.url('📢 Подписаться', link)],
+      [Markup.button.callback('🔄 Проверить подписку', 'check_subscription')],
+    ]);
+
+    // Check if this is a callback query (button click) or a text message
+    if (ctx.callbackQuery) {
+      // It's a callback query, show an alert instead of editing the same message
+      try {
+        await ctx.answerCbQuery(
+          '❌ Вы еще не подписались на канал. Пожалуйста, подпишитесь и попробуйте снова.',
+          { show_alert: true },
+        );
+        return;
+      } catch (error) {
+        console.error('Error sending alert:', error);
+        // If answerCbQuery fails (already answered), try without await
+        try {
+          ctx.telegram.answerCbQuery(
+            ctx.callbackQuery.id,
+            '❌ Вы еще не подписались на канал. Пожалуйста, подпишитесь и попробуйте снова.',
+            { show_alert: true },
+          );
+          return;
+        } catch (e) {
+          console.error('Fallback also failed:', e);
+        }
+      }
+      return;
+    } else {
+      // It's a text message (like /start), send a new reply
+      await ctx.reply(message, keyboard);
+    }
   }
 
   private getImagePath(imageName): string {

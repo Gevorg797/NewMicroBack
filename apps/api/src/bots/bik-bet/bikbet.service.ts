@@ -365,20 +365,20 @@ export class BikBetService {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('Базовые игры', 'ignore_game')],
+        [Markup.button.callback('Базовые игры', 'ignore_all')],
         [
-          Markup.button.callback('🎲 Дайсы', 'ignore_game'),
-          Markup.button.callback('⚽️ Футбол', 'ignore_game'),
-          Markup.button.callback('🎯 Дартс', 'ignore_game'),
+          Markup.button.callback('🎲 Дайсы', 'ignore_all'),
+          Markup.button.callback('⚽️ Футбол', 'ignore_all'),
+          Markup.button.callback('🎯 Дартс', 'ignore_all'),
         ],
         [
-          Markup.button.callback('🎳 Боулинг', 'ignore_game'),
-          Markup.button.callback('🍭 Слот', 'ignore_game'),
-          Markup.button.callback('🏀 Баскетбол', 'ignore_game'),
+          Markup.button.callback('🎳 Боулинг', 'ignore_all'),
+          Markup.button.callback('🍭 Слот', 'ignore_all'),
+          Markup.button.callback('🏀 Баскетбол', 'ignore_all'),
         ],
-        [Markup.button.callback('Настоящие игры', 'ignore_game')],
-        [Markup.button.callback('🎰 Слоты', 'slotsB2B')],
-        [Markup.button.callback('Мультиплеер', 'ignore_game')],
+        [Markup.button.callback('Настоящие игры', 'ignore_all')],
+        [Markup.button.callback('🎰 Слоты', 'slots')],
+        [Markup.button.callback('Мультиплеер', 'ignore_all')],
         [
           Markup.button.callback('⚔️ PVP', 'ignore_all'),
           Markup.button.callback('💰 Аукцион', 'ignore_all'),
@@ -423,7 +423,7 @@ export class BikBetService {
     });
   }
 
-  async slotsB2B(ctx: any) {
+  async slots(ctx: any) {
     const text = `
 <blockquote><b>🎰 Выберите баланс на котором будете играть:</b></blockquote>
 `;
@@ -478,7 +478,7 @@ export class BikBetService {
             Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
           ],
           [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
-          [Markup.button.callback('🔙 Назад', 'slotsB2B')],
+          [Markup.button.callback('🔙 Назад', 'slots')],
         ]).reply_markup,
       });
 
@@ -836,7 +836,7 @@ export class BikBetService {
         Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
       ],
       [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
-      [Markup.button.callback('🔙 Назад', 'slotsB2B')],
+      [Markup.button.callback('🔙 Назад', 'slots')],
     ]);
   }
 

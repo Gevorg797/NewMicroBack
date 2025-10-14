@@ -127,6 +127,26 @@ export class BikBetController {
       }
     });
 
+    // Platega payment handler: paymentSystem_platega_<amount>
+    this.bot.action(/paymentSystem_platega_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.plategaPayment(ctx, amount);
+      } catch (error) {
+        console.error('Platega payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // Game button click handler
     this.bot.action('games', async (ctx) => {
       await ctx.answerCbQuery();

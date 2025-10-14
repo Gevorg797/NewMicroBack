@@ -1,0 +1,204 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import {
+  Currency,
+  FinanceProviderSettings,
+  FinanceTransactions,
+} from '@lib/database';
+import { EntityRepository } from '@mikro-orm/postgresql';
+import axios from 'axios';
+import { randomUUID } from 'crypto';
+import {
+  IPaymentProvider,
+  PaymentPayload,
+  PayoutPayload,
+  CallbackPayload,
+  PaymentResult,
+} from '../interfaces/payment-provider.interface';
+import { TransactionManagerService } from '../repository/transaction-manager.service';
+
+@Injectable()
+export class PlategaService implements IPaymentProvider {
+  constructor(
+    @InjectRepository(FinanceProviderSettings)
+    readonly financeProviderSettingsRepository: EntityRepository<FinanceProviderSettings>,
+    @InjectRepository(Currency)
+    readonly currencyRepository: EntityRepository<Currency>,
+    @InjectRepository(FinanceTransactions)
+    readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
+    readonly transactionManager: TransactionManagerService,
+  ) {}
+
+  async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
+    const { transactionId, amount, params } = payload;
+
+    const transaction = await this.transactionManager.getTransaction(
+      transactionId,
+      ['subMethod.method.providerSettings', 'subMethod.method', 'user'],
+    );
+
+    const providerSettings = transaction?.subMethod.method.providerSettings;
+    const merchantId = providerSettings.publicKey as string; // X-MerchantId
+    const secretKey = providerSettings.privateKey as string; // X-Secret
+
+    if (!merchantId || !secretKey) {
+      throw new BadRequestException(
+        'Platega credentials not configured properly',
+      );
+    }
+
+    const apiUrl = `${providerSettings.baseURL}/transaction/process`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-MerchantId': merchantId,
+      'X-Secret': secretKey,
+    };
+
+    // Generate UUID for Platega transaction ID
+    const plategaTransactionId = randomUUID();
+
+    const data = {
+      command: 'pay',
+      paymentMethod: 2,
+      id: plategaTransactionId,
+      paymentDetails: {
+        amount: parseInt(String(amount)),
+        currency: 'RUB',
+      },
+      description: 'Пополнение баланса Bilumsmm',
+      return: 'https://t.me/Bilumsmm_bot',
+      failedUrl: 'https://t.me/Bilumsmm_bot',
+      payload: String(transaction.id),
+    };
+
+    try {
+      const response = await axios.post(apiUrl, data, { headers });
+      const result = response.data;
+
+      const redirectUrl = result.redirect;
+
+      if (!redirectUrl) {
+        throw new BadRequestException('No redirect URL received from Platega');
+      }
+
+      // Store Platega transaction ID for callback matching
+      transaction.paymentTransactionId = plategaTransactionId;
+      await this.financeTransactionRepo
+        .getEntityManager()
+        .persistAndFlush(transaction);
+
+      // Try to get QR code
+      let qrUrl: string | null = null;
+      try {
+        qrUrl = await this.getQRCode(plategaTransactionId);
+      } catch (error) {
+        console.warn(
+          `QR code not available yet for tx ${plategaTransactionId}:`,
+          error.message,
+        );
+        // QR might not be ready yet, continue without it
+      }
+
+      return {
+        paymentUrl: qrUrl || undefined,
+      };
+    } catch (error) {
+      // Log detailed error information
+      console.log(error.response?.data || error.message);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      // Extract error details
+      const errorData = error.response?.data;
+      const errorDetails = errorData?.errors
+        ? JSON.stringify(errorData.errors)
+        : '';
+      const providerMessage =
+        errorData?.title ||
+        errorData?.message ||
+        errorData?.error ||
+        error.message;
+
+      throw new BadRequestException(
+        `Platega request failed: ${providerMessage}${errorDetails ? ` | Validation errors: ${errorDetails}` : ''}`,
+      );
+    }
+  }
+
+  /**
+   * Get QR code URL for a transaction
+   */
+  private async getQRCode(plategaTransactionId: string): Promise<string> {
+    const url = `https://app.platega.io/transaction/${plategaTransactionId}`;
+
+    try {
+      const response = await axios.get(url);
+      const result = response.data;
+
+      const qr = result.qr;
+
+      if (!qr) {
+        throw new Error('QR code not available');
+      }
+
+      return qr;
+    } catch (error) {
+      throw new Error(
+        `Failed to get QR code: ${error.response?.data?.message || error.message}`,
+      );
+    }
+  }
+
+  async createPayoutProcess(payload: PayoutPayload): Promise<any> {
+    // Platega payout implementation (if supported)
+    throw new BadRequestException('Payout not supported for Platega provider');
+  }
+
+  async handleCallback(payload: CallbackPayload): Promise<void> {
+    const { body } = payload;
+    const { id, status, amount } = body;
+
+    // Find transaction by Platega transaction ID (stored in paymentTransactionId)
+    const transaction = await this.financeTransactionRepo.findOne(
+      { paymentTransactionId: id },
+      {
+        populate: ['subMethod.method.providerSettings', 'user', 'currency'],
+      },
+    );
+
+    if (!transaction) {
+      throw new NotFoundException(
+        `Transaction with Platega ID ${id} not found`,
+      );
+    }
+
+    this.transactionManager.validateTransactionNotProcessed(transaction);
+
+    // Validate amount
+    if (transaction.amount !== parseFloat(amount)) {
+      throw new BadRequestException('Amount mismatch');
+    }
+
+    // Handle different statuses
+    if (status === 'success' || status === 'completed' || status === 'paid') {
+      await this.transactionManager.completePayin(
+        transaction.id as number,
+        Number(amount),
+        String(id),
+      );
+    } else if (status === 'failed' || status === 'cancelled') {
+      await this.transactionManager.failTransaction(
+        transaction.id as number,
+        `Payment ${status}`,
+      );
+    }
+    // For other statuses (pending, processing), do nothing and wait for next callback
+  }
+}

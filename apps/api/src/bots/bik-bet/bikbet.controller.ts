@@ -22,7 +22,7 @@ export class BikBetController {
 
     // Button click handler
     this.bot.action('check_subscription', async (ctx) => {
-      await ctx.answerCbQuery();
+      // Don't answer here - let checkSubscription handle it based on subscription status
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
     });
 
@@ -209,7 +209,7 @@ export class BikBetController {
 
     // Ignore button click handler
     this.bot.action('ignore_game', async (ctx) => {
-      await ctx.answerCbQuery('⏳ В разработке');
+      await ctx.answerCbQuery();
     });
 
     // Ignore button click handler
@@ -218,9 +218,9 @@ export class BikBetController {
     });
 
     // Start game button click handler
-    this.bot.action('slotsB2B', async (ctx) => {
+    this.bot.action('slots', async (ctx) => {
       await ctx.answerCbQuery();
-      await this.bikbetService.slotsB2B(ctx);
+      await this.bikbetService.slots(ctx);
     });
 
     // Playslots main balance handler

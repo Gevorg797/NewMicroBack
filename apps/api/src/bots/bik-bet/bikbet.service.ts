@@ -250,25 +250,51 @@ export class BikBetService {
 ⤷ <code>${this.totalBets}</code></blockquote>
 `;
 
-      await ctx.replyWithPhoto(
-        { source: fs.createReadStream(this.getImagePath('bik_bet_8.jpg')) },
-        {
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎰 Играть!', 'games')],
+        [
+          Markup.button.callback('💰 Баланс', 'donate_menu'),
+          Markup.button.callback('⚙️ Профиль', 'profile'),
+        ],
+        [
+          Markup.button.callback('🏆 Топы', 'leaderboard_wins'),
+          Markup.button.callback('📚 Информация', 'info'),
+        ],
+        [Markup.button.callback('🎁 Бонусы', 'bonuses')],
+      ]);
+
+      // Check if this is a callback query (button click) or a text message
+      if (ctx.callbackQuery) {
+        // It's a callback query, answer it first
+        try {
+          await ctx.answerCbQuery();
+        } catch (error) {
+          console.log('Callback query already answered:', error.message);
+        }
+
+        // Then edit the message
+        const filePath = this.getImagePath('bik_bet_8.jpg');
+        const media: any = {
+          type: 'photo',
+          media: { source: fs.readFileSync(filePath) },
           caption: text,
           parse_mode: 'HTML',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🎰 Играть!', 'games')],
-            [
-              Markup.button.callback('💰 Баланс', 'donate_menu'),
-              Markup.button.callback('⚙️ Профиль', 'profile'),
-            ],
-            [
-              Markup.button.callback('🏆 Топы', 'leaderboard_wins'),
-              Markup.button.callback('📚 Информация', 'info'),
-            ],
-            [Markup.button.callback('🎁 Бонусы', 'bonuses')],
-          ]).reply_markup,
-        },
-      );
+        };
+
+        await ctx.editMessageMedia(media, {
+          reply_markup: keyboard.reply_markup,
+        });
+      } else {
+        // It's a text message (like /start), send a new reply with photo
+        await ctx.replyWithPhoto(
+          { source: fs.createReadStream(this.getImagePath('bik_bet_8.jpg')) },
+          {
+            caption: text,
+            parse_mode: 'HTML',
+            reply_markup: keyboard.reply_markup,
+          },
+        );
+      }
     } catch (error) {
       console.error('Subscription check error:', error);
       await this.sendSubscriptionPrompt(ctx, link, true);
@@ -284,13 +310,29 @@ export class BikBetService {
       ? `❌ Не удалось проверить подписку. Пожалуйста, подпишитесь на канал:\n${link}`
       : `❗️Для использования бота необходимо подписаться на канал!\nДальше отправьте команду /start, либо же нажмите кнопку ниже`;
 
-    await ctx.reply(
-      message,
-      Markup.inlineKeyboard([
-        [Markup.button.url('📢 Подписаться', link)],
-        [Markup.button.callback('🔄 Проверить подписку', 'check_subscription')],
-      ]),
-    );
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.url('📢 Подписаться', link)],
+      [Markup.button.callback('🔄 Проверить подписку', 'check_subscription')],
+    ]);
+
+    // Check if this is a callback query (button click) or a text message
+    if (ctx.callbackQuery) {
+      // It's a callback query, show an alert instead of editing the same message
+      try {
+        await ctx.telegram.answerCbQuery(
+          ctx.callbackQuery.id,
+          '❌ Вы еще не подписались на канал. Пожалуйста, подпишитесь и попробуйте снова.',
+          { show_alert: true },
+        );
+        console.log('Subscription alert sent successfully');
+      } catch (error) {
+        console.error('Error sending subscription alert:', error);
+      }
+      return;
+    } else {
+      // It's a text message (like /start), send a new reply
+      await ctx.reply(message, keyboard);
+    }
   }
 
   private getImagePath(imageName): string {
@@ -323,20 +365,20 @@ export class BikBetService {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('Базовые игры', 'ignore_game')],
+        [Markup.button.callback('Базовые игры', 'ignore_all')],
         [
-          Markup.button.callback('🎲 Дайсы', 'ignore_game'),
-          Markup.button.callback('⚽️ Футбол', 'ignore_game'),
-          Markup.button.callback('🎯 Дартс', 'ignore_game'),
+          Markup.button.callback('🎲 Дайсы', 'ignore_all'),
+          Markup.button.callback('⚽️ Футбол', 'ignore_all'),
+          Markup.button.callback('🎯 Дартс', 'ignore_all'),
         ],
         [
-          Markup.button.callback('🎳 Боулинг', 'ignore_game'),
-          Markup.button.callback('🍭 Слот', 'ignore_game'),
-          Markup.button.callback('🏀 Баскетбол', 'ignore_game'),
+          Markup.button.callback('🎳 Боулинг', 'ignore_all'),
+          Markup.button.callback('🍭 Слот', 'ignore_all'),
+          Markup.button.callback('🏀 Баскетбол', 'ignore_all'),
         ],
-        [Markup.button.callback('Настоящие игры', 'ignore_game')],
-        [Markup.button.callback('🎰 Слоты', 'slotsB2B')],
-        [Markup.button.callback('Мультиплеер', 'ignore_game')],
+        [Markup.button.callback('Настоящие игры', 'ignore_all')],
+        [Markup.button.callback('🎰 Слоты', 'slots')],
+        [Markup.button.callback('Мультиплеер', 'ignore_all')],
         [
           Markup.button.callback('⚔️ PVP', 'ignore_all'),
           Markup.button.callback('💰 Аукцион', 'ignore_all'),
@@ -381,7 +423,7 @@ export class BikBetService {
     });
   }
 
-  async slotsB2B(ctx: any) {
+  async slots(ctx: any) {
     const text = `
 <blockquote><b>🎰 Выберите баланс на котором будете играть:</b></blockquote>
 `;
@@ -436,7 +478,7 @@ export class BikBetService {
             Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
           ],
           [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
-          [Markup.button.callback('🔙 Назад', 'slotsB2B')],
+          [Markup.button.callback('🔙 Назад', 'slots')],
         ]).reply_markup,
       });
 
@@ -794,7 +836,7 @@ export class BikBetService {
         Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
       ],
       [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
-      [Markup.button.callback('🔙 Назад', 'slotsB2B')],
+      [Markup.button.callback('🔙 Назад', 'slots')],
     ]);
   }
 
@@ -836,7 +878,6 @@ export class BikBetService {
 
       const userState = this.getUserState(userId);
       const chosenBalance = userState.chosenBalance || 'main';
-      console.log(userState);
 
       const operatorId = 40272;
       const currency = 'RUB';
@@ -849,6 +890,7 @@ export class BikBetService {
         currency: currency,
         language: language,
         provider: providerName,
+        balanceType: chosenBalance,
       };
 
       const queryString = Object.entries(params)

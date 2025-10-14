@@ -265,7 +265,14 @@ export class BikBetService {
 
       // Check if this is a callback query (button click) or a text message
       if (ctx.callbackQuery) {
-        // It's a callback query, we can edit the message
+        // It's a callback query, answer it first
+        try {
+          await ctx.answerCbQuery();
+        } catch (error) {
+          console.log('Callback query already answered:', error.message);
+        }
+
+        // Then edit the message
         const filePath = this.getImagePath('bik_bet_8.jpg');
         const media: any = {
           type: 'photo',
@@ -312,24 +319,14 @@ export class BikBetService {
     if (ctx.callbackQuery) {
       // It's a callback query, show an alert instead of editing the same message
       try {
-        await ctx.answerCbQuery(
+        await ctx.telegram.answerCbQuery(
+          ctx.callbackQuery.id,
           '❌ Вы еще не подписались на канал. Пожалуйста, подпишитесь и попробуйте снова.',
           { show_alert: true },
         );
-        return;
+        console.log('Subscription alert sent successfully');
       } catch (error) {
-        console.error('Error sending alert:', error);
-        // If answerCbQuery fails (already answered), try without await
-        try {
-          ctx.telegram.answerCbQuery(
-            ctx.callbackQuery.id,
-            '❌ Вы еще не подписались на канал. Пожалуйста, подпишитесь и попробуйте снова.',
-            { show_alert: true },
-          );
-          return;
-        } catch (e) {
-          console.error('Fallback also failed:', e);
-        }
+        console.error('Error sending subscription alert:', error);
       }
       return;
     } else {

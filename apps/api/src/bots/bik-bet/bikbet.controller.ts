@@ -22,7 +22,7 @@ export class BikBetController {
 
     // Button click handler
     this.bot.action('check_subscription', async (ctx) => {
-      await ctx.answerCbQuery();
+      // Don't answer here - let checkSubscription handle it based on subscription status
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
     });
 

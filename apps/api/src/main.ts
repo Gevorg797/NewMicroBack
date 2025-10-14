@@ -12,6 +12,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MikroORM } from '@mikro-orm/core';
 import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
+import { AppExceptionFilter } from 'libs/utils/interceptors/AppExeptionFilter';
+import { ResponseInterceptor } from 'libs/utils/interceptors/ResponseInterceptor';
 
 const fAdapter = new FastifyAdapter({
   logger: false,
@@ -39,6 +41,10 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalFilters(new AppExceptionFilter());
+
+  app.setGlobalPrefix('api');
+
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
     .setDescription('The API description')
@@ -46,8 +52,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  app.setGlobalPrefix('api');
-
+  app.useGlobalInterceptors(new ResponseInterceptor());
   const docs = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,
   });

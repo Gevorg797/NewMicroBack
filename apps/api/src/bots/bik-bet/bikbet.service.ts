@@ -1734,15 +1734,12 @@ export class BikBetService {
         ],
       ];
 
-      // Only show save button if user doesn't have saved requisite
-      if (!hasSavedRequisite) {
-        buttons.push([
-          Markup.button.callback(
-            '💾 Сохранить реквизиты',
-            `saveReq:FKwallet:${fkwalletId}`,
-          ),
-        ]);
-      }
+      buttons.push([
+        Markup.button.callback(
+          '💾 Сохранить реквизиты',
+          `saveReq:FKwallet:${fkwalletId}`,
+        ),
+      ]);
 
       buttons.push([
         Markup.button.callback('⬅️ Вернуться назад', 'donate_menu'),
@@ -2416,8 +2413,83 @@ export class BikBetService {
     }
   }
 
+  async useSavedWithdrawRequisite(
+    ctx: any,
+    method: string,
+    requisite: string,
+    amount: number,
+  ) {
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({
+      telegramId,
+    });
+    console.log(222);
+
+    if (!user) {
+      await ctx.answerCbQuery('⚠ Пользователь не найден. Нажмите /start', {
+        show_alert: true,
+      });
+      return;
+    }
+
+    try {
+      const methodId = 1; // FKwallet method ID
+
+      // Create payout request using PaymentService
+      const withdrawal = await this.paymentService.payout({
+        userId: user.id!,
+        amount: amount,
+        methodId: methodId,
+        requisite: requisite,
+      });
+
+      await ctx.answerCbQuery('✅ Используется сохранённый реквизит');
+
+      // Send success message
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>📝 Реквизит: <code>${requisite}</code></b></blockquote>
+<blockquote><b>💾 Использован сохранённый реквизит</b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.url(
+              '👨‍💻 Техническая поддержка',
+              'https://t.me/bikbetsupport',
+            ),
+          ],
+          [Markup.button.callback('⬅️ Вернуться назад', 'donate_menu')],
+        ]).reply_markup,
+      });
+    } catch (error) {
+      console.error('Use saved requisite error:', error);
+      await ctx.answerCbQuery('❌ Ошибка создания заявки на вывод', {
+        show_alert: true,
+      });
+    }
+  }
+
   async withdrawFKwallet(ctx: any, amount: number) {
     const userId = ctx.from.id;
+
+    // Get user with saved requisites
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['paymentPayoutRequisite'] },
+    );
 
     // Set user state to waiting for FKwallet ID
     this.userStates.set(userId, {
@@ -2427,13 +2499,28 @@ export class BikBetService {
       withdrawMethodId: 1, // FKwallet method ID
     });
 
-    const text = `
+    const savedFKwalletId = user?.paymentPayoutRequisite?.freekassa_id;
+
+    let text = `
 <blockquote><b>Сумма вывода: <code>${amount}</code>  RUB</b></blockquote>
 <blockquote><b>Метод: FKwallet 💎</b></blockquote>
 <blockquote><b>Отправьте свой аккаунт в следующем формате:</b></blockquote>
 <blockquote><b>F8202583610562856</b></blockquote>
-<blockquote><b>Либо выберите сохранённый реквизит ниже</b></blockquote>
-`;
+<blockquote><b>Либо выберите сохранённый реквизит ниже:</b></blockquote>`;
+
+    const buttons: any[] = [];
+
+    // If user has saved FKwallet ID, show it as a button
+    if (savedFKwalletId) {
+      buttons.push([
+        Markup.button.callback(
+          ` ${savedFKwalletId}`,
+          `useSavedReq:FKwallet:${savedFKwalletId}:${amount}`,
+        ),
+      ]);
+    }
+
+    buttons.push([Markup.button.callback('🔙 Назад', 'withdraw')]);
 
     const filePath = this.getImagePath('bik_bet_5.jpg');
     const media: any = {
@@ -2444,9 +2531,7 @@ export class BikBetService {
     };
 
     await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Назад', 'withdraw')],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
   }
 

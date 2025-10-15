@@ -190,6 +190,35 @@ export class BikBetController {
       }
     });
 
+    // Use saved requisite handler: useSavedReq:<method>:<requisite>:<amount>
+    this.bot.action(/useSavedReq:(.+):(.+):(.+)/, async (ctx) => {
+      try {
+        const match = (ctx as any).match;
+        const method = match?.[1];
+        const requisite = match?.[2];
+        const amount = Number(match?.[3]);
+
+        if (!method || !requisite || !Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректные данные');
+          return;
+        }
+
+        await this.bikbetService.useSavedWithdrawRequisite(
+          ctx,
+          method,
+          requisite,
+          amount,
+        );
+      } catch (error) {
+        console.error('Use saved requisite handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // FKwallet payment handler: paymentSystem_fkwallet_<amount>
     this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
       try {

@@ -67,6 +67,106 @@ export class BikBetController {
       await this.bikbetService.withdrawAmount(ctx, amount);
     });
 
+    // Withdraw CryptoBot handler: withdrCrypto_cryptobot_<amount>
+    this.bot.action(/withdrCrypto_cryptobot_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawCryptoBot(ctx, amount);
+      } catch (error) {
+        console.error('Withdraw CryptoBot handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // Withdraw FKwallet handler: withdrCrypto_fkwallet_<amount>
+    this.bot.action(/withdrCrypto_fkwallet_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawFKwallet(ctx, amount);
+      } catch (error) {
+        console.error('Withdraw FKwallet handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // Withdraw USDT (trc-20) handler: withdrCrypto_usdt20_<amount>
+    this.bot.action(/withdrCrypto_usdt20_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawUSDT20(ctx, amount);
+      } catch (error) {
+        console.error('Withdraw USDT handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // Withdraw Card handler: withdrFiat_card_<amount>
+    this.bot.action(/withdrFiat_card_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawCard(ctx, amount);
+      } catch (error) {
+        console.error('Withdraw Card handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // Withdraw SBP handler: withdrFiat_sbp_<amount>
+    this.bot.action(/withdrFiat_sbp_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawSBP(ctx, amount);
+      } catch (error) {
+        console.error('Withdraw SBP handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // FKwallet payment handler: paymentSystem_fkwallet_<amount>
     this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
       try {
@@ -2100,7 +2200,7 @@ export class BikBetController {
 
         // Check if user is waiting to enter a custom withdraw amount
         const handledWithdraw =
-          await this.bikbetService.handleCustomWithdrawAmount(ctx);
+          await this.bikbetService.handleForWithdrawText(ctx);
         if (handledWithdraw) {
           return;
         }

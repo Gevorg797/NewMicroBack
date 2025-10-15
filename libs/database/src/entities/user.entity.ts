@@ -13,6 +13,7 @@ import { GameFreeSpin } from './game-free-spins.entity';
 import { Balances } from './balances.entity';
 import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { GameSession } from './game-sassion.entity';
+import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -43,6 +44,9 @@ export class User extends BaseEntity {
   @Property({ onCreate: () => new Date() })
   createdAt: Date = new Date();
 
-  @OneToMany(() => FinanceTransactions, t => t.user)
+  @OneToMany(() => FinanceTransactions, (t) => t.user)
   financeTransactions = new Collection<FinanceTransactions>(this);
+
+  @OneToOne(() => PaymentPayoutRequisite, (ppr) => ppr.user, { nullable: true })
+  paymentPayoutRequisite?: PaymentPayoutRequisite;
 }

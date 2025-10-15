@@ -223,19 +223,6 @@ export class FinanceService {
     if (!subMethod) {
       throw new Error('Payment method not found');
     }
-
-    if (subMethod.minAmount > data.amount) {
-      throw new Error(`Minimum amount is ${subMethod.minAmount}`);
-    }
-
-    if (subMethod.maxAmount < data.amount) {
-      throw new Error(`Maximum amount is ${subMethod.maxAmount}`);
-    }
-
-    if (!subMethod.isEnabled) {
-      throw new Error('Payment method is not available');
-    }
-
     // Get user and check balance
     const user = await this.financeTransactionRepo
       .getEntityManager()
@@ -270,7 +257,6 @@ export class FinanceService {
       .persistAndFlush(transaction);
 
     this.logger.log(`Created payout transaction ${transaction.id}`);
-
     // Initiate payout with provider
     const providerName =
       subMethod.method.providerSettings.provider.name.toLowerCase();

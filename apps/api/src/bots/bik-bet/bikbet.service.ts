@@ -33,7 +33,13 @@ export class BikBetService {
   private readonly totalBets = '5973499.88 RUB';
   private readonly userStates = new Map<
     number,
-    { chosenBalance?: string; state?: string }
+    {
+      chosenBalance?: string;
+      state?: string;
+      withdrawAmount?: number;
+      withdrawMethod?: string;
+      withdrawMethodId?: number;
+    }
   >();
   private readonly currentPage = new Map<number, number>();
   private readonly lastMessageId = new Map<number, number>();
@@ -1137,7 +1143,6 @@ export class BikBetService {
     }
 
     const messageText = ctx.message?.text?.trim();
-    console.log(messageText);
 
     if (!messageText) {
       return false;
@@ -1372,9 +1377,19 @@ export class BikBetService {
   }
 
   async withdraw(ctx: any) {
+    const telegramId = String(ctx.from.id);
+    const user = await this.userRepository.findOne({ telegramId });
+    let balanceValue = 0;
+    if (user) {
+      const mainBalance = await this.balancesRepository.findOne({
+        user,
+        type: BalanceType.MAIN,
+      });
+      balanceValue = mainBalance?.balance ?? 0;
+    }
     const text = `
 <blockquote><b>💳 Вывод средств</b></blockquote>
-<blockquote><b>💰 Доступно: 0 RUB</b></blockquote>
+<blockquote><b>💰 Доступно: ${balanceValue} RUB</b></blockquote>
 <blockquote><b>• Минимальная сумма: 200 RUB
 • Выберите сумму для вывода
 • После выбора суммы выберите способ вывода</b></blockquote>
@@ -1423,16 +1438,29 @@ export class BikBetService {
     const mainBalance = user.balances
       .getItems()
       .find((b) => b.type === BalanceType.MAIN);
+
+    const balanceValue = mainBalance?.balance ?? 0;
+
+    // Check minimum amount
+    if (amount < 200) {
+      await ctx.answerCbQuery('❌ Минимальная сумма вывода: 200 RUB', {
+        show_alert: true,
+      });
+      return;
+    }
+
+    // Check if sufficient balance
     if (!mainBalance || mainBalance.balance < amount) {
-      await ctx.answerCbQuery('Недостаточно средств для вывода данной суммы.');
+      await ctx.answerCbQuery(
+        '⚠ Недостаточно средств для вывода данной суммы',
+      );
       return;
     }
 
     const text = `
 <blockquote><b>💳 Вывод средств</b></blockquote>
 <blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
-<blockquote><b>✅ Заявка на вывод ${amount} RUB создана!</b></blockquote>
-<blockquote><b>⏱ Ожидайте обработки заявки</b></blockquote>`;
+<blockquote><b>• Выберите способ вывода</b></blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_5.jpg');
     const media: any = {
@@ -1444,8 +1472,29 @@ export class BikBetService {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Назад к выводу', 'withdraw')],
-        [Markup.button.callback('🏠 Главное меню', 'start')],
+        [Markup.button.callback('От 200р:', 'ignore_game')],
+        [
+          Markup.button.callback(
+            '💎 CryptoBot',
+            `withdrCrypto_cryptobot_${amount}`,
+          ),
+          Markup.button.callback(
+            '👛 FKwallet',
+            `withdrCrypto_fkwallet_${amount}`,
+          ),
+        ],
+        [Markup.button.callback('От 500р:', 'ignore_game')],
+        [
+          Markup.button.callback(
+            '🛡 USDT (trc-20)',
+            `withdrCrypto_usdt20_${amount}`,
+          ),
+        ],
+        [
+          Markup.button.callback('💳 Карта', `withdrFiat_card_${amount}`),
+          Markup.button.callback('💳 СБП', `withdrFiat_sbp_${amount}`),
+        ],
+        [Markup.button.callback('🔙 Назад', 'withdraw')],
       ]).reply_markup,
     });
   }
@@ -1479,26 +1528,63 @@ export class BikBetService {
     });
   }
 
-  async handleCustomWithdrawAmount(ctx: any) {
+  async handleForWithdrawText(ctx: any) {
     const userId = ctx.from.id;
     const userState = this.userStates.get(userId);
 
-    // Check if user is in the correct state
-    if (!userState || userState.state !== 'awaiting_custom_withdraw') {
-      return false; // Not waiting for custom withdraw
+    if (!userState || !userState.state) {
+      const message = '⚠ Ошибка. Нажмите /start';
+      await ctx.reply(message);
+      return;
     }
 
+    if (userState.state === 'awaiting_custom_withdraw') {
+      await this.handleCustomWithdrawAmount(ctx);
+      return true;
+    }
+
+    if (userState.state === 'awaiting_withdraw_fkwallet') {
+      await this.handleWithdrawFKwalletRequisite(ctx);
+      return true;
+    }
+
+    return false; // Not handled
+  }
+
+  async handleCustomWithdrawAmount(ctx: any) {
+    const userId = ctx.from.id;
+    // Check if user is in the correct state
     const messageText = ctx.message?.text?.trim();
+    console.log(1111);
 
     if (!messageText) {
       return false;
     }
 
+    // Check user balance first
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['balances'] },
+    );
+
+    if (!user || !user.balances || user.balances.length === 0) {
+      await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
+      this.userStates.delete(userId);
+      return true;
+    }
+
+    // Get the main balance
+    const mainBalance = user.balances
+      .getItems()
+      .find((b) => b.type === BalanceType.MAIN);
+    const balanceValue = mainBalance?.balance ?? 0;
+
     // Parse the amount
     const amount = Number(messageText);
 
-    // Validate the amount
-    if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < 200) {
+    // Validate the amount is a number and integer
+    if (!Number.isFinite(amount) || !Number.isInteger(amount)) {
       await ctx.reply(
         '❌ Некорректная сумма. Пожалуйста, введите целое число не менее 200 RUB.',
         Markup.inlineKeyboard([
@@ -1508,13 +1594,145 @@ export class BikBetService {
       return true;
     }
 
+    // Check minimum amount
+    if (amount < 200) {
+      await ctx.reply('❌ Минимальная сумма вывода: 200 RUB');
+      this.userStates.delete(userId);
+      return true;
+    }
+
+    // Check if sufficient balance
+    if (!mainBalance || mainBalance.balance < amount) {
+      await ctx.reply('⚠ Недостаточно средств для вывода данной суммы');
+      this.userStates.delete(userId);
+      return true;
+    }
+
     // Clear the state
     this.userStates.delete(userId);
 
-    // Call the withdrawAmount method with the custom amount
-    await this.withdrawAmount(ctx, amount);
+    // Send new message with withdrawal method selection
+    const text = `
+<blockquote><b>💳 Вывод средств</b></blockquote>
+<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
+<blockquote><b>• Выберите способ вывода</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+
+    await ctx.replyWithPhoto(
+      { source: fs.readFileSync(filePath) },
+      {
+        caption: text,
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('От 200р:', 'ignore_game')],
+          [
+            Markup.button.callback(
+              '💎 CryptoBot',
+              `withdrCrypto_cryptobot_${amount}`,
+            ),
+            Markup.button.callback(
+              '👛 FKwallet',
+              `withdrCrypto_fkwallet_${amount}`,
+            ),
+          ],
+          [Markup.button.callback('От 500р:', 'ignore_game')],
+          [
+            Markup.button.callback(
+              '🛡 USDT (trc-20)',
+              `withdrCrypto_usdt20_${amount}`,
+            ),
+          ],
+          [
+            Markup.button.callback('💳 Карта', `withdrFiat_card_${amount}`),
+            Markup.button.callback('💳 СБП', `withdrFiat_sbp_${amount}`),
+          ],
+          [Markup.button.callback('🔙 Назад', 'withdraw')],
+        ]).reply_markup,
+      },
+    );
 
     return true;
+  }
+
+  async handleWithdrawFKwalletRequisite(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+    console.log(2222);
+
+    // Check if user is in the correct state
+    if (!userState || userState.state !== 'awaiting_withdraw_fkwallet') {
+      const message = '⚠ Ошибка. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    const messageText = ctx.message?.text?.trim();
+
+    if (!messageText) {
+      return false;
+    }
+
+    const fkwalletId = messageText;
+    const amount = userState.withdrawAmount!;
+    const methodId = userState.withdrawMethodId!;
+
+    // Get user from database
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({
+      telegramId,
+    });
+
+    if (!user) {
+      await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
+      this.userStates.delete(userId);
+      return true;
+    }
+    console.log(methodId, amount, fkwalletId);
+
+    try {
+      // Create payout request using PaymentService (same as payin)
+      await this.paymentService.payout({
+        userId: user.id!,
+        amount: amount,
+        methodId: methodId,
+        requisite: fkwalletId,
+      });
+
+      // Clear the state
+      this.userStates.delete(userId);
+
+      // Send success message
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💰 Сумма: ${amount} RUB</b></blockquote>
+<blockquote><b>💎 Метод: FKwallet</b></blockquote>
+<blockquote><b>📝 Реквизит: ${fkwalletId}</b></blockquote>
+<blockquote><b>⏱ Заявка отправлена на обработку администратору</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+
+      await ctx.replyWithPhoto(
+        { source: fs.readFileSync(filePath) },
+        {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('🔙 Назад к выводу', 'withdraw')],
+            [Markup.button.callback('🏠 Главное меню', 'start')],
+          ]).reply_markup,
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.log(error);
+
+      this.userStates.delete(userId);
+      await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
+      console.error('Withdraw FKwallet error:', error);
+      return true;
+    }
   }
 
   async fkwalletPayment(ctx: any, amount: number) {
@@ -2069,6 +2287,126 @@ export class BikBetService {
           Markup.button.callback('💰 По сумме ставок', 'leaderboard_bets'),
         ],
         [Markup.button.callback('⬅️ Назад', 'start')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdrawCryptoBot(ctx: any, amount: number) {
+    const text = `
+<blockquote><b>💎 Вывод через CryptoBot</b></blockquote>
+<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
+<blockquote><b>📝 Введите ваш CryptoBot ID для вывода</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Назад', 'withdraw')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdrawFKwallet(ctx: any, amount: number) {
+    const userId = ctx.from.id;
+
+    // Set user state to waiting for FKwallet ID
+    this.userStates.set(userId, {
+      state: 'awaiting_withdraw_fkwallet',
+      withdrawAmount: amount,
+      withdrawMethod: 'FKwallet',
+      withdrawMethodId: 1, // FKwallet method ID
+    });
+
+    const text = `
+<blockquote><b>Сумма вывода: <code>${amount}</code>  RUB</b></blockquote>
+<blockquote><b>Метод: FKwallet 💎</b></blockquote>
+<blockquote><b>Отправьте свой аккаунт в следующем формате:</b></blockquote>
+<blockquote><b>F8202583610562856</b></blockquote>
+<blockquote><b>Либо выберите сохранённый реквизит ниже</b></blockquote>
+`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Назад', 'withdraw')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdrawUSDT20(ctx: any, amount: number) {
+    const text = `
+<blockquote><b>🛡 Вывод USDT (trc-20)</b></blockquote>
+<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
+<blockquote><b>📝 Введите ваш USDT (trc-20) адрес для вывода</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Назад', 'withdraw')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdrawCard(ctx: any, amount: number) {
+    const text = `
+<blockquote><b>💳 Вывод на карту</b></blockquote>
+<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
+<blockquote><b>📝 Введите номер карты для вывода</b></blockquote>
+<blockquote><b>Формат: 0000 0000 0000 0000</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Назад', 'withdraw')],
+      ]).reply_markup,
+    });
+  }
+
+  async withdrawSBP(ctx: any, amount: number) {
+    const text = `
+<blockquote><b>💳 Вывод через СБП</b></blockquote>
+<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
+<blockquote><b>📝 Введите номер телефона для вывода</b></blockquote>
+<blockquote><b>Формат: +7XXXXXXXXXX</b></blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('🔙 Назад', 'withdraw')],
       ]).reply_markup,
     });
   }

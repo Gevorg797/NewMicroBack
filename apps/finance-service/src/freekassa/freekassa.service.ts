@@ -84,7 +84,7 @@ export class FreekassaService implements IPaymentProvider {
 
   async createPayoutProcess(payload: PayoutPayload): Promise<any> {
     // Freekassa doesn't support automated payouts yet
-    throw new Error('Freekassa does not support automated payouts');
+    return 'Payouts are not supported via Freekassa';
   }
 
   async handleCallback(payload: CallbackPayload): Promise<void> {

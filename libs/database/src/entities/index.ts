@@ -19,9 +19,15 @@ import { FinanceProvider } from './finance-provider.entity';
 import { FinanceProviderSettings } from './finance-provider-settings.entity';
 import { FinanceProviderMethods } from './finance-provider-methods.entity';
 import { FinanceProviderSubMethods } from './finance-provider-sub-method.entity';
-import { FinanceTransactions } from './finance-provider-transactions.entity';
+import {
+  FinanceTransactions,
+  PaymentTransactionStatus,
+  PaymentTransactionType,
+  PaymentTransactionUserResponseStatus,
+} from './finance-provider-transactions.entity';
 import { SiteSettings } from './site-settings.entity';
 import { Balances, BalanceType } from './balances.entity';
+import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 
 // Export everything for convenient imports
 // export * from './balances.entity';
@@ -46,6 +52,7 @@ export const ENTITIES = [
   FinanceProviderSubMethods,
   FinanceTransactions,
   Balances,
+  PaymentPayoutRequisite,
 ];
 
 export {
@@ -69,6 +76,10 @@ export {
   FinanceProviderMethods,
   FinanceProviderSubMethods,
   FinanceTransactions,
+  PaymentTransactionStatus,
+  PaymentTransactionType,
+  PaymentTransactionUserResponseStatus,
   Balances,
   BalanceType,
+  PaymentPayoutRequisite,
 };

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { EntityRepository } from '@mikro-orm/core';
+import { EntityRepository, EntityManager } from '@mikro-orm/core';
 import {
   User,
   Currency,
@@ -8,6 +8,7 @@ import {
   CurrencyType,
   Site,
   BalanceType,
+  PaymentPayoutRequisite,
 } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
@@ -53,7 +54,10 @@ export class BikBetService {
     private readonly currencyRepository: EntityRepository<Currency>,
     @InjectRepository(Balances)
     private readonly balancesRepository: EntityRepository<Balances>,
+    @InjectRepository(PaymentPayoutRequisite)
+    private readonly paymentPayoutRequisiteRepository: EntityRepository<PaymentPayoutRequisite>,
     private readonly paymentService: PaymentService,
+    private readonly em: EntityManager,
   ) {}
 
   // Game data for different operators (imported from games-data.ts)
@@ -1658,7 +1662,6 @@ export class BikBetService {
   async handleWithdrawFKwalletRequisite(ctx: any) {
     const userId = ctx.from.id;
     const userState = this.userStates.get(userId);
-    console.log(2222);
 
     // Check if user is in the correct state
     if (!userState || userState.state !== 'awaiting_withdraw_fkwallet') {
@@ -1677,22 +1680,31 @@ export class BikBetService {
     const amount = userState.withdrawAmount!;
     const methodId = userState.withdrawMethodId!;
 
-    // Get user from database
+    // Get user from database with paymentPayoutRequisite relation
     const telegramId = String(ctx.from.id);
-    let user = await this.userRepository.findOne({
-      telegramId,
-    });
+    let user = await this.userRepository.findOne(
+      {
+        telegramId,
+      },
+      {
+        populate: ['paymentPayoutRequisite'],
+      },
+    );
 
     if (!user) {
       await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
       this.userStates.delete(userId);
       return true;
     }
-    console.log(methodId, amount, fkwalletId);
+
+    // Check if user has saved freekassa_id
+    const hasSavedRequisite =
+      user.paymentPayoutRequisite?.freekassa_id !== null &&
+      user.paymentPayoutRequisite?.freekassa_id !== undefined;
 
     try {
       // Create payout request using PaymentService (same as payin)
-      await this.paymentService.payout({
+      const withdrawal = await this.paymentService.payout({
         userId: user.id!,
         amount: amount,
         methodId: methodId,
@@ -1705,22 +1717,43 @@ export class BikBetService {
       // Send success message
       const text = `
 <blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
-<blockquote><b>💰 Сумма: ${amount} RUB</b></blockquote>
-<blockquote><b>💎 Метод: FKwallet</b></blockquote>
-<blockquote><b>📝 Реквизит: ${fkwalletId}</b></blockquote>
-<blockquote><b>⏱ Заявка отправлена на обработку администратору</b></blockquote>`;
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>📝 Реквизит: <code>${fkwalletId}</code></b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
 
       const filePath = this.getImagePath('bik_bet_5.jpg');
+
+      // Build inline keyboard buttons
+      const buttons: any[] = [
+        [
+          Markup.button.url(
+            '👨‍💻 Техническая поддержка',
+            'https://t.me/bikbetsupport',
+          ),
+        ],
+      ];
+
+      // Only show save button if user doesn't have saved requisite
+      if (!hasSavedRequisite) {
+        buttons.push([
+          Markup.button.callback(
+            '💾 Сохранить реквизиты',
+            `saveReq:FKwallet:${fkwalletId}`,
+          ),
+        ]);
+      }
+
+      buttons.push([
+        Markup.button.callback('⬅️ Вернуться назад', 'donate_menu'),
+      ]);
 
       await ctx.replyWithPhoto(
         { source: fs.readFileSync(filePath) },
         {
           caption: text,
           parse_mode: 'HTML',
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.callback('🔙 Назад к выводу', 'withdraw')],
-            [Markup.button.callback('🏠 Главное меню', 'start')],
-          ]).reply_markup,
+          reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
         },
       );
 
@@ -2310,6 +2343,77 @@ export class BikBetService {
         [Markup.button.callback('🔙 Назад', 'withdraw')],
       ]).reply_markup,
     });
+  }
+
+  async saveWithdrawRequisite(ctx: any, method: string, requisite: string) {
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['paymentPayoutRequisite'] },
+    );
+
+    if (!user) {
+      await ctx.answerCbQuery('⚠ Пользователь не найден. Нажмите /start', {
+        show_alert: true,
+      });
+      return;
+    }
+
+    try {
+      let payoutRequisite = user.paymentPayoutRequisite;
+
+      if (!payoutRequisite) {
+        // Create new requisite record
+        payoutRequisite = this.paymentPayoutRequisiteRepository.create({
+          user: user,
+        });
+      }
+
+      // Save based on method
+      if (method === 'FKwallet') {
+        payoutRequisite.freekassa_id = requisite;
+      }
+      // Add other methods here as needed (sbp, card, etc.)
+
+      await this.em.persistAndFlush(payoutRequisite);
+
+      await ctx.answerCbQuery('✅ Реквизиты сохранены!', {
+        show_alert: true,
+      });
+
+      // Update the message to remove the save button
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💰 Сумма вывода сохранена</b></blockquote>
+<blockquote><b>💎 Метод: ${method}</b></blockquote>
+<blockquote><b>📝 Реквизит: <code>${requisite}</code></b></blockquote>
+<blockquote><b>💾 Реквизиты сохранены для будущих выводов</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            Markup.button.url(
+              '👨‍💻 Техническая поддержка',
+              'https://t.me/bikbetsupport',
+            ),
+          ],
+          [Markup.button.callback('⬅️ Вернуться назад', 'donate_menu')],
+        ]).reply_markup,
+      });
+    } catch (error) {
+      console.error('Save requisite error:', error);
+      await ctx.answerCbQuery('❌ Ошибка сохранения реквизитов', {
+        show_alert: true,
+      });
+    }
   }
 
   async withdrawFKwallet(ctx: any, amount: number) {

@@ -242,6 +242,7 @@ export class FinanceService {
       amount: data.amount,
       type: PaymentTransactionType.PAYOUT,
       subMethod,
+      requisite: data.requisite,
       user: this.financeTransactionRepo
         .getEntityManager()
         .getReference(User, data.userId),
@@ -252,34 +253,38 @@ export class FinanceService {
       userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
     });
 
+    if (!transaction) {
+      throw new Error('Failed to create transaction');
+    }
+
     await this.financeTransactionRepo
       .getEntityManager()
       .persistAndFlush(transaction);
 
-    this.logger.log(`Created payout transaction ${transaction.id}`);
+    return transaction;
     // Initiate payout with provider
-    const providerName =
-      subMethod.method.providerSettings.provider.name.toLowerCase();
+    // const providerName =
+    //   subMethod.method.providerSettings.provider.name.toLowerCase();
 
-    try {
-      const result = await this.createPayoutOrder(providerName, {
-        transactionId: transaction.id as number,
-        amount: data.amount,
-        requisite: data.requisite,
-        to: data.requisite,
-      });
+    // try {
+    //   const result = await this.createPayoutOrder(providerName, {
+    //     transactionId: transaction.id as number,
+    //     amount: data.amount,
+    //     requisite: data.requisite,
+    //     to: data.requisite,
+    //   });
 
-      this.logger.log(
-        `Payout initiated successfully for transaction ${transaction.id}`,
-      );
-      return result;
-    } catch (error) {
-      // Mark transaction as failed
-      await this.transactionManager.failTransaction(
-        transaction.id as number,
-        error.message,
-      );
-      throw error;
-    }
+    //   this.logger.log(
+    //     `Payout initiated successfully for transaction ${transaction.id}`,
+    //   );
+    //   return result;
+    // } catch (error) {
+    //   // Mark transaction as failed
+    //   await this.transactionManager.failTransaction(
+    //     transaction.id as number,
+    //     error.message,
+    //   );
+    //   throw error;
+    // }
   }
 }

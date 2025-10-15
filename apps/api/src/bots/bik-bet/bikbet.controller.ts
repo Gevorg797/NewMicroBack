@@ -167,6 +167,29 @@ export class BikBetController {
       }
     });
 
+    // Save requisite handler: saveReq:<method>:<requisite>
+    this.bot.action(/saveReq:(.+):(.+)/, async (ctx) => {
+      try {
+        const match = (ctx as any).match;
+        const method = match?.[1];
+        const requisite = match?.[2];
+
+        if (!method || !requisite) {
+          await ctx.answerCbQuery('Некорректные данные');
+          return;
+        }
+
+        await this.bikbetService.saveWithdrawRequisite(ctx, method, requisite);
+      } catch (error) {
+        console.error('Save requisite handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка сохранения реквизитов');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // FKwallet payment handler: paymentSystem_fkwallet_<amount>
     this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
       try {

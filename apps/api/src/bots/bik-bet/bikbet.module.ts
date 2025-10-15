@@ -13,6 +13,7 @@ import {
   GameProviderSetting,
   GamesProviderSettingGroup,
   GameSubProvider,
+  PaymentPayoutRequisite,
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
 
@@ -31,6 +32,7 @@ import { PaymentModule } from '../../client/payment/payment.module';
       GameProviderSetting,
       GamesProviderSettingGroup,
       Game,
+      PaymentPayoutRequisite,
     ]),
     PaymentModule,
   ],

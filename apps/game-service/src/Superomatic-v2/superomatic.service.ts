@@ -267,7 +267,7 @@ export class SuperomaticService implements IExtendedGameProvider {
         // Get the final balance to store as endAmount
         // Note: During close.session, Superomatic sends /check.balance and /deposit.win webhooks
         // The balance should already be updated through those webhooks
-        const finalBalance = session.balance?.balance;
+        const finalBalance = session.balance.balance;
 
         // Close our database session with the final balance
         await this.sessionManager.closeSession(sessionId, finalBalance);

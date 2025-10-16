@@ -200,7 +200,7 @@ export class SessionManagerService {
     /**
      * Closes a game session and updates user balance if endAmount is provided
      */
-    async closeSession(sessionId: string, endAmount?: number): Promise<void> {
+    async closeSession(sessionId: string, endAmount: number): Promise<void> {
         this.logger.debug(`Closing session ${sessionId} with endAmount: ${endAmount || 'N/A'}`);
 
         const session = await this.em.findOne(
@@ -217,6 +217,7 @@ export class SessionManagerService {
             isAlive: false,
             endedAt: new Date(),
             endAmount,
+            diff: session.startAmount - endAmount,
         });
 
         // Update user's balance if endAmount is provided

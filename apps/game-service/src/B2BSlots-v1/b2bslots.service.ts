@@ -254,7 +254,38 @@ export class B2BSlotsService implements IGameProvider {
   }
 
   async closeSession(payload: ProviderPayload): Promise<any> {
-    this.logger.debug(`Closing session for game: ${payload.params.gameId}`);
+    this.logger.debug(`Closing session for user: ${payload.userId}`);
+
+    const { userId } = payload;
+
+    // Find the active session for this user (with user.site populated to get siteId)
+    const activeSessions = await this.sessionManager.getActiveSessions(userId);
+
+    if (!activeSessions || activeSessions.length === 0) {
+      this.logger.warn(`No active session found for user: ${userId}`);
+      throw new Error(`No active session found for user: ${userId}`);
+    }
+
+    // Use the first active session (assuming one session per user)
+    const session = activeSessions[0];
+
+    if (!session.id) {
+      throw new Error(`Invalid session data for user: ${userId}`);
+    }
+
+    // Get siteId from the session's user
+    const siteId = session.user?.site?.id;
+    if (!siteId) {
+      throw new Error(`Cannot determine siteId for user: ${userId}`);
+    }
+
+    const sessionId = session.id.toString(); // Our database session ID
+
+    this.logger.debug(`Found active session ${sessionId} for user ${userId} on site ${siteId}`);
+
+    // Get provider settings using siteId from user
+
+
 
     const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
 
@@ -267,15 +298,17 @@ export class B2BSlotsService implements IGameProvider {
     };
 
     const sign = this.utils.sign(b2bPayload, key);
-    const result = await this.api.closeSession(baseURL, { ...b2bPayload, sign });
+    const response = await this.api.closeSession(baseURL, { ...b2bPayload, sign });
 
-    // Close our database session if we have the session ID
-    if (payload.params.sessionId) {
-      await this.sessionManager.closeSession(payload.params.sessionId);
-    }
+    const finalBalance = session.balance.balance;
 
-    this.logger.debug('Successfully closed session with B2BSlots');
-    return result;
+    // Close our database session with the final balance
+    await this.sessionManager.closeSession(sessionId, finalBalance);
+
+    this.logger.debug(`Successfully closed session ${sessionId} for user ${userId} with final balance: ${finalBalance}`);
+
+    // Response is just: { method: "close.session", status: 200, response: true }
+    return response;
   }
 
   /**

@@ -9,6 +9,7 @@ import {
     User,
     Balances,
     BalanceType,
+    GameOutcome,
 } from '@lib/database';
 
 export interface CreateSessionParams {
@@ -133,22 +134,15 @@ export class SessionManagerService {
             throw new Error(`Session not found: ${sessionId}`);
         }
 
-        // Extract launch URL based on provider response format
-        // Superomatic uses response.clientDist
-        // B2BSlots and others use launch_url or url
-        const launchURL =
-            providerResponse?.response?.clientDist ||
-            providerResponse?.launch_url ||
-            providerResponse?.url ||
-            null;
-
         // Extract token/uuid based on provider response format
         // Superomatic uses response.token
+        const providerLaunchUrl = providerResponse?.response?.clientDist || null;
         const providerToken = providerResponse?.response?.token || null;
+
 
         // Update session with provider response data
         const updates: Partial<GameSession> = {
-            launchURL,
+            launchURL: `${providerLaunchUrl}?t=${providerToken}`,
             isAlive: true, // Mark session as alive when provider response is received
             ...(providerToken && { uuid: providerToken }), // Update UUID only if Superomatic provides a token
             metadata: {
@@ -218,6 +212,7 @@ export class SessionManagerService {
             endedAt: new Date(),
             endAmount,
             diff: session.startAmount - endAmount,
+            outcome: endAmount > session.startAmount ? GameOutcome.WIN : endAmount < session.startAmount ? GameOutcome.LOST : GameOutcome.DRAW,
         });
 
         // Update user's balance if endAmount is provided

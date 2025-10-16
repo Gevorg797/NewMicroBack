@@ -4,6 +4,7 @@ import {
   ManyToOne,
   OneToMany,
   Collection,
+  Enum,
 } from '@mikro-orm/core';
 import { BaseEntity } from './base.entity';
 import { Game } from './games.entity';
@@ -11,6 +12,12 @@ import { GameFreeSpin } from './game-free-spins.entity';
 import { User } from './user.entity';
 import { GameTransaction } from './game-transaction.entity';
 import { Balances } from './balances.entity';
+
+export enum GameOutcome {
+  WIN = 'win',
+  LOST = 'lost',
+  DRAW = 'draw',
+}
 
 @Entity({ tableName: 'gameSessions' })
 export class GameSession extends BaseEntity {
@@ -67,6 +74,9 @@ export class GameSession extends BaseEntity {
 
   @Property({ default: false })
   isFreeSpin: boolean = false;
+
+  @Enum({ items: () => GameOutcome, nullable: true })
+  outcome?: GameOutcome;
 
   @Property({ columnType: 'timestamptz', nullable: true })
   deletedAt?: Date;

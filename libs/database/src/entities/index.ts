@@ -6,7 +6,7 @@ import { GameSubProvider } from './game-sub-providers.entity';
 import { GameProviderSetting } from './game-provider-settings.entity';
 import { GamesProviderSettingGroup } from './game-provider-settings-group.entity';
 import { Game } from './games.entity';
-import { GameSession } from './game-sassion.entity';
+import { GameSession, GameOutcome } from './game-sassion.entity';
 import {
   GameTransaction,
   GameTransactionType,
@@ -67,6 +67,7 @@ export {
   GamesProviderSettingGroup,
   Game,
   GameSession,
+  GameOutcome,
   GameTransaction,
   GameTransactionType,
   GameFreeSpin,

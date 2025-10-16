@@ -860,6 +860,8 @@ export class BikBetService {
     operatorName: string,
     providerName: string,
   ) {
+    console.log(1111);
+
     // Always answer callback query first to prevent timeout
     try {
       await ctx.answerCbQuery();
@@ -893,10 +895,12 @@ export class BikBetService {
       const operatorId = 40272;
       const currency = 'RUB';
       const language = 'RU';
+      console.log(providerName);
 
-      const baseUrl = `https://dev.bik-bet.com/gamesbycode/${gameId}.gamecode`;
+      const baseUrl = `https://dev.bik-bet.com/gamesbycode/gamecode`;
       const params = {
         operator_id: operatorId,
+        gameId: gameId,
         user_id: String(user.id),
         currency: currency,
         language: language,
@@ -908,7 +912,7 @@ export class BikBetService {
         .map(([key, value]) => `${key}=${value}`)
         .join('&');
       const webAppUrl = `${baseUrl}?${queryString}`;
-
+      console.log(webAppUrl);
       const keyboard = Markup.inlineKeyboard([
         [Markup.button.webApp(`🎮 Играть в ${gameName}`, webAppUrl)],
         [
@@ -1059,6 +1063,8 @@ export class BikBetService {
   }
 
   async handlePopularGameSelection(ctx: any, callbackData: string) {
+    console.log(4444);
+
     const parts = callbackData.split('_');
     const gameId = parts[0];
     const game = this.POPULAR_GAMES.find((g) => g.id === gameId);

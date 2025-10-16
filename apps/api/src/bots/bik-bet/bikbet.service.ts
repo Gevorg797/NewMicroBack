@@ -32,6 +32,7 @@ export class BikBetService {
   private readonly totalPlayers = 1311;
   private readonly gamesPlayed = 61192;
   private readonly totalBets = '5973499.88 RUB';
+  private readonly chatIdForDepositsAndWithdrawals = -1002939266999; // Replace with your actual chat ID
   private readonly userStates = new Map<
     number,
     {
@@ -1711,6 +1712,14 @@ export class BikBetService {
         requisite: fkwalletId,
       });
 
+      await this.sendMessageToAdminForWithdraw(
+        ctx,
+        withdrawal,
+        'FKwallet',
+        amount,
+        fkwalletId,
+      );
+
       // Clear the state
       this.userStates.delete(userId);
 
@@ -2423,7 +2432,6 @@ export class BikBetService {
     let user = await this.userRepository.findOne({
       telegramId,
     });
-    console.log(222);
 
     if (!user) {
       await ctx.answerCbQuery('⚠ Пользователь не найден. Нажмите /start', {
@@ -2442,6 +2450,14 @@ export class BikBetService {
         methodId: methodId,
         requisite: requisite,
       });
+
+      await this.sendMessageToAdminForWithdraw(
+        ctx,
+        withdrawal,
+        method,
+        amount,
+        requisite,
+      );
 
       await ctx.answerCbQuery('✅ Используется сохранённый реквизит');
 
@@ -2479,6 +2495,58 @@ export class BikBetService {
         show_alert: true,
       });
     }
+  }
+
+  async sendMessageToAdminForWithdraw(
+    ctx: any,
+    withdrawal: any,
+    method: string,
+    amount: number,
+    requisite: string,
+  ) {
+    // Format the message
+    const message =
+      `<blockquote><b>🔹 Новый запрос на вывод 🔹</b></blockquote>\n` +
+      `<blockquote><b>🛡 Метод: <code>${method}</code>🔹</b></blockquote>\n` +
+      `<blockquote><b>📌 ID запроса: <code>№${withdrawal.id}</code></b></blockquote>\n` +
+      `<blockquote><b>👤 Пользователь: <code>${ctx.from.id}</code></b></blockquote>\n` +
+      `<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>\n` +
+      `<blockquote><b>💳 Реквизиты:\n` +
+      `<code>${requisite}\n</code></b></blockquote>`;
+    // Send message to Telegram
+    await ctx.telegram.sendMessage(
+      this.chatIdForDepositsAndWithdrawals,
+      message,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '✅ Выполнено',
+                callback_data: `withdraw_${withdrawal.id}_approve_${method}`,
+              },
+              {
+                text: '❌ Отклонить',
+                callback_data: `withdraw_${withdrawal.id}_reject_${method}`,
+              },
+            ],
+            [
+              {
+                text: '👾 История игр',
+                callback_data: `gameDump_${ctx.from.id}`,
+              },
+            ],
+            [
+              {
+                text: '📨 Написать',
+                url: `tg://user?id=${ctx.from.id}`,
+              },
+            ],
+          ],
+        },
+      },
+    );
   }
 
   async withdrawFKwallet(ctx: any, amount: number) {

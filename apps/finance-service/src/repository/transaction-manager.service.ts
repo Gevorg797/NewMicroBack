@@ -220,4 +220,30 @@ export class TransactionManagerService {
       PaymentTransactionStatus.FAILED,
     );
   }
+
+  /**
+   * Fail payout transaction and refund balance
+   */
+  async failPayoutAndRefund(transactionId: number): Promise<void> {
+    this.logger.log(
+      `Failing payout transaction ${transactionId} and refunding balance`,
+    );
+
+    const transaction = await this.getTransaction(transactionId, ['user']);
+
+    this.validateTransactionNotProcessed(transaction);
+
+    // Refund the amount back to user's main balance
+    await this.creditBalance(transaction.user, transaction.amount, transaction);
+
+    // Mark transaction as failed
+    await this.updateTransactionStatus(
+      transaction,
+      PaymentTransactionStatus.FAILED,
+    );
+
+    this.logger.log(
+      `Payout transaction ${transactionId} failed and ${transaction.amount} refunded to user ${transaction.user.id}`,
+    );
+  }
 }

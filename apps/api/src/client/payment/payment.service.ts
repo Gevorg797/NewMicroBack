@@ -42,4 +42,36 @@ export class PaymentService {
       throw error;
     }
   }
+
+  async getTransaction(transactionId: number) {
+    try {
+      const result = await this.msFinanceService.getTransaction(transactionId);
+
+      this.logger.log(`Get transaction completed successfully`);
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Get transaction failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async rejectPayout(transactionId: number) {
+    try {
+      const result = await this.msFinanceService.rejectPayout(transactionId);
+
+      this.logger.log(
+        `Payout rejection completed successfully for transaction ${transactionId}`,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Payout rejection failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

@@ -41,6 +41,14 @@ export class BikBetService {
       withdrawAmount?: number;
       withdrawMethod?: string;
       withdrawMethodId?: number;
+      rejectionData?: {
+        withdrawalId: number;
+        method: string;
+        adminId: number;
+        messageId: number;
+        userTgId: number;
+        amount: number;
+      };
     }
   >();
   private readonly currentPage = new Map<number, number>();
@@ -1544,9 +1552,7 @@ export class BikBetService {
     const userState = this.userStates.get(userId);
 
     if (!userState || !userState.state) {
-      const message = '⚠ Ошибка. Нажмите /start';
-      await ctx.reply(message);
-      return;
+      return false; // No active state
     }
 
     if (userState.state === 'awaiting_custom_withdraw') {
@@ -1556,6 +1562,11 @@ export class BikBetService {
 
     if (userState.state === 'awaiting_withdraw_fkwallet') {
       await this.handleWithdrawFKwalletRequisite(ctx);
+      return true;
+    }
+
+    if (userState.state === 'awaiting_reject_reason') {
+      await this.handleRejectReason(ctx);
       return true;
     }
 
@@ -2650,6 +2661,144 @@ export class BikBetService {
         [Markup.button.callback('🔙 Назад', 'withdraw')],
       ]).reply_markup,
     });
+  }
+
+  async handleWithdrawReject(ctx: any, withdrawalId: number, method: string) {
+    try {
+      // Get transaction details
+      const withdrawal = await this.paymentService.getTransaction(withdrawalId);
+
+      if (!withdrawal) {
+        await ctx.answerCbQuery('❌ Транзакция не найдена', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      const adminId = ctx.from.id;
+      const userTgId = withdrawal.user?.telegramId || 'Unknown';
+      const amount = withdrawal.amount;
+
+      await ctx.answerCbQuery();
+
+      // Update the admin message to show rejection info
+      const text = `
+<blockquote>❌ Запрос на вывод отклонен.</blockquote>
+<blockquote>📌 <b>ID запроса: </b><code>№${withdrawalId}</code></blockquote>
+<blockquote>💳 <b>Метод: </b><code>${method}</code></blockquote>
+<blockquote><b>👤 Пользователь:</b> <code>${userTgId}</code></blockquote>
+<blockquote><b>💰 Сумма:</b> <code>${Math.floor(amount)} RUB</code></blockquote>
+
+`;
+
+      await ctx.editMessageText(text, {
+        parse_mode: 'HTML',
+      });
+
+      // Ask admin for rejection reason
+      const reasonMsg = await ctx.reply(
+        '<blockquote>📝 Укажите причину отказа в выводе:</blockquote>',
+        { parse_mode: 'HTML' },
+      );
+
+      // Store rejection data in state
+      this.userStates.set(adminId, {
+        state: 'awaiting_reject_reason',
+        rejectionData: {
+          withdrawalId,
+          method,
+          adminId,
+          messageId: reasonMsg.message_id,
+          userTgId: parseInt(userTgId),
+          amount,
+        },
+      });
+    } catch (error) {
+      console.error('Withdraw reject error:', error);
+      await ctx.answerCbQuery('❌ Ошибка отклонения запроса', {
+        show_alert: true,
+      });
+    }
+  }
+
+  async handleRejectReason(ctx: any) {
+    const adminId = ctx.from.id;
+    const userState = this.userStates.get(adminId);
+
+    // Check if admin is in the correct state
+    if (!userState || userState.state !== 'awaiting_reject_reason') {
+      return false; // Not waiting for reject reason
+    }
+
+    const reason = ctx.message?.text?.trim();
+
+    if (!reason) {
+      return false;
+    }
+
+    const rejectionData = userState.rejectionData!;
+
+    try {
+      // Reject payout in finance service (refunds balance)
+      await this.paymentService.rejectPayout(rejectionData.withdrawalId);
+
+      // Send message to user
+      await ctx.telegram.sendMessage(
+        rejectionData.userTgId,
+        `
+<blockquote>❌ Ваш запрос №${rejectionData.withdrawalId} на вывод ${Math.floor(rejectionData.amount)} RUB отклонен.</blockquote>
+<blockquote>💰 Средства возвращены на баланс.</blockquote>
+
+<blockquote>💬 Причина:</blockquote>
+<blockquote>${reason}</blockquote>
+`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🏠 Главное меню',
+                  callback_data: 'start',
+                },
+              ],
+            ],
+          },
+        },
+      );
+
+      // Delete the reason request message
+      await ctx.telegram.deleteMessage(ctx.chat.id, rejectionData.messageId);
+      await ctx.telegram.deleteMessage(ctx.chat.id, ctx.message.message_id);
+
+      // Send confirmation to admin
+      await ctx.reply(
+        `<blockquote>Заявка на вывод №${rejectionData.withdrawalId} успешно отклонена</blockquote>\n\n<blockquote>💬 Причина:</blockquote>\n<blockquote>${reason}</blockquote>`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '❌ Удалить',
+                  callback_data: 'removeMSG',
+                },
+              ],
+            ],
+          },
+        },
+      );
+
+      // Clear state
+      this.userStates.delete(adminId);
+
+      return true;
+    } catch (error) {
+      console.error('Reject reason processing error:', error);
+      await ctx.reply('❌ Ошибка обработки отклонения');
+      this.userStates.delete(adminId);
+      return true;
+    }
   }
 
   async withdrawSBP(ctx: any, amount: number) {

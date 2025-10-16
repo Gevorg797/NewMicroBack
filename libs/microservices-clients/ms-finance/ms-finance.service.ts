@@ -64,4 +64,50 @@ export class MsFinanceService {
       throw error;
     }
   }
+
+  /**
+   * Get transaction details
+   */
+  async getTransaction(transactionId: number): Promise<any> {
+    try {
+      const result = await firstValueFrom(
+        this.client.send('finance.transaction.get', { transactionId }),
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get transaction');
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error(
+        `Get transaction failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Reject payout - Fail transaction and refund balance
+   */
+  async rejectPayout(transactionId: number): Promise<any> {
+    try {
+      const result = await firstValueFrom(
+        this.client.send('finance.payout.reject', { transactionId }),
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Payout rejection failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error(
+        `Payout rejection failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

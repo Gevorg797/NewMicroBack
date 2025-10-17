@@ -24,37 +24,61 @@ export class PartnerWebhooksService {
             throw new Error('Missing partner.session parameter');
         }
 
-        // Find the session in the database with all required relationships
-        const session = await this.em.findOne(
-            GameSession,
-            { id: parseInt(partnerSession) },
-            {
-                populate: ['user', 'game', 'balance', 'balance.currency']
-            }
+        // Single SQL query to get session data and check for other alive sessions
+        const sessionId = parseInt(partnerSession);
+        const sessionData = await this.em.getConnection().execute(
+            `SELECT 
+                gs.id,
+                gs."is_alive" as "isAlive",
+                gs."is_live" as "isLive",
+                gs.denomination,
+                gs."user_id" as "userId",
+                g.uuid as "gameUuid",
+                b.balance,
+                c.name as "currencyName",
+                (SELECT id FROM "gameSessions" 
+                 WHERE "user_id" = gs."user_id" 
+                   AND "is_alive" = true 
+                   AND id != gs.id 
+                 LIMIT 1) as "otherAliveSessionId"
+             FROM "gameSessions" gs
+             INNER JOIN games g ON gs."game_id" = g.id
+             INNER JOIN balances b ON gs."balance_id" = b.id
+             INNER JOIN currencies c ON b."currency_id" = c.id
+             WHERE gs.id = ?
+             LIMIT 1`,
+            [sessionId]
         );
 
-        if (!session) {
+
+        if (!sessionData || sessionData.length === 0) {
             throw new Error(`Session not found: ${partnerSession}`);
         }
 
+        const session = sessionData[0];
+
         if (!session.isLive) {
             throw new Error(`Session is not live: ${partnerSession}`);
+        }
+
+        if (session.otherAliveSessionId) {
+            throw new Error(`User already has an active session: ${session.otherAliveSessionId}`);
         }
 
         // Convert denomination from string (e.g., "1.00") to cents (e.g., 100)
         const denominationInCents = Math.round(parseFloat(session.denomination || '1.00') * 100);
 
         // Convert balance from decimal to cents
-        const balanceInCents = Math.round(session.balance.balance * 100);
+        const balanceInCents = Math.round(parseFloat(session.balance) * 100);
 
         // Return response in Superomatic format
         return {
             method: 'check.session',
             status: 200,
             response: {
-                id_player: session.user.id, // immutable player id
-                game_id: parseInt(session.game.uuid), // Superomatic's game id
-                currency: session.balance.currency.name, // currency code
+                id_player: session.userId, // immutable player id
+                game_id: parseInt(session.gameUuid), // Superomatic's game id
+                currency: session.currencyName, // currency code
                 balance: balanceInCents, // balance in cents
                 denomination: denominationInCents // denomination in cents
             }
@@ -81,30 +105,40 @@ export class PartnerWebhooksService {
             throw new Error('Missing @currency parameter');
         }
 
-        // Find the session in the database with balance relationship
-        const gameSession = await this.em.findOne(
-            GameSession,
-            { id: parseInt(session) },
-            {
-                populate: ['balance', 'balance.currency']
-            }
+        // Single SQL query to get session data
+        const sessionId = parseInt(session);
+        const sessionData = await this.em.getConnection().execute(
+            `SELECT 
+                gs.id,
+                gs."is_live" as "isLive",
+                gs."user_id" as "userId",
+                b.balance,
+                c.name as "currencyName"
+             FROM "gameSessions" gs
+             INNER JOIN balances b ON gs."balance_id" = b.id
+             INNER JOIN currencies c ON b."currency_id" = c.id
+             WHERE gs.id = ?
+             LIMIT 1`,
+            [sessionId]
         );
 
-        if (!gameSession) {
+        if (!sessionData || sessionData.length === 0) {
             throw new Error(`Session not found: ${session}`);
         }
+
+        const gameSession = sessionData[0];
 
         if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
         // Verify currency matches the session's currency
-        if (gameSession.balance.currency.name !== currency) {
-            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        if (gameSession.currencyName !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.currencyName}, Got: ${currency}`);
         }
 
         // Convert balance from decimal to cents (Long format)
-        const balanceInCents = Math.round(gameSession.balance.balance * 100);
+        const balanceInCents = Math.round(parseFloat(gameSession.balance) * 100);
 
         // Return response in Superomatic format
         return {

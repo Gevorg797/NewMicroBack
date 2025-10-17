@@ -10,6 +10,7 @@ import { GameSession, GameOutcome } from './game-sassion.entity';
 import {
   GameTransaction,
   GameTransactionType,
+  GameTransactionStatus,
 } from './game-transaction.entity';
 import { Currency, CurrencyType } from './currency.entity';
 import { Site } from './site.entity';
@@ -70,6 +71,7 @@ export {
   GameOutcome,
   GameTransaction,
   GameTransactionType,
+  GameTransactionStatus,
   GameFreeSpin,
   GameCategory,
   FinanceProvider,

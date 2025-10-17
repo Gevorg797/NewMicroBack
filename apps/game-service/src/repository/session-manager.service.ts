@@ -47,7 +47,7 @@ export class SessionManagerService {
         const balanceType = params.balanceType || BalanceType.MAIN;
 
         // Fetch and validate all required entities in parallel
-        const [game, user, balance, existingAliveSession] = await Promise.all([
+        const [game, user, balance, existingLiveSession] = await Promise.all([
             this.em.findOne(Game, { uuid: params.gameId }),
             this.em.findOne(User, { id: params.userId }),
             this.em.findOne(
@@ -57,7 +57,7 @@ export class SessionManagerService {
             ),
             this.em.findOne(GameSession, {
                 user: { id: params.userId },
-                isAlive: true,
+                isLive: true,
             }),
         ]);
 
@@ -73,9 +73,9 @@ export class SessionManagerService {
             throw new Error(`Balance not found for user: ${params.userId}`);
         }
 
-        if (existingAliveSession) {
+        if (existingLiveSession) {
             throw new Error(
-                `User ${params.userId} already has an active session. Please close the current session first.`,
+                `User ${params.userId} already has an active session.`,
             );
         }
 

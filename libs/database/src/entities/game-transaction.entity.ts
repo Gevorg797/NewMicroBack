@@ -28,7 +28,7 @@ export class GameTransaction extends BaseEntity {
   @Property({ default: false, nullable: true })
   isCanceled?: boolean = false
 
-  @Property({ default: GameTransactionStatus.PENDING })
+  @Enum(() => GameTransactionStatus)
   status: GameTransactionStatus = GameTransactionStatus.PENDING;
 
   // Assuming `user_balance` is a custom PostgreSQL domain/type based on numeric/decimal

@@ -226,25 +226,46 @@ export class SuperomaticService implements IExtendedGameProvider {
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/init.session');
-        const providerResponse = await this.api.getGameSession(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
 
-        // Update session with provider response (launch URL, etc.)
-        await this.sessionManager.updateSessionWithProviderResponse(
-            sessionResult.sessionId,
-            providerResponse
-        );
+        try {
+            const providerResponse = await this.api.getGameSession(baseURL, {
+                ...superomaticParams,
+                sign,
+            });
 
-        this.logger.debug('Successfully initialized game session with Superomatic');
+            // Update session with provider response (launch URL, etc.)
+            await this.sessionManager.updateSessionWithProviderResponse(
+                sessionResult.sessionId,
+                providerResponse
+            );
 
-        return {
-            launchUrl: `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`, // Construct full launch URL
-            sessionId: sessionResult.sessionId,
-            gameUuid: sessionResult.gameUuid,
-            currency: sessionResult.currency,
-        };
+            this.logger.debug('Successfully initialized game session with Superomatic');
+
+            return {
+                launchUrl: `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`, // Construct full launch URL
+                sessionId: sessionResult.sessionId,
+                gameUuid: sessionResult.gameUuid,
+                currency: sessionResult.currency,
+            };
+        } catch (error) {
+            this.logger.error(`Failed to get game session from Superomatic: ${error.message}`);
+
+            // Close the session in database if provider call fails
+            await this.em.nativeUpdate(
+                'GameSession',
+                { id: parseInt(sessionResult.sessionId) },
+                {
+                    isAlive: false,
+                    isLive: false,
+                    endedAt: new Date()
+                }
+            );
+
+            this.logger.debug(`Closed session ${sessionResult.sessionId} due to provider error`);
+
+            // Re-throw the error so caller knows about the failure
+            throw error;
+        }
     }
 
     async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {

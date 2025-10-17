@@ -26,7 +26,7 @@ export class GameTransaction extends BaseEntity {
   trxId?: string;
 
   @Property({ default: false, nullable: true })
-  isCanceled?: boolean = false
+  isCanceled?: boolean = false;
 
   @Enum(() => GameTransactionStatus)
   status: GameTransactionStatus = GameTransactionStatus.PENDING;

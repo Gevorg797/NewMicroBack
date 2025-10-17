@@ -182,8 +182,8 @@ export class CryptobotService implements IPaymentProvider {
   }
 
   /**
-   * Process crypto payout (withdrawal) - Similar to Python's create_crypto_invoice
-   * Converts fiat (RUB) to crypto (USDT) and sends via CryptoBot /transfer API
+   * Process crypto payout (withdrawal) - Similar to Python's get_check()
+   * Creates a CryptoBot check that user can claim
    */
   async createPayoutProcess(payload: PayoutPayload): Promise<any> {
     const { transactionId, amount } = payload;
@@ -214,27 +214,103 @@ export class CryptobotService implements IPaymentProvider {
       throw new BadRequestException('User telegram ID not found');
     }
 
-    const reqBody = {
-      user_id: transaction.user.telegramId.toString(),
-      asset: transaction.currency.name,
-      amount: amount.toString(), // Amount must be string according to API docs
-      spend_id: transaction.id?.toString() || transactionId.toString(),
+    // Get exchange rate and convert RUB to USDT
+    const exchangeRate = await this.getExchangeRate(
+      'USDT',
+      transaction.currency.name,
+      providerSettings,
+    );
+    const usdtAmount = amount / exchangeRate;
+
+    // Create check (like Python's get_check function)
+    const check = await this.createCheck(
+      usdtAmount,
+      transaction.user.telegramId,
+      transaction.id as number,
+      providerSettings,
+    );
+
+    // Update transaction
+    transaction.paymentTransactionId = check.check_id?.toString();
+    transaction.status = PaymentTransactionStatus.COMPLETED;
+    transaction.requisite = check.bot_check_url; // Store check URL in requisite
+    await this.financeTransactionsRepo
+      .getEntityManager()
+      .persistAndFlush(transaction);
+
+    return {
+      id: transaction.id,
+      check_id: check.check_id,
+      check_url: check.bot_check_url,
+      amount_rub: amount,
+      amount_usdt: usdtAmount.toFixed(2),
+      exchange_rate: exchangeRate,
     };
+  }
 
-    // Use default mainnet URL if baseURL is not configured
-    let baseURL =
-      (providerSettings.baseURL as string) || 'https://pay.crypt.bot/api/';
-
-    // Ensure baseURL ends with /api/
-    if (!baseURL.endsWith('/api/')) {
-      if (!baseURL.endsWith('/')) {
-        baseURL += '/';
-      }
-      baseURL += 'api/';
-    }
+  /**
+   * Get exchange rate - Similar to Python's calc_rub_to_usdt logic
+   */
+  private async getExchangeRate(
+    source: string,
+    target: string,
+    providerSettings: any,
+  ): Promise<number> {
+    const baseURL =
+      (providerSettings.baseURL as string) || 'https://pay.crypt.bot/api';
+    const apiURL = baseURL.replace(/\/$/, '').endsWith('/api')
+      ? baseURL.replace(/\/$/, '')
+      : `${baseURL.replace(/\/$/, '')}/api`;
 
     try {
-      const response = await axios.post(`${baseURL}transfer`, reqBody, {
+      const response = await axios.get(`${apiURL}/getExchangeRates`, {
+        headers: {
+          'Crypto-Pay-API-Token': providerSettings.apiKey,
+        },
+        params: { source, target },
+      });
+
+      if (response.data.ok && response.data.result.length > 0) {
+        return parseFloat(response.data.result[0].rate);
+      }
+
+      throw new Error('Exchange rate not available');
+    } catch (error) {
+      console.error('❌ Exchange rate error:', error.response?.data || error);
+      throw new BadRequestException(
+        `Failed to get exchange rate: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Create CryptoBot Check - Similar to Python's get_check()
+   * Creates a check URL that user clicks to claim funds
+   * https://help.send.tg/en/articles/10279948-crypto-pay-api
+   */
+  private async createCheck(
+    usdtAmount: number,
+    userId: string,
+    transactionId: number,
+    providerSettings: any,
+  ): Promise<any> {
+    const baseURL =
+      (providerSettings.baseURL as string) || 'https://pay.crypt.bot/api';
+    const apiURL = baseURL.replace(/\/$/, '').endsWith('/api')
+      ? baseURL.replace(/\/$/, '')
+      : `${baseURL.replace(/\/$/, '')}/api`;
+
+    const reqBody = {
+      asset: 'USDT',
+      amount: usdtAmount.toFixed(2),
+      pin_to_user_id: Number(userId), // Pin check to specific user
+      description: `💎 Вывод #${transactionId} | Бот - @BikBet_bot`,
+    };
+
+    console.log('🚀 CryptoBot createCheck:', reqBody);
+
+    try {
+      const response = await axios.post(`${apiURL}/createCheck`, reqBody, {
         headers: {
           'Crypto-Pay-API-Token': providerSettings.apiKey,
           'Content-Type': 'application/json',
@@ -243,28 +319,29 @@ export class CryptobotService implements IPaymentProvider {
 
       if (!response.data.ok) {
         throw new BadRequestException(
-          `Cryptobot API error: ${response.data.error?.name || 'Unknown error'}`,
+          `CryptoBot API error: ${response.data.error?.name || 'Unknown error'}`,
         );
       }
 
-      const transfer = response.data.result;
-      transaction.paymentTransactionId = transfer.transfer_id?.toString();
-      transaction.status = PaymentTransactionStatus.COMPLETED;
-      await this.financeTransactionsRepo
-        .getEntityManager()
-        .persistAndFlush(transaction);
-
-      return transfer;
+      return response.data.result;
     } catch (error) {
+      console.error(
+        '❌ CryptoBot createCheck error:',
+        error.response?.data || error,
+      );
+
       if (error instanceof BadRequestException) {
         throw error;
       }
-      const providerMessage =
+
+      const errorMessage =
         error.response?.data?.error?.name ||
+        error.response?.data?.error ||
         error.response?.data?.message ||
         error.message;
+
       throw new BadRequestException(
-        `Cryptobot request failed: ${providerMessage}`,
+        `CryptoBot check creation failed: ${errorMessage}`,
       );
     }
   }

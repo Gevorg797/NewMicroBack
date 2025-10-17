@@ -2456,35 +2456,51 @@ export class BikBetService {
 
     // Use user's Telegram ID as the requisite for CryptoBot
     const cryptobotRequisite = telegramId;
-    console.log(cryptobotRequisite);
 
     try {
-      // Create payout request using PaymentService
+      // Create payout request using PaymentService (creates CryptoBot check)
       const withdrawal = await this.paymentService.payout({
         userId: user.id!,
         amount: amount,
         methodId: methodId,
         requisite: cryptobotRequisite,
       });
+      console.log(withdrawal);
 
+      // Clear the state
+      this.userStates.delete(userId);
+
+      // Check if we got a check URL from the response
+      const checkUrl = withdrawal?.check_url || withdrawal?.requisite;
+      const amountUsdt = withdrawal?.amount_usdt || 'N/A';
+
+      // Build success message - Similar to Python code
+      let text = '';
+      if (checkUrl) {
+        // If check URL is available, show it to user (like Python code)
+        text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code> (${amountUsdt} USDT)</b></blockquote>
+<blockquote><b>💎 <a href='${checkUrl}'>Получить выплату (CryptoBot)</a></b></blockquote>
+<blockquote><b>✅ Вывод готов! Нажмите на ссылку выше для получения.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+      } else {
+        // Fallback if no check URL
+        text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+      }
+
+      // Send admin notification with check URL
       await this.sendMessageToAdminForWithdraw(
         ctx,
         withdrawal,
         'CryptoBot',
         amount,
-        cryptobotRequisite,
+        checkUrl || cryptobotRequisite,
       );
-
-      // Clear the state
-      this.userStates.delete(userId);
-
-      // Send success message
-      const text = `
-<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
-<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
-<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
-<blockquote><b>📝 Telegram ID: <code>${cryptobotRequisite}</code></b></blockquote>
-<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
 
       const filePath = this.getImagePath('bik_bet_5.jpg');
 
@@ -2516,7 +2532,29 @@ export class BikBetService {
       console.log(error);
 
       this.userStates.delete(userId);
-      await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
+
+      // Check for specific CryptoBot errors
+      const errorMessage = error?.message || '';
+      let userMessage = '❌ Ошибка создания заявки на вывод. Попробуйте позже.';
+
+      if (errorMessage.includes('NOT_ENOUGH_COINS')) {
+        userMessage =
+          '⚠️ Временно недоступно.\n' +
+          'Сервис CryptoBot пополняется. Попробуйте позже или выберите другой способ вывода.\n\n' +
+          '💰 Ваш баланс был возвращен.';
+      } else if (errorMessage.includes('INSUFFICIENT_FUNDS')) {
+        userMessage =
+          '⚠️ Временно недоступно.\n' +
+          'Недостаточно средств для вывода. Попробуйте позже.\n\n' +
+          '💰 Ваш баланс был возвращен.';
+      } else if (errorMessage.includes('USER_NOT_FOUND')) {
+        userMessage =
+          '❌ Ошибка: пользователь не найден в CryptoBot.\n' +
+          'Убедитесь, что вы начали диалог с @CryptoBot.\n\n' +
+          '💰 Ваш баланс был возвращен.';
+      }
+
+      await ctx.reply(userMessage);
       console.error('Withdraw CryptoBot error:', error);
       return true;
     }
@@ -2704,15 +2742,33 @@ export class BikBetService {
     amount: number,
     requisite: string,
   ) {
-    // Format the message
-    const message =
-      `<blockquote><b>🔹 Новый запрос на вывод 🔹</b></blockquote>\n` +
-      `<blockquote><b>🛡 Метод: <code>${method}</code>🔹</b></blockquote>\n` +
-      `<blockquote><b>📌 ID запроса: <code>№${withdrawal.id}</code></b></blockquote>\n` +
-      `<blockquote><b>👤 Пользователь: <code>${ctx.from.id}</code></b></blockquote>\n` +
-      `<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>\n` +
-      `<blockquote><b>💳 Реквизиты:\n` +
-      `<code>${requisite}\n</code></b></blockquote>`;
+    // Check if withdrawal has check URL (for CryptoBot)
+    const checkUrl = withdrawal?.check_url;
+    const amountUsdt = withdrawal?.amount_usdt;
+
+    // Format the message - similar to Python code
+    let message = '';
+    if (method === 'CryptoBot' && checkUrl) {
+      // Special format for CryptoBot with check URL
+      message =
+        `<blockquote><b>🔹 Новый запрос на вывод 🔹</b></blockquote>\n` +
+        `<blockquote><b>🛡 Метод: <code>${method}</code>🔹</b></blockquote>\n` +
+        `<blockquote><b>📌 ID запроса: <code>№${withdrawal.id}</code></b></blockquote>\n` +
+        `<blockquote><b>👤 Пользователь: <code>${ctx.from.id}</code></b></blockquote>\n` +
+        `<blockquote><b>💰 Сумма: <code>${amount} RUB</code> (${amountUsdt} USDT)</b></blockquote>\n` +
+        `<blockquote><b>💎 Check URL: <a href='${checkUrl}'>Открыть чек</a></b></blockquote>\n`;
+    } else {
+      // Standard format for other methods
+      message =
+        `<blockquote><b>🔹 Новый запрос на вывод 🔹</b></blockquote>\n` +
+        `<blockquote><b>🛡 Метод: <code>${method}</code>🔹</b></blockquote>\n` +
+        `<blockquote><b>📌 ID запроса: <code>№${withdrawal.id}</code></b></blockquote>\n` +
+        `<blockquote><b>👤 Пользователь: <code>${ctx.from.id}</code></b></blockquote>\n` +
+        `<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>\n` +
+        `<blockquote><b>💳 Реквизиты:\n` +
+        `<code>${requisite}\n</code></b></blockquote>`;
+    }
+
     // Send message to Telegram
     await ctx.telegram.sendMessage(
       this.chatIdForDepositsAndWithdrawals,

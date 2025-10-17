@@ -284,8 +284,14 @@ export class FinanceService {
         return result;
       } catch (error) {
         // Mark transaction as failed and refund balance
+        this.logger.warn(
+          `CryptoBot payout failed for transaction ${transaction.id}: ${error.message}. Refunding balance...`,
+        );
         await this.transactionManager.failPayoutAndRefund(
           transaction.id as number,
+        );
+        this.logger.log(
+          `Balance refunded for failed transaction ${transaction.id}`,
         );
         throw error;
       }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { User, GameSession, GameTransaction, GameTransactionType } from '@lib/database';
+import { User, GameSession, GameTransaction, GameTransactionType, GameTransactionStatus } from '@lib/database';
 import { wrap } from '@mikro-orm/core';
 import * as crypto from 'crypto';
 import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
@@ -24,37 +24,61 @@ export class PartnerWebhooksService {
             throw new Error('Missing partner.session parameter');
         }
 
-        // Find the session in the database with all required relationships
-        const session = await this.em.findOne(
-            GameSession,
-            { id: parseInt(partnerSession) },
-            {
-                populate: ['user', 'game', 'balance', 'balance.currency']
-            }
+        // Single SQL query to get session data and check for other alive sessions
+        const sessionId = parseInt(partnerSession);
+        const sessionData = await this.em.getConnection().execute(
+            `SELECT 
+                gs.id,
+                gs."is_alive" as "isAlive",
+                gs."is_live" as "isLive",
+                gs.denomination,
+                gs."user_id" as "userId",
+                g.uuid as "gameUuid",
+                b.balance,
+                c.name as "currencyName",
+                (SELECT id FROM "gameSessions" 
+                 WHERE "user_id" = gs."user_id" 
+                   AND "is_alive" = true 
+                   AND id != gs.id 
+                 LIMIT 1) as "otherAliveSessionId"
+             FROM "gameSessions" gs
+             INNER JOIN games g ON gs."game_id" = g.id
+             INNER JOIN balances b ON gs."balance_id" = b.id
+             INNER JOIN currencies c ON b."currency_id" = c.id
+             WHERE gs.id = ?
+             LIMIT 1`,
+            [sessionId]
         );
 
-        if (!session) {
+
+        if (!sessionData || sessionData.length === 0) {
             throw new Error(`Session not found: ${partnerSession}`);
         }
 
+        const session = sessionData[0];
+
         if (!session.isLive) {
             throw new Error(`Session is not live: ${partnerSession}`);
+        }
+
+        if (session.otherAliveSessionId) {
+            throw new Error(`User already has an active session: ${session.otherAliveSessionId}`);
         }
 
         // Convert denomination from string (e.g., "1.00") to cents (e.g., 100)
         const denominationInCents = Math.round(parseFloat(session.denomination || '1.00') * 100);
 
         // Convert balance from decimal to cents
-        const balanceInCents = Math.round(session.balance.balance * 100);
+        const balanceInCents = Math.round(parseFloat(session.balance) * 100);
 
         // Return response in Superomatic format
         return {
             method: 'check.session',
             status: 200,
             response: {
-                id_player: session.user.id, // immutable player id
-                game_id: parseInt(session.game.uuid), // Superomatic's game id
-                currency: session.balance.currency.name, // currency code
+                id_player: session.userId, // immutable player id
+                game_id: parseInt(session.gameUuid), // Superomatic's game id
+                currency: session.currencyName, // currency code
                 balance: balanceInCents, // balance in cents
                 denomination: denominationInCents // denomination in cents
             }
@@ -81,30 +105,40 @@ export class PartnerWebhooksService {
             throw new Error('Missing @currency parameter');
         }
 
-        // Find the session in the database with balance relationship
-        const gameSession = await this.em.findOne(
-            GameSession,
-            { id: parseInt(session) },
-            {
-                populate: ['balance', 'balance.currency']
-            }
+        // Single SQL query to get session data
+        const sessionId = parseInt(session);
+        const sessionData = await this.em.getConnection().execute(
+            `SELECT 
+                gs.id,
+                gs."is_live" as "isLive",
+                gs."user_id" as "userId",
+                b.balance,
+                c.name as "currencyName"
+             FROM "gameSessions" gs
+             INNER JOIN balances b ON gs."balance_id" = b.id
+             INNER JOIN currencies c ON b."currency_id" = c.id
+             WHERE gs.id = ?
+             LIMIT 1`,
+            [sessionId]
         );
 
-        if (!gameSession) {
+        if (!sessionData || sessionData.length === 0) {
             throw new Error(`Session not found: ${session}`);
         }
+
+        const gameSession = sessionData[0];
 
         if (!gameSession.isLive) {
             throw new Error(`Session is not active: ${session}`);
         }
 
         // Verify currency matches the session's currency
-        if (gameSession.balance.currency.name !== currency) {
-            throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
+        if (gameSession.currencyName !== currency) {
+            throw new Error(`Currency mismatch. Expected: ${gameSession.currencyName}, Got: ${currency}`);
         }
 
         // Convert balance from decimal to cents (Long format)
-        const balanceInCents = Math.round(gameSession.balance.balance * 100);
+        const balanceInCents = Math.round(parseFloat(gameSession.balance) * 100);
 
         // Return response in Superomatic format
         return {
@@ -357,11 +391,7 @@ export class PartnerWebhooksService {
         // Extract required parameters
         const session = parsedData['@session'] || parsedData.session;
         const currency = parsedData['@currency'] || parsedData.currency;
-        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
         const trxId = parsedData['@trx_id'] || parsedData.trx_id;
-        const sign = parsedData['@sign'] || parsedData.sign;
-        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
-        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -369,10 +399,6 @@ export class PartnerWebhooksService {
 
         if (!currency) {
             throw new Error('Missing @currency parameter');
-        }
-
-        if (!amountInCents || amountInCents <= 0) {
-            throw new Error('Invalid @amount parameter');
         }
 
         if (!trxId) {
@@ -384,7 +410,7 @@ export class PartnerWebhooksService {
             GameSession,
             { id: parseInt(session) },
             {
-                populate: ['balance', 'balance.currency']
+                populate: ['balance', 'balance.currency', 'user']
             }
         );
 
@@ -392,57 +418,75 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isAlive) {
-            throw new Error(`Session is not active: ${session}`);
-        }
-
         // Verify currency matches the session's currency
         if (gameSession.balance.currency.name !== currency) {
             throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
         }
 
-        // Convert amount from cents to decimal
-        const amountInDecimal = amountInCents / 100;
-
-        // Find the transaction to cancel (look for WITHDRAW transaction with matching amount)
+        // Find the transaction to cancel by trx_id
         const transactionToCancel = await this.em.findOne(GameTransaction, {
-            session: gameSession,
-            amount: amountInDecimal,
             trxId: trxId,
+            session: gameSession
         });
 
         if (!transactionToCancel) {
             throw new Error(`Transaction not found to cancel: ${trxId}`);
         }
 
+        // Get current balance in cents
+        let balanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // If transaction is already cancelled/completed, return current balance
+        if (transactionToCancel.status === GameTransactionStatus.COMPLETED || transactionToCancel.isCanceled) {
+            this.logger.log(`Transaction ${trxId} already cancelled. Returning current balance.`);
+            return {
+                method: 'trx.cancel',
+                status: 200,
+                response: {
+                    currency: currency,
+                    balance: balanceInCents
+                }
+            };
+        }
+
         // Start transaction to ensure atomicity
         await this.em.transactional(async (em) => {
-            // Revert the withdrawal by adding the amount back to balance
-            wrap(gameSession.balance).assign({
-                balance: gameSession.balance.balance + amountInDecimal
-            });
+            // For WITHDRAW transactions, revert by adding the amount back to balance
+            if (transactionToCancel.type === GameTransactionType.WITHDRAW && transactionToCancel.amount > 0) {
+                const refundAmount = transactionToCancel.amount;
 
-            // Mark the transaction as cancelled (soft delete)
+                this.logger.log(`Cancelling withdraw transaction ${trxId}. Refunding ${refundAmount} to balance`);
+
+                // Revert the withdrawal by adding the amount back
+                wrap(gameSession.balance).assign({
+                    balance: gameSession.balance.balance + refundAmount
+                });
+
+                await em.flush();
+            }
+
+            // Mark the transaction as cancelled
             wrap(transactionToCancel).assign({
-                deletedAt: new Date(),
-                isCanceled: true
+                status: GameTransactionStatus.COMPLETED,
+                isCanceled: true,
+                deletedAt: new Date()
             });
 
             await em.flush();
 
-            this.logger.log(`Successfully cancelled transaction ${trxId}. Refunded ${amountInDecimal} to session ${session}`);
+            this.logger.log(`Successfully cancelled transaction ${trxId} for session ${session}`);
         });
 
         // Get updated balance in cents
-        const updatedBalanceInCents = Math.round(gameSession.balance.balance * 100);
+        balanceInCents = Math.round(gameSession.balance.balance * 100);
 
         // Return response in Superomatic format
         return {
             method: 'trx.cancel',
             status: 200,
             response: {
-                currency: currency,           // requested currency
-                balance: updatedBalanceInCents // player's balance in cents after cancellation
+                currency: currency,
+                balance: balanceInCents
             }
         };
     }
@@ -456,11 +500,7 @@ export class PartnerWebhooksService {
         // Extract required parameters
         const session = parsedData['@session'] || parsedData.session;
         const currency = parsedData['@currency'] || parsedData.currency;
-        const amountInCents = parseInt(parsedData['@amount'] || parsedData.amount || '0');
         const trxId = parsedData['@trx_id'] || parsedData.trx_id;
-        const sign = parsedData['@sign'] || parsedData.sign;
-        const turnId = parsedData['@turn_id'] || parsedData.turn_id;
-        const meta = parsedData['@meta'] || parsedData.meta;
 
         if (!session) {
             throw new Error('Missing @session parameter');
@@ -468,10 +508,6 @@ export class PartnerWebhooksService {
 
         if (!currency) {
             throw new Error('Missing @currency parameter');
-        }
-
-        if (amountInCents === undefined || amountInCents === null || isNaN(amountInCents) || amountInCents < 0) {
-            throw new Error('Invalid @amount parameter');
         }
 
         if (!trxId) {
@@ -483,7 +519,7 @@ export class PartnerWebhooksService {
             GameSession,
             { id: parseInt(session) },
             {
-                populate: ['balance', 'balance.currency']
+                populate: ['balance', 'balance.currency', 'user']
             }
         );
 
@@ -491,30 +527,72 @@ export class PartnerWebhooksService {
             throw new Error(`Session not found: ${session}`);
         }
 
-        if (!gameSession.isLive) {
-            throw new Error(`Session is not active: ${session}`);
-        }
-
         // Verify currency matches the session's currency
         if (gameSession.balance.currency.name !== currency) {
             throw new Error(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${currency}`);
         }
 
-        // For trx.complete, we just acknowledge the completion
-        // The actual deposit should have already been processed in deposit.win
-        // Amount 0 is valid (means no win)
-        this.logger.log(`Transaction ${trxId} marked as completed for session ${session} with amount ${amountInCents}`);
+        // Find the transaction by trx_id
+        const transaction = await this.em.findOne(GameTransaction, {
+            trxId: trxId,
+            session: gameSession
+        });
+
+        if (!transaction) {
+            throw new Error(`Transaction ${trxId} not found`);
+        }
 
         // Get current balance in cents
-        const currentBalanceInCents = Math.round(gameSession.balance.balance * 100);
+        let balanceInCents = Math.round(gameSession.balance.balance * 100);
+
+        // If transaction status is already COMPLETED, return current balance
+        if (transaction.status === GameTransactionStatus.COMPLETED) {
+            this.logger.log(`Transaction ${trxId} already completed. Returning current balance.`);
+            return {
+                method: 'trx.complete',
+                status: 200,
+                response: {
+                    currency: currency,
+                    balance: balanceInCents
+                }
+            };
+        }
+
+        // If transaction is DEPOSIT with amount > 0, rollback by decreasing balance
+        await this.em.transactional(async (em) => {
+            if (transaction.type === GameTransactionType.DEPOSIT && transaction.amount > 0) {
+                const rollbackAmount = transaction.amount;
+
+                this.logger.log(`Rolling back deposit transaction ${trxId}. Decreasing balance by ${rollbackAmount}`);
+
+                // Decrease balance (rollback the deposit)
+                wrap(gameSession.balance).assign({
+                    balance: gameSession.balance.balance - rollbackAmount
+                });
+
+                await em.flush();
+            }
+
+            // Update transaction status to COMPLETED
+            wrap(transaction).assign({
+                status: GameTransactionStatus.COMPLETED
+            });
+
+            await em.flush();
+
+            this.logger.log(`Transaction ${trxId} marked as completed for session ${session}`);
+        });
+
+        // Get updated balance in cents
+        balanceInCents = Math.round(gameSession.balance.balance * 100);
 
         // Return response in Superomatic format
         return {
             method: 'trx.complete',
             status: 200,
             response: {
-                currency: currency,           // requested currency
-                balance: currentBalanceInCents // player's current balance in cents
+                currency: currency,
+                balance: balanceInCents
             }
         };
     }

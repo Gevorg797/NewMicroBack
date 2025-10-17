@@ -209,6 +209,7 @@ export class SessionManagerService {
         // Update session closure data
         wrap(session).assign({
             isAlive: false,
+            isLive: false,
             endedAt: new Date(),
             endAmount,
             diff: session.startAmount - endAmount,

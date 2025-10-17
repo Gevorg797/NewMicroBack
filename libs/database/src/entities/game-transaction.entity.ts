@@ -8,6 +8,12 @@ export enum GameTransactionType {
   WITHDRAW = 'withdraw',
 }
 
+export enum GameTransactionStatus {
+  PENDING = 0,
+  PROCESSING = 1,
+  COMPLETED = 2,
+}
+
 @Entity({ tableName: 'gameTransactions' })
 export class GameTransaction extends BaseEntity {
   @ManyToOne(() => GameSession)
@@ -21,6 +27,9 @@ export class GameTransaction extends BaseEntity {
 
   @Property({ default: false, nullable: true })
   isCanceled?: boolean = false
+
+  @Property({ default: GameTransactionStatus.PENDING })
+  status: GameTransactionStatus = GameTransactionStatus.PENDING;
 
   // Assuming `user_balance` is a custom PostgreSQL domain/type based on numeric/decimal
   @Property({ columnType: 'numeric' })

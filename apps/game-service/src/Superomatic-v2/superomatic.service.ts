@@ -151,6 +151,60 @@ export class SuperomaticService implements IExtendedGameProvider {
         const { params, siteId, userId, balanceType } = payload;
         const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(siteId);
 
+        const existingSessions = await this.sessionManager.getActiveSessions(userId);
+
+        if (existingSessions && existingSessions.length > 0) {
+            this.logger.warn(
+                `User ${userId} has ${existingSessions.length} active session(s). Closing all sessions before creating new one.`
+            );
+
+            // Close all existing sessions in parallel using Promise.all
+            await Promise.all(
+                existingSessions.map(async (session) => {
+                    try {
+                        if (!session.id) {
+                            this.logger.warn(`Skipping session with undefined id for user ${userId}`);
+                            return;
+                        }
+
+                        const sessionId = session.id.toString();
+                        this.logger.debug(`Closing session ${sessionId} for user ${userId}`);
+
+                        // Get provider settings
+                        const sessionSiteId = session.user?.site?.id;
+                        if (!sessionSiteId) {
+                            throw new Error(`Cannot determine siteId for session ${sessionId}`);
+                        }
+
+                        const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(sessionSiteId);
+
+                        // Call Superomatic close.session API
+                        const superomaticParams = {
+                            'partner.alias': partnerAlias,
+                            'partner.session': sessionId,
+                        };
+
+                        const sign = this.utils.generateSigniture(superomaticParams, key, '/close.session');
+                        await this.api.closeSession(baseURL, {
+                            ...superomaticParams,
+                            sign,
+                        });
+
+                        // Close in our database
+                        const finalBalance = session.balance.balance;
+                        await this.sessionManager.closeSession(sessionId, finalBalance);
+
+                        this.logger.debug(`Successfully closed session ${sessionId}`);
+                    } catch (error) {
+                        this.logger.error(`Failed to close session ${session.id || 'unknown'}: ${error.message}`);
+                        // Continue closing other sessions even if one fails
+                    }
+                })
+            );
+
+            this.logger.log(`Closed all ${existingSessions.length} active session(s) for user ${userId}`);
+        }
+
         // Create database session first - generates our session ID
         const sessionResult = await this.sessionManager.createRealSession({
             userId,
@@ -172,25 +226,46 @@ export class SuperomaticService implements IExtendedGameProvider {
         };
 
         const sign = this.utils.generateSigniture(superomaticParams, key, '/init.session');
-        const providerResponse = await this.api.getGameSession(baseURL, {
-            ...superomaticParams,
-            sign,
-        });
 
-        // Update session with provider response (launch URL, etc.)
-        await this.sessionManager.updateSessionWithProviderResponse(
-            sessionResult.sessionId,
-            providerResponse
-        );
+        try {
+            const providerResponse = await this.api.getGameSession(baseURL, {
+                ...superomaticParams,
+                sign,
+            });
 
-        this.logger.debug('Successfully initialized game session with Superomatic');
+            // Update session with provider response (launch URL, etc.)
+            await this.sessionManager.updateSessionWithProviderResponse(
+                sessionResult.sessionId,
+                providerResponse
+            );
 
-        return {
-            launchUrl: `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`, // Construct full launch URL
-            sessionId: sessionResult.sessionId,
-            gameUuid: sessionResult.gameUuid,
-            currency: sessionResult.currency,
-        };
+            this.logger.debug('Successfully initialized game session with Superomatic');
+
+            return {
+                launchUrl: `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`, // Construct full launch URL
+                sessionId: sessionResult.sessionId,
+                gameUuid: sessionResult.gameUuid,
+                currency: sessionResult.currency,
+            };
+        } catch (error) {
+            this.logger.error(`Failed to get game session from Superomatic: ${error.message}`);
+
+            // Close the session in database if provider call fails
+            await this.em.nativeUpdate(
+                'GameSession',
+                { id: parseInt(sessionResult.sessionId) },
+                {
+                    isAlive: false,
+                    isLive: false,
+                    endedAt: new Date()
+                }
+            );
+
+            this.logger.debug(`Closed session ${sessionResult.sessionId} due to provider error`);
+
+            // Re-throw the error so caller knows about the failure
+            throw error;
+        }
     }
 
     async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {

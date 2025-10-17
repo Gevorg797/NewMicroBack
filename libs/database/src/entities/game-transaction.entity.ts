@@ -26,9 +26,9 @@ export class GameTransaction extends BaseEntity {
   trxId?: string;
 
   @Property({ default: false, nullable: true })
-  isCanceled?: boolean = false
+  isCanceled?: boolean = false;
 
-  @Property({ default: GameTransactionStatus.PENDING })
+  @Enum(() => GameTransactionStatus)
   status: GameTransactionStatus = GameTransactionStatus.PENDING;
 
   // Assuming `user_balance` is a custom PostgreSQL domain/type based on numeric/decimal

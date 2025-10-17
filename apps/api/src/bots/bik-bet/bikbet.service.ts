@@ -908,6 +908,7 @@ export class BikBetService {
       const baseUrl = `https://dev.bik-bet.com/gamesbycode/gamecode`;
       const params = {
         operator_id: operatorId,
+        siteId: 1,
         gameId: gameId,
         user_id: String(user.id),
         currency: currency,

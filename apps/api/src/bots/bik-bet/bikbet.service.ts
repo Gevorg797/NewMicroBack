@@ -604,6 +604,52 @@ export class BikBetService {
     );
   }
 
+  // Helper method to safely answer callback queries
+  private async safeAnswerCbQuery(
+    ctx: any,
+    text?: string,
+    options?: any,
+  ): Promise<boolean> {
+    try {
+      if (text) {
+        await ctx.answerCbQuery(text, options);
+      } else {
+        await ctx.answerCbQuery();
+      }
+      return true;
+    } catch (error) {
+      // Silently ignore callback query errors (already answered or expired)
+      return false;
+    }
+  }
+
+  // Helper method to safely edit message media with proper error handling
+  private async safeEditMessageMedia(
+    ctx: any,
+    media: any,
+    extra?: any,
+  ): Promise<boolean> {
+    try {
+      await ctx.editMessageMedia(media, extra);
+      return true;
+    } catch (error: any) {
+      // Ignore common Telegram errors that are not critical
+      if (error.response?.description) {
+        const desc = error.response.description;
+        if (
+          desc.includes('message is not modified') ||
+          desc.includes('canceled by new editMessageMedia') ||
+          desc.includes('message to edit not found')
+        ) {
+          // These are expected errors, just log them
+          return false;
+        }
+      }
+      // Re-throw unexpected errors
+      throw error;
+    }
+  }
+
   async showPopularGames(ctx: any, callbackData: string) {
     await this.showOperatorGames(
       ctx,
@@ -620,22 +666,17 @@ export class BikBetService {
     operatorName: string,
     games: Array<{ id: string; name: string }>,
   ) {
-    // Always answer callback query first to prevent timeout
-    try {
-      await ctx.answerCbQuery();
-    } catch (error) {
-      // Ignore callback query errors (already answered or expired)
-      console.log('Callback query already answered or expired');
-    }
-
     try {
       const userId = this.validateUserAndExtractId(ctx, callbackData);
       if (!userId) {
-        await ctx.answerCbQuery('⚠ Это действие недоступно', {
+        await this.safeAnswerCbQuery(ctx, '⚠ Это действие недоступно', {
           show_alert: true,
         });
         return;
       }
+
+      // Answer callback query first
+      await this.safeAnswerCbQuery(ctx);
 
       // Update user state and reset pagination
       this.userStates.set(userId, {
@@ -654,7 +695,7 @@ export class BikBetService {
         parse_mode: 'HTML',
       };
 
-      await ctx.editMessageMedia(media, {
+      await this.safeEditMessageMedia(ctx, media, {
         reply_markup: this.buildOperatorGamesKeyboard(
           0,
           userId,
@@ -2349,10 +2390,145 @@ export class BikBetService {
   }
 
   async withdrawCryptoBot(ctx: any, amount: number) {
-    const text = `
-<blockquote><b>💎 Вывод через CryptoBot</b></blockquote>
-<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
-<blockquote><b>📝 Введите ваш CryptoBot ID для вывода</b></blockquote>`;
+    const userId = ctx.from.id;
+
+    // Set user state with withdrawal info
+    this.userStates.set(userId, {
+      withdrawAmount: amount,
+      withdrawMethod: 'CryptoBot',
+      withdrawMethodId: 4, // CryptoBot method ID
+    });
+
+    let text = `
+<blockquote><b>Сумма вывода: <code>${amount}</code> RUB</b></blockquote>
+<blockquote><b>Метод: CryptoBot 💎</b></blockquote>
+<blockquote><b>Вы уверены?</b></blockquote>`;
+
+    const buttons: any[] = [];
+
+    // Add confirmation buttons
+    buttons.push([Markup.button.callback('✅ Подтвердить', 'kb_accept')]);
+    buttons.push([Markup.button.callback('❌ Отменить', 'kb_reject')]);
+
+    const filePath = this.getImagePath('bik_bet_5.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    await ctx.editMessageMedia(media, {
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+    });
+  }
+
+  async handleCryptoBotAccept(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    if (!userState || !userState.withdrawAmount) {
+      await ctx.answerCbQuery('⚠ Ошибка. Начните сначала', {
+        show_alert: true,
+      });
+      return;
+    }
+
+    const amount = userState.withdrawAmount;
+    const methodId = userState.withdrawMethodId!;
+
+    // Get user from database
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      {
+        telegramId,
+      },
+      {
+        populate: ['paymentPayoutRequisite'],
+      },
+    );
+
+    if (!user) {
+      await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
+      this.userStates.delete(userId);
+      return;
+    }
+
+    // Use user's Telegram ID as the requisite for CryptoBot
+    const cryptobotRequisite = telegramId;
+    console.log(cryptobotRequisite);
+
+    try {
+      // Create payout request using PaymentService
+      const withdrawal = await this.paymentService.payout({
+        userId: user.id!,
+        amount: amount,
+        methodId: methodId,
+        requisite: cryptobotRequisite,
+      });
+
+      await this.sendMessageToAdminForWithdraw(
+        ctx,
+        withdrawal,
+        'CryptoBot',
+        amount,
+        cryptobotRequisite,
+      );
+
+      // Clear the state
+      this.userStates.delete(userId);
+
+      // Send success message
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>📝 Telegram ID: <code>${cryptobotRequisite}</code></b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+
+      // Build inline keyboard buttons
+      const buttons: any[] = [
+        [
+          Markup.button.url(
+            '👨‍💻 Техническая поддержка',
+            'https://t.me/bikbetsupport',
+          ),
+        ],
+      ];
+
+      buttons.push([
+        Markup.button.callback('⬅️ Вернуться назад', 'donate_menu'),
+      ]);
+
+      await ctx.replyWithPhoto(
+        { source: fs.readFileSync(filePath) },
+        {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.log(error);
+
+      this.userStates.delete(userId);
+      await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
+      console.error('Withdraw CryptoBot error:', error);
+      return true;
+    }
+  }
+
+  async handleCryptoBotReject(ctx: any) {
+    const userId = ctx.from.id;
+
+    // Clear the state
+    this.userStates.delete(userId);
+
+    const text = `<blockquote><b>❌ Действие было отменено!</b></blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_5.jpg');
     const media: any = {
@@ -2364,7 +2540,7 @@ export class BikBetService {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Назад', 'withdraw')],
+        [Markup.button.callback('🔙 Назад к выводу', 'withdraw')],
       ]).reply_markup,
     });
   }
@@ -2459,7 +2635,13 @@ export class BikBetService {
     }
 
     try {
-      const methodId = 1; // FKwallet method ID
+      // Determine methodId based on payment method
+      let methodId = 1; // Default to FKwallet
+      if (method === 'FKwallet') {
+        methodId = 1;
+      } else if (method === 'CryptoBot') {
+        methodId = 4;
+      }
 
       // Create payout request using PaymentService
       const withdrawal = await this.paymentService.payout({

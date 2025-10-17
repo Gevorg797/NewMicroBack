@@ -181,9 +181,14 @@ export class CryptobotService implements IPaymentProvider {
     }
   }
 
+  /**
+   * Process crypto payout (withdrawal) - Similar to Python's create_crypto_invoice
+   * Converts fiat (RUB) to crypto (USDT) and sends via CryptoBot /transfer API
+   */
   async createPayoutProcess(payload: PayoutPayload): Promise<any> {
     const { transactionId, amount } = payload;
 
+    // Get transaction with all required relations
     const transaction = await this.financeTransactionsRepo.findOne(
       { id: transactionId },
       {
@@ -201,7 +206,6 @@ export class CryptobotService implements IPaymentProvider {
     }
 
     const providerSettings = transaction?.subMethod.method.providerSettings;
-
     if (!providerSettings) {
       throw new NotFoundException('Provider settings not found');
     }
@@ -237,7 +241,6 @@ export class CryptobotService implements IPaymentProvider {
         },
       });
 
-      // Check API response structure according to docs
       if (!response.data.ok) {
         throw new BadRequestException(
           `Cryptobot API error: ${response.data.error?.name || 'Unknown error'}`,

@@ -264,31 +264,35 @@ export class FinanceService {
       `Debited ${data.amount} from user ${user.id} for payout transaction ${transaction.id}`,
     );
 
+    // Check if provider supports automated payouts
+    const providerName =
+      subMethod.method.providerSettings.provider.name.toLowerCase();
+
+    // Only process automated payouts for CryptoBot
+    if (providerName === 'cryptobot') {
+      try {
+        const result = await this.createPayoutOrder(providerName, {
+          transactionId: transaction.id as number,
+          amount: data.amount,
+          requisite: data.requisite,
+          to: data.requisite,
+        });
+
+        this.logger.log(
+          `Payout initiated successfully for transaction ${transaction.id}`,
+        );
+        return result;
+      } catch (error) {
+        // Mark transaction as failed and refund balance
+        await this.transactionManager.failPayoutAndRefund(
+          transaction.id as number,
+        );
+        throw error;
+      }
+    }
+
+    // For other providers (manual processing), just return the transaction
     return transaction;
-    // Initiate payout with provider
-    // const providerName =
-    //   subMethod.method.providerSettings.provider.name.toLowerCase();
-
-    // try {
-    //   const result = await this.createPayoutOrder(providerName, {
-    //     transactionId: transaction.id as number,
-    //     amount: data.amount,
-    //     requisite: data.requisite,
-    //     to: data.requisite,
-    //   });
-
-    //   this.logger.log(
-    //     `Payout initiated successfully for transaction ${transaction.id}`,
-    //   );
-    //   return result;
-    // } catch (error) {
-    //   // Mark transaction as failed
-    //   await this.transactionManager.failTransaction(
-    //     transaction.id as number,
-    //     error.message,
-    //   );
-    //   throw error;
-    // }
   }
 
   /**

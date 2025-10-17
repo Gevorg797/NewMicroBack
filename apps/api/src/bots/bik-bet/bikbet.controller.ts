@@ -87,6 +87,36 @@ export class BikBetController {
       }
     });
 
+    // CryptoBot withdrawal confirmation handlers
+    this.bot.action('kb_accept', async (ctx) => {
+      try {
+        await ctx.answerCbQuery();
+
+        await this.bikbetService.handleCryptoBotAccept(ctx);
+      } catch (error) {
+        console.error('CryptoBot accept handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    this.bot.action('kb_reject', async (ctx) => {
+      try {
+        await ctx.answerCbQuery('❌ Отменено');
+        await this.bikbetService.handleCryptoBotReject(ctx);
+      } catch (error) {
+        console.error('CryptoBot reject handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // Withdraw FKwallet handler: withdrCrypto_fkwallet_<amount>
     this.bot.action(/withdrCrypto_fkwallet_(.+)/, async (ctx) => {
       try {

@@ -257,9 +257,12 @@ export class FinanceService {
       throw new Error('Failed to create transaction');
     }
 
-    await this.financeTransactionRepo
-      .getEntityManager()
-      .persistAndFlush(transaction);
+    // Debit the amount from user's main balance (ensures balance >= 0)
+    await this.transactionManager.debitBalance(user, data.amount, transaction);
+
+    this.logger.log(
+      `Debited ${data.amount} from user ${user.id} for payout transaction ${transaction.id}`,
+    );
 
     return transaction;
     // Initiate payout with provider
@@ -286,5 +289,20 @@ export class FinanceService {
     //   );
     //   throw error;
     // }
+  }
+
+  /**
+   * Reject payout - Fail transaction and refund balance
+   */
+  async rejectPayout(transactionId: number): Promise<any> {
+    this.logger.log(`Rejecting payout transaction ${transactionId}`);
+
+    await this.transactionManager.failPayoutAndRefund(transactionId);
+
+    this.logger.log(
+      `Payout transaction ${transactionId} rejected and refunded`,
+    );
+
+    return { success: true, message: 'Payout rejected and balance refunded' };
   }
 }

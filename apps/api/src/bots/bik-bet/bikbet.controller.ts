@@ -219,6 +219,43 @@ export class BikBetController {
       }
     });
 
+    // Withdraw reject handler: withdraw_<id>_reject_<method>
+    this.bot.action(/withdraw_(\d+)_reject_(.+)/, async (ctx) => {
+      try {
+        const match = (ctx as any).match;
+        const withdrawalId = Number(match?.[1]);
+        const method = match?.[2];
+
+        if (!Number.isFinite(withdrawalId) || !method) {
+          await ctx.answerCbQuery('Некорректные данные');
+          return;
+        }
+
+        await this.bikbetService.handleWithdrawReject(
+          ctx,
+          withdrawalId,
+          method,
+        );
+      } catch (error) {
+        console.error('Withdraw reject handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка отклонения вывода');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // Remove message handler
+    this.bot.action('removeMSG', async (ctx) => {
+      try {
+        await ctx.answerCbQuery();
+        await ctx.deleteMessage();
+      } catch (error) {
+        console.error('Remove message error:', error);
+      }
+    });
+
     // FKwallet payment handler: paymentSystem_fkwallet_<amount>
     this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
       try {

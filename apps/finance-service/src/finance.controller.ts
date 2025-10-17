@@ -48,4 +48,53 @@ export class FinanceController {
       };
     }
   }
+
+  /**
+   * Get transaction details
+   */
+  @MessagePattern('finance.transaction.get')
+  async getTransaction(@Payload() data: { transactionId: number }) {
+    try {
+      const result = await this.financeService.getTransaction(
+        data.transactionId,
+        ['user', 'currency', 'subMethod'],
+      );
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Get transaction failed: ${error.message}`,
+        error.stack,
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Handle payout rejection - Fail transaction and refund balance
+   */
+  @MessagePattern('finance.payout.reject')
+  async rejectPayout(@Payload() data: { transactionId: number }) {
+    try {
+      const result = await this.financeService.rejectPayout(data.transactionId);
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Payout rejection failed: ${error.message}`,
+        error.stack,
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
 }

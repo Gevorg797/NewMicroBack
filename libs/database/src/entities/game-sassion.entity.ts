@@ -54,6 +54,9 @@ export class GameSession extends BaseEntity {
   @Property({ columnType: 'double precision', nullable: true })
   endAmount?: number;
 
+  @Property({ columnType: 'double precision', nullable: true })
+  endBalanceAmount?: number;
+
   @Property({ columnType: 'numeric(10,2)', default: '1.00', nullable: true })
   denomination?: string = '1.00'; // supports values like 0.1, 0.2, 1.00, etc.
 

@@ -300,12 +300,11 @@ export class B2BSlotsService implements IGameProvider {
     const sign = this.utils.sign(b2bPayload, key);
     const response = await this.api.closeSession(baseURL, { ...b2bPayload, sign });
 
-    const finalBalance = session.balance.balance;
+    // Close our database session
+    // The endAmount and diff will be calculated automatically based on transactions
+    await this.sessionManager.closeSession(sessionId);
 
-    // Close our database session with the final balance
-    await this.sessionManager.closeSession(sessionId, finalBalance);
-
-    this.logger.debug(`Successfully closed session ${sessionId} for user ${userId} with final balance: ${finalBalance}`);
+    this.logger.debug(`Successfully closed session ${sessionId} for user ${userId}`);
 
     // Response is just: { method: "close.session", status: 200, response: true }
     return response;

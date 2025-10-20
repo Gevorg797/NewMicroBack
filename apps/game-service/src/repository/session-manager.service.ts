@@ -192,19 +192,61 @@ export class SessionManagerService {
     }
 
     /**
-     * Closes a game session and updates user balance if endAmount is provided
+     * Closes a game session and calculates end amount and diff based on transactions
      */
-    async closeSession(sessionId: string, endAmount: number): Promise<void> {
-        this.logger.debug(`Closing session ${sessionId} with endAmount: ${endAmount || 'N/A'}`);
+    async closeSession(sessionId: string): Promise<void> {
+        this.logger.debug(`Closing session ${sessionId}`);
 
         const session = await this.em.findOne(
             GameSession,
             { id: parseInt(sessionId) },
-            { populate: ['balance'] }
+            { populate: ['balance', 'transactions'] }
         );
         if (!session) {
             throw new Error(`Session not found: ${sessionId}`);
         }
+
+        // Calculate profit/loss from transactions
+        let totalDeposits = 0;
+        let totalWithdraws = 0;
+        const transactions = session.transactions.getItems();
+
+        for (const transaction of transactions) {
+            // Skip canceled transactions
+            if (transaction.isCanceled) {
+                continue;
+            }
+
+            const amount = Number(transaction.amount);
+
+            if (transaction.type === GameTransactionType.DEPOSIT) {
+                totalDeposits += amount;
+            } else if (transaction.type === GameTransactionType.WITHDRAW) {
+                totalWithdraws += amount;
+            }
+        }
+
+        // Calculate end amount: startAmount - deposits + withdraws
+        const endAmount = session.startAmount + totalDeposits - totalWithdraws;
+
+        // Calculate diff (total amount lost/won)
+        const diff = session.startAmount - endAmount;
+
+        // Determine outcome based on profit/loss
+        let outcome: GameOutcome;
+        if (endAmount > session.startAmount) {
+            outcome = GameOutcome.WIN;
+        } else if (endAmount < session.startAmount) {
+            outcome = GameOutcome.LOST;
+        } else {
+            outcome = GameOutcome.DRAW;
+        }
+
+        this.logger.debug(
+            `Session ${sessionId} calculation: startAmount=${session.startAmount}, ` +
+            `deposits=${totalDeposits}, withdraws=${totalWithdraws}, ` +
+            `endAmount=${endAmount}, diff=${diff}, outcome=${outcome}`
+        );
 
         // Update session closure data
         wrap(session).assign({
@@ -212,12 +254,13 @@ export class SessionManagerService {
             isLive: false,
             endedAt: new Date(),
             endAmount,
-            diff: session.startAmount - endAmount,
-            outcome: endAmount > session.startAmount ? GameOutcome.WIN : endAmount < session.startAmount ? GameOutcome.LOST : GameOutcome.DRAW,
+            endBalanceAmount: session.balance.balance,
+            diff,
+            outcome,
         });
 
-        // Update user's balance if endAmount is provided
-        if (endAmount !== undefined && session.balance) {
+        // Update user's balance with calculated endAmount
+        if (session.balance) {
             this.logger.debug(
                 `Updating balance from ${session.balance.balance} to ${endAmount} for session ${sessionId}`
             );
@@ -229,7 +272,7 @@ export class SessionManagerService {
 
         await this.em.flush();
 
-        this.logger.debug(`Closed session ${sessionId}`);
+        this.logger.debug(`Closed session ${sessionId} successfully`);
     }
 
     /**
@@ -251,5 +294,263 @@ export class SessionManagerService {
             },
             { populate: ['balance', 'user.site'] }
         );
+    }
+
+    /**
+     * Calculates profit or loss for a game session based on transactions
+     * @param sessionUuid - The UUID of the game session
+     * @returns Object containing profit/loss calculation details
+     */
+    async calculateSessionProfitLoss(sessionUuid: string): Promise<{
+        sessionId: number;
+        sessionUuid: string;
+        totalDeposits: number;
+        totalWithdraws: number;
+        profitLoss: number;
+        outcome: 'profit' | 'loss' | 'breakeven';
+        transactionCount: number;
+        depositCount: number;
+        withdrawCount: number;
+    }> {
+        this.logger.debug(`Calculating profit/loss for session ${sessionUuid}`);
+
+        // Fetch session with transactions
+        const session = await this.em.findOne(
+            GameSession,
+            { uuid: sessionUuid },
+            { populate: ['transactions'] }
+        );
+
+        if (!session) {
+            throw new Error(`Session not found: ${sessionUuid}`);
+        }
+
+        // Initialize counters
+        let totalDeposits = 0;
+        let totalWithdraws = 0;
+        let depositCount = 0;
+        let withdrawCount = 0;
+
+        // Calculate totals from transactions
+        const transactions = session.transactions.getItems();
+
+        for (const transaction of transactions) {
+            // Skip canceled transactions
+            if (transaction.isCanceled) {
+                continue;
+            }
+
+            const amount = Number(transaction.amount);
+
+            if (transaction.type === GameTransactionType.DEPOSIT) {
+                totalDeposits += amount;
+                depositCount++;
+            } else if (transaction.type === GameTransactionType.WITHDRAW) {
+                totalWithdraws += amount;
+                withdrawCount++;
+            }
+        }
+
+        // Calculate profit/loss
+        // Profit/Loss = Total Withdraws (wins) - Total Deposits (bets)
+        const profitLoss = totalWithdraws - totalDeposits;
+
+        // Determine outcome
+        let outcome: 'profit' | 'loss' | 'breakeven';
+        if (profitLoss > 0) {
+            outcome = 'profit';
+        } else if (profitLoss < 0) {
+            outcome = 'loss';
+        } else {
+            outcome = 'breakeven';
+        }
+
+        const result = {
+            sessionId: session.id!,
+            sessionUuid: session.uuid,
+            totalDeposits,
+            totalWithdraws,
+            profitLoss,
+            outcome,
+            transactionCount: transactions.length,
+            depositCount,
+            withdrawCount,
+        };
+
+        this.logger.debug(
+            `Session ${sessionUuid} profit/loss calculation: ${JSON.stringify(result)}`
+        );
+
+        return result;
+    }
+
+    /**
+     * Calculates profit or loss for a game session by ID
+     * @param sessionId - The ID of the game session
+     * @returns Object containing profit/loss calculation details
+     */
+    async calculateSessionProfitLossById(sessionId: number): Promise<{
+        sessionId: number;
+        sessionUuid: string;
+        totalDeposits: number;
+        totalWithdraws: number;
+        profitLoss: number;
+        outcome: 'profit' | 'loss' | 'breakeven';
+        transactionCount: number;
+        depositCount: number;
+        withdrawCount: number;
+    }> {
+        this.logger.debug(`Calculating profit/loss for session ID ${sessionId}`);
+
+        // Fetch session with transactions
+        const session = await this.em.findOne(
+            GameSession,
+            { id: sessionId },
+            { populate: ['transactions'] }
+        );
+
+        if (!session) {
+            throw new Error(`Session not found with ID: ${sessionId}`);
+        }
+
+        // Reuse the UUID-based method
+        return this.calculateSessionProfitLoss(session.uuid);
+    }
+
+    /**
+     * Calculates profit or loss for multiple game sessions
+     * @param sessionUuids - Array of session UUIDs
+     * @returns Array of profit/loss calculations for each session
+     */
+    async calculateMultipleSessionsProfitLoss(sessionUuids: string[]): Promise<Array<{
+        sessionId: number;
+        sessionUuid: string;
+        totalDeposits: number;
+        totalWithdraws: number;
+        profitLoss: number;
+        outcome: 'profit' | 'loss' | 'breakeven';
+        transactionCount: number;
+        depositCount: number;
+        withdrawCount: number;
+    }>> {
+        this.logger.debug(
+            `Calculating profit/loss for ${sessionUuids.length} sessions`
+        );
+
+        const results = await Promise.all(
+            sessionUuids.map(uuid => this.calculateSessionProfitLoss(uuid))
+        );
+
+        return results;
+    }
+
+    /**
+     * Calculates aggregate profit or loss for a user across all their sessions
+     * @param userId - The user ID
+     * @param startDate - Optional start date filter
+     * @param endDate - Optional end date filter
+     * @returns Aggregate profit/loss statistics
+     */
+    async calculateUserProfitLoss(
+        userId: number,
+        startDate?: Date,
+        endDate?: Date
+    ): Promise<{
+        userId: number;
+        totalSessions: number;
+        totalDeposits: number;
+        totalWithdraws: number;
+        totalProfitLoss: number;
+        averageProfitLossPerSession: number;
+        winSessions: number;
+        lossSessions: number;
+        breakevenSessions: number;
+    }> {
+        this.logger.debug(`Calculating aggregate profit/loss for user ${userId}`);
+
+        // Build query filters
+        const filters: any = {
+            user: { id: userId },
+        };
+
+        if (startDate || endDate) {
+            filters.startedAt = {};
+            if (startDate) {
+                filters.startedAt.$gte = startDate;
+            }
+            if (endDate) {
+                filters.startedAt.$lte = endDate;
+            }
+        }
+
+        // Fetch all user sessions with transactions
+        const sessions = await this.em.find(
+            GameSession,
+            filters,
+            { populate: ['transactions'] }
+        );
+
+        // Initialize aggregate counters
+        let totalDeposits = 0;
+        let totalWithdraws = 0;
+        let winSessions = 0;
+        let lossSessions = 0;
+        let breakevenSessions = 0;
+
+        // Calculate for each session
+        for (const session of sessions) {
+            const transactions = session.transactions.getItems();
+            let sessionDeposits = 0;
+            let sessionWithdraws = 0;
+
+            for (const transaction of transactions) {
+                if (transaction.isCanceled) {
+                    continue;
+                }
+
+                const amount = Number(transaction.amount);
+
+                if (transaction.type === GameTransactionType.DEPOSIT) {
+                    sessionDeposits += amount;
+                    totalDeposits += amount;
+                } else if (transaction.type === GameTransactionType.WITHDRAW) {
+                    sessionWithdraws += amount;
+                    totalWithdraws += amount;
+                }
+            }
+
+            // Count session outcome based on this session's profit/loss
+            const sessionProfitLoss = sessionWithdraws - sessionDeposits;
+            if (sessionProfitLoss > 0) {
+                winSessions++;
+            } else if (sessionProfitLoss < 0) {
+                lossSessions++;
+            } else {
+                breakevenSessions++;
+            }
+        }
+
+        const totalProfitLoss = totalWithdraws - totalDeposits;
+        const averageProfitLossPerSession = sessions.length > 0
+            ? totalProfitLoss / sessions.length
+            : 0;
+
+        const result = {
+            userId,
+            totalSessions: sessions.length,
+            totalDeposits,
+            totalWithdraws,
+            totalProfitLoss,
+            averageProfitLossPerSession,
+            winSessions,
+            lossSessions,
+            breakevenSessions,
+        };
+
+        this.logger.debug(
+            `User ${userId} aggregate profit/loss: ${JSON.stringify(result)}`
+        );
+
+        return result;
     }
 }

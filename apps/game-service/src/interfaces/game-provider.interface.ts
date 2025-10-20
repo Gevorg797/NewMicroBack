@@ -18,6 +18,11 @@ export interface ProviderPayload {
     params: Record<string, any>;
 }
 
+export interface CloseSessionPayload {
+    userId: number;
+    siteId?: number; // Optional: determined from user's active session
+}
+
 export interface LoadGamesPayload {
     siteId: number;
     providerName: string;

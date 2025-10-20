@@ -6,7 +6,7 @@ import { SessionManagerService } from '../repository/session-manager.service';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
 import { Game, GameProvider, GameSubProvider } from '@lib/database';
-import { IExtendedGameProvider, ProviderPayload, GameLoadResult } from '../interfaces/game-provider.interface';
+import { IExtendedGameProvider, ProviderPayload, GameLoadResult, CloseSessionPayload } from '../interfaces/game-provider.interface';
 
 @Injectable()
 export class SuperomaticService implements IExtendedGameProvider {
@@ -157,50 +157,51 @@ export class SuperomaticService implements IExtendedGameProvider {
             this.logger.warn(
                 `User ${userId} has ${existingSessions.length} active session(s). Closing all sessions before creating new one.`
             );
+            await this.closeSession({ userId });
 
             // Close all existing sessions in parallel using Promise.all
-            await Promise.all(
-                existingSessions.map(async (session) => {
-                    try {
-                        if (!session.id) {
-                            this.logger.warn(`Skipping session with undefined id for user ${userId}`);
-                            return;
-                        }
+            // await Promise.all(
+            //     existingSessions.map(async (session) => {
+            //         try {
+            //             if (!session.id) {
+            //                 this.logger.warn(`Skipping session with undefined id for user ${userId}`);
+            //                 return;
+            //             }
 
-                        const sessionId = session.id.toString();
-                        this.logger.debug(`Closing session ${sessionId} for user ${userId}`);
+            //             const sessionId = session.id.toString();
+            //             this.logger.debug(`Closing session ${sessionId} for user ${userId}`);
 
-                        // Get provider settings
-                        const sessionSiteId = session.user?.site?.id;
-                        if (!sessionSiteId) {
-                            throw new Error(`Cannot determine siteId for session ${sessionId}`);
-                        }
+            //             // Get provider settings
+            //             const sessionSiteId = session.user?.site?.id;
+            //             if (!sessionSiteId) {
+            //                 throw new Error(`Cannot determine siteId for session ${sessionId}`);
+            //             }
 
-                        const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(sessionSiteId);
+            //             const { baseURL, key, partnerAlias } = await this.providerSettings.getProviderSettings(sessionSiteId);
 
-                        // Call Superomatic close.session API
-                        const superomaticParams = {
-                            'partner.alias': partnerAlias,
-                            'partner.session': sessionId,
-                        };
+            //             // Call Superomatic close.session API
+            //             const superomaticParams = {
+            //                 'partner.alias': partnerAlias,
+            //                 'partner.session': sessionId,
+            //             };
 
-                        const sign = this.utils.generateSigniture(superomaticParams, key, '/close.session');
-                        await this.api.closeSession(baseURL, {
-                            ...superomaticParams,
-                            sign,
-                        });
+            //             const sign = this.utils.generateSigniture(superomaticParams, key, '/close.session');
+            //             await this.api.closeSession(baseURL, {
+            //                 ...superomaticParams,
+            //                 sign,
+            //             });
 
-                        // Close in our database
-                        const finalBalance = session.balance.balance;
-                        await this.sessionManager.closeSession(sessionId, finalBalance);
+            //             // Close in our database
+            //             const finalBalance = session.balance.balance;
+            //             await this.sessionManager.closeSession(sessionId, finalBalance);
 
-                        this.logger.debug(`Successfully closed session ${sessionId}`);
-                    } catch (error) {
-                        this.logger.error(`Failed to close session ${session.id || 'unknown'}: ${error.message}`);
-                        // Continue closing other sessions even if one fails
-                    }
-                })
-            );
+            //             this.logger.debug(`Successfully closed session ${sessionId}`);
+            //         } catch (error) {
+            //             this.logger.error(`Failed to close session ${session.id || 'unknown'}: ${error.message}`);
+            //             // Continue closing other sessions even if one fails
+            //         }
+            //     })
+            // );
 
             this.logger.log(`Closed all ${existingSessions.length} active session(s) for user ${userId}`);
         }
@@ -293,7 +294,7 @@ export class SuperomaticService implements IExtendedGameProvider {
         return providerResponse;
     }
 
-    async closeSession(payload: ProviderPayload): Promise<any> {
+    async closeSession(payload: CloseSessionPayload): Promise<any> {
         this.logger.debug(`Closing session for user: ${payload.userId}`);
 
         const { userId } = payload;
@@ -339,15 +340,11 @@ export class SuperomaticService implements IExtendedGameProvider {
             sign,
         });
 
-        // Get the final balance to store as endAmount
-        // Note: During close.session, Superomatic sends /check.balance and /deposit.win webhooks
-        // The balance should already be updated through those webhooks
-        const finalBalance = session.balance.balance;
+        // Close our database session
+        // The endAmount and diff will be calculated automatically based on transactions
+        await this.sessionManager.closeSession(sessionId);
 
-        // Close our database session with the final balance
-        await this.sessionManager.closeSession(sessionId, finalBalance);
-
-        this.logger.debug(`Successfully closed session ${sessionId} for user ${userId} with final balance: ${finalBalance}`);
+        this.logger.debug(`Successfully closed session ${sessionId} for user ${userId}`);
 
         // Response is just: { method: "close.session", status: 200, response: true }
         return response;

@@ -383,7 +383,12 @@ export class BikBetController {
 
     // Balances button click handler
     this.bot.action('donate_menu', async (ctx) => {
-      await ctx.answerCbQuery();
+      try {
+        await ctx.answerCbQuery();
+      } catch (error) {
+        // Ignore if callback query is too old or already answered
+        console.log('Callback query already expired:', error.message);
+      }
       await this.bikbetService.donateMenu(ctx);
     });
 
@@ -2339,6 +2344,20 @@ export class BikBetController {
         await ctx.reply(
           '❌ Произошла ошибка. Попробуйте снова или вернитесь в главное меню /start',
         );
+      }
+    });
+
+    // Global error handler for expired callback queries and other errors
+    this.bot.catch((err: any, ctx) => {
+      console.error('Bot error:', err);
+      // Don't crash the bot for expired callback queries
+      if (err?.message?.includes('query is too old')) {
+        console.log('Ignoring expired callback query');
+        return;
+      }
+      if (err?.message?.includes('BUTTON_DATA_INVALID')) {
+        console.log('Ignoring invalid button data');
+        return;
       }
     });
 

@@ -1671,7 +1671,6 @@ export class BikBetService {
     // Check minimum amount
     if (amount < 200) {
       await ctx.reply('❌ Минимальная сумма вывода: 200 RUB');
-      this.userStates.delete(userId);
       return true;
     }
 
@@ -2693,6 +2692,7 @@ export class BikBetService {
       });
       return;
     }
+    console.log(method);
 
     // Get saved requisite from database
     let requisite: string | undefined;
@@ -2888,8 +2888,8 @@ export class BikBetService {
     if (savedFKwalletId) {
       buttons.push([
         Markup.button.callback(
-          ` ${savedFKwalletId}`,
-          `useSavedReq:FKwallet:${savedFKwalletId}:${amount}`,
+          `💎 ${savedFKwalletId}`,
+          `useSavedReq:FKwallet:${amount}`,
         ),
       ]);
     }

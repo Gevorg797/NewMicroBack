@@ -2888,8 +2888,8 @@ export class BikBetService {
     if (savedFKwalletId) {
       buttons.push([
         Markup.button.callback(
-          `💎 ${savedFKwalletId}`,
-          `useSavedReq:FKwallet:${amount}`,
+          ` ${savedFKwalletId}`,
+          `useSavedReq:FKwallet:${savedFKwalletId}:${amount}`,
         ),
       ]);
     }

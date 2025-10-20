@@ -15,6 +15,7 @@ export interface CreatePayoutDto {
   amount: number;
   methodId: number;
   requisite?: string;
+  params?: Record<string, any>;
 }
 
 @Injectable()

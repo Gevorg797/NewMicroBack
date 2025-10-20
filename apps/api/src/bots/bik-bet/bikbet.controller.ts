@@ -139,14 +139,20 @@ export class BikBetController {
 
     // Withdraw USDT (trc-20) handler: withdrCrypto_usdt20_<amount>
     this.bot.action(/withdrCrypto_usdt20_(.+)/, async (ctx) => {
+      await ctx.answerCbQuery('⏳ В разработке');
+      return;
       try {
         const amount = Number((ctx as any).match?.[1]);
         if (!Number.isFinite(amount)) {
           await ctx.answerCbQuery('Некорректная сумма');
           return;
         }
-        await ctx.answerCbQuery();
-        await this.bikbetService.withdrawUSDT20(ctx, amount);
+        if (amount < 500) {
+          await ctx.answerCbQuery('Минимальная сумма вывода 10 USDT');
+          return;
+        }
+        // await ctx.answerCbQuery();
+        // await this.bikbetService.withdrawUSDT20(ctx, amount);
       } catch (error) {
         console.error('Withdraw USDT handler error:', error);
         try {
@@ -163,6 +169,11 @@ export class BikBetController {
         const amount = Number((ctx as any).match?.[1]);
         if (!Number.isFinite(amount)) {
           await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+
+        if (amount < 500) {
+          await ctx.answerCbQuery('Минимальная сумма вывода на карту 500 RUB');
           return;
         }
         await ctx.answerCbQuery();
@@ -183,6 +194,10 @@ export class BikBetController {
         const amount = Number((ctx as any).match?.[1]);
         if (!Number.isFinite(amount)) {
           await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        if (amount < 500) {
+          await ctx.answerCbQuery('Минимальная сумма вывода через СБП 500 RUB');
           return;
         }
         await ctx.answerCbQuery();
@@ -220,25 +235,19 @@ export class BikBetController {
       }
     });
 
-    // Use saved requisite handler: useSavedReq:<method>:<requisite>:<amount>
-    this.bot.action(/useSavedReq:(.+):(.+):(.+)/, async (ctx) => {
+    // Use saved requisite handler: useSavedReq:<method>:<amount>
+    this.bot.action(/useSavedReq:(.+):(.+)/, async (ctx) => {
       try {
         const match = (ctx as any).match;
         const method = match?.[1];
-        const requisite = match?.[2];
-        const amount = Number(match?.[3]);
+        const amount = Number(match?.[2]);
 
-        if (!method || !requisite || !Number.isFinite(amount)) {
+        if (!method || !Number.isFinite(amount)) {
           await ctx.answerCbQuery('Некорректные данные');
           return;
         }
 
-        await this.bikbetService.useSavedWithdrawRequisite(
-          ctx,
-          method,
-          requisite,
-          amount,
-        );
+        await this.bikbetService.useSavedWithdrawRequisite(ctx, method, amount);
       } catch (error) {
         console.error('Use saved requisite handler error:', error);
         try {

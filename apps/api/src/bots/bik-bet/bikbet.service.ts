@@ -1607,6 +1607,16 @@ export class BikBetService {
       return true;
     }
 
+    if (userState.state === 'awaiting_withdraw_card') {
+      await this.handleWithdrawCardRequisite(ctx);
+      return true;
+    }
+
+    if (userState.state === 'awaiting_withdraw_sbp') {
+      await this.handleWithdrawSBPRequisite(ctx);
+      return true;
+    }
+
     if (userState.state === 'awaiting_reject_reason') {
       await this.handleRejectReason(ctx);
       return true;
@@ -2465,7 +2475,6 @@ export class BikBetService {
         methodId: methodId,
         requisite: cryptobotRequisite,
       });
-      console.log(withdrawal);
 
       // Clear the state
       this.userStates.delete(userId);
@@ -2583,7 +2592,7 @@ export class BikBetService {
     });
   }
 
-  async saveWithdrawRequisite(ctx: any, method: string, requisite: string) {
+  async saveWithdrawRequisite(ctx: any, method: string, withdrawalId: string) {
     const telegramId = String(ctx.from.id);
     let user = await this.userRepository.findOne(
       { telegramId },
@@ -2598,6 +2607,20 @@ export class BikBetService {
     }
 
     try {
+      // Get the withdrawal to fetch the requisite
+      const withdrawal = await this.paymentService.getTransaction(
+        Number(withdrawalId),
+      );
+
+      if (!withdrawal || !withdrawal.requisite) {
+        await ctx.answerCbQuery('❌ Не удалось получить реквизиты', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      const requisite = withdrawal.requisite;
+
       let payoutRequisite = user.paymentPayoutRequisite;
 
       if (!payoutRequisite) {
@@ -2610,8 +2633,11 @@ export class BikBetService {
       // Save based on method
       if (method === 'FKwallet') {
         payoutRequisite.freekassa_id = requisite;
+      } else if (method === 'Card') {
+        payoutRequisite.card = requisite;
+      } else if (method === 'SBP') {
+        payoutRequisite.sbp = requisite;
       }
-      // Add other methods here as needed (sbp, card, etc.)
 
       await this.em.persistAndFlush(payoutRequisite);
 
@@ -2654,19 +2680,32 @@ export class BikBetService {
     }
   }
 
-  async useSavedWithdrawRequisite(
-    ctx: any,
-    method: string,
-    requisite: string,
-    amount: number,
-  ) {
+  async useSavedWithdrawRequisite(ctx: any, method: string, amount: number) {
     const telegramId = String(ctx.from.id);
-    let user = await this.userRepository.findOne({
-      telegramId,
-    });
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['paymentPayoutRequisite'] },
+    );
 
     if (!user) {
       await ctx.answerCbQuery('⚠ Пользователь не найден. Нажмите /start', {
+        show_alert: true,
+      });
+      return;
+    }
+
+    // Get saved requisite from database
+    let requisite: string | undefined;
+    if (method === 'FKwallet') {
+      requisite = user.paymentPayoutRequisite?.freekassa_id;
+    } else if (method === 'Card') {
+      requisite = user.paymentPayoutRequisite?.card;
+    } else if (method === 'SBP') {
+      requisite = user.paymentPayoutRequisite?.sbp;
+    }
+
+    if (!requisite) {
+      await ctx.answerCbQuery('❌ Сохранённый реквизит не найден', {
         show_alert: true,
       });
       return;
@@ -2679,6 +2718,16 @@ export class BikBetService {
         methodId = 1;
       } else if (method === 'CryptoBot') {
         methodId = 4;
+      } else if (method === 'Card' || method === 'SBP') {
+        methodId = 5; // Platega
+      }
+
+      // Determine payment type params for Platega
+      const params: any = {};
+      if (method === 'Card') {
+        params.paymentType = 'card';
+      } else if (method === 'SBP') {
+        params.paymentType = 'sbp';
       }
 
       // Create payout request using PaymentService
@@ -2687,6 +2736,7 @@ export class BikBetService {
         amount: amount,
         methodId: methodId,
         requisite: requisite,
+        params: Object.keys(params).length > 0 ? params : undefined,
       });
 
       await this.sendMessageToAdminForWithdraw(
@@ -2880,12 +2930,327 @@ export class BikBetService {
     });
   }
 
+  async handleWithdrawCardRequisite(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // Check if user is in the correct state
+    if (!userState || userState.state !== 'awaiting_withdraw_card') {
+      const message = '⚠ Ошибка. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    const messageText = ctx.message?.text?.trim();
+
+    if (!messageText) {
+      return false;
+    }
+
+    // Parse input: "2222333344445555 Игнат А. Сбербанк"
+    // Extract card number (first 16 digits), name, and bank
+    const parts = messageText.split(/\s+/);
+    const cardNumber = parts[0].replace(/\D/g, ''); // Remove non-digits
+    const holderName = parts.slice(1, -1).join(' ') || ''; // Name (middle parts)
+    const bankName = parts[parts.length - 1] || ''; // Bank (last part)
+
+    // Validate card number (16 digits)
+    if (!/^\d{16}$/.test(cardNumber)) {
+      await ctx.reply(
+        '❌ Некорректный номер карты. Введите 16 цифр карты, затем имя и банк.\nПример: 2222333344445555 Игнат А. Сбербанк',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Назад к выводу', 'withdraw')],
+        ]),
+      );
+      return true;
+    }
+
+    // Combine full requisite for admin and storage
+    const fullRequisite = `${cardNumber} ${holderName} ${bankName}`.trim();
+
+    const amount = userState.withdrawAmount!;
+    const methodId = userState.withdrawMethodId!;
+
+    // Get user from database
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      {
+        telegramId,
+      },
+      {
+        populate: ['paymentPayoutRequisite'],
+      },
+    );
+
+    if (!user) {
+      await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
+      this.userStates.delete(userId);
+      return true;
+    }
+
+    try {
+      // Create payout request using PaymentService with Platega
+      const withdrawal = await this.paymentService.payout({
+        userId: user.id!,
+        amount: amount,
+        methodId: methodId,
+        requisite: fullRequisite,
+        params: { paymentType: 'card' },
+      });
+
+      await this.sendMessageToAdminForWithdraw(
+        ctx,
+        withdrawal,
+        'Card',
+        amount,
+        fullRequisite,
+      );
+
+      // Clear the state
+      this.userStates.delete(userId);
+
+      // Send success message
+      const maskedCard =
+        cardNumber.substring(0, 4) + ' **** **** ' + cardNumber.substring(12);
+      const displayRequisite = `${maskedCard} ${holderName} ${bankName}`.trim();
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>📝 Карта: <code>${displayRequisite}</code></b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+
+      // Build inline keyboard buttons
+      const buttons: any[] = [
+        [
+          Markup.button.url(
+            '👨‍💻 Техническая поддержка',
+            'https://t.me/bikbetsupport',
+          ),
+        ],
+      ];
+
+      // Use withdrawal ID for callback to avoid length issues
+      buttons.push([
+        Markup.button.callback(
+          '💾 Сохранить реквизиты',
+          `saveReq:Card:${withdrawal.id}`,
+        ),
+      ]);
+
+      buttons.push([
+        Markup.button.callback('⬅️ Вернуться назад', 'donate_menu'),
+      ]);
+
+      await ctx.replyWithPhoto(
+        { source: fs.readFileSync(filePath) },
+        {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.log(error);
+
+      this.userStates.delete(userId);
+      await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
+      console.error('Withdraw Card error:', error);
+      return true;
+    }
+  }
+
+  async handleWithdrawSBPRequisite(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // Check if user is in the correct state
+    if (!userState || userState.state !== 'awaiting_withdraw_sbp') {
+      const message = '⚠ Ошибка. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    const messageText = ctx.message?.text?.trim();
+
+    if (!messageText) {
+      return false;
+    }
+
+    // Parse input: "+79004006090 Игнат А. Сбербанк"
+    // Extract phone, name, and bank
+    const parts = messageText.split(/\s+/);
+    let phoneNumber = parts[0].replace(/[\s\-\(\)]/g, '');
+    const holderName = parts.slice(1, -1).join(' ') || ''; // Name (middle parts)
+    const bankName = parts[parts.length - 1] || ''; // Bank (last part)
+
+    // Normalize phone number
+    if (phoneNumber.startsWith('+7')) {
+      phoneNumber = phoneNumber.substring(2);
+    } else if (phoneNumber.startsWith('7')) {
+      phoneNumber = phoneNumber.substring(1);
+    } else if (phoneNumber.startsWith('8')) {
+      phoneNumber = phoneNumber.substring(1);
+    }
+
+    // Validate phone number
+    if (!/^\d{10}$/.test(phoneNumber)) {
+      await ctx.reply(
+        '❌ Некорректный номер телефона. Введите номер, имя и банк.\nПример: +79004006090 Игнат А. Сбербанк',
+        Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Назад к выводу', 'withdraw')],
+        ]),
+      );
+      return true;
+    }
+
+    // Add +7 prefix for full phone number
+    const fullPhoneNumber = '+7' + phoneNumber;
+
+    // Combine full requisite for admin and storage
+    const fullRequisite = `${fullPhoneNumber} ${holderName} ${bankName}`.trim();
+
+    const amount = userState.withdrawAmount!;
+    const methodId = userState.withdrawMethodId!;
+
+    // Get user from database
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      {
+        telegramId,
+      },
+      {
+        populate: ['paymentPayoutRequisite'],
+      },
+    );
+
+    if (!user) {
+      await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
+      this.userStates.delete(userId);
+      return true;
+    }
+
+    try {
+      // Create payout request using PaymentService with Platega
+      const withdrawal = await this.paymentService.payout({
+        userId: user.id!,
+        amount: amount,
+        methodId: methodId,
+        requisite: fullRequisite,
+        params: { paymentType: 'sbp' },
+      });
+
+      await this.sendMessageToAdminForWithdraw(
+        ctx,
+        withdrawal,
+        'SBP',
+        amount,
+        fullRequisite,
+      );
+
+      // Clear the state
+      this.userStates.delete(userId);
+
+      // Send success message
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>📝 Реквизиты: <code>${fullRequisite}</code></b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+
+      // Build inline keyboard buttons
+      const buttons: any[] = [
+        [
+          Markup.button.url(
+            '👨‍💻 Техническая поддержка',
+            'https://t.me/bikbetsupport',
+          ),
+        ],
+      ];
+
+      // Use withdrawal ID for callback to avoid length issues
+      buttons.push([
+        Markup.button.callback(
+          '💾 Сохранить реквизиты',
+          `saveReq:SBP:${withdrawal.id}`,
+        ),
+      ]);
+
+      buttons.push([
+        Markup.button.callback('⬅️ Вернуться назад', 'donate_menu'),
+      ]);
+
+      await ctx.replyWithPhoto(
+        { source: fs.readFileSync(filePath) },
+        {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.log(error);
+
+      this.userStates.delete(userId);
+      await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
+      console.error('Withdraw SBP error:', error);
+      return true;
+    }
+  }
+
   async withdrawCard(ctx: any, amount: number) {
-    const text = `
-<blockquote><b>💳 Вывод на карту</b></blockquote>
-<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
-<blockquote><b>📝 Введите номер карты для вывода</b></blockquote>
-<blockquote><b>Формат: 0000 0000 0000 0000</b></blockquote>`;
+    const userId = ctx.from.id;
+
+    // Get user with saved requisites
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['paymentPayoutRequisite'] },
+    );
+
+    // Set user state to waiting for card number
+    this.userStates.set(userId, {
+      state: 'awaiting_withdraw_card',
+      withdrawAmount: amount,
+      withdrawMethod: 'Card',
+      withdrawMethodId: 5, // Platega method ID
+    });
+
+    const savedCardNumber = user?.paymentPayoutRequisite?.card;
+
+    let text = `
+<blockquote><b>Сумма вывода: <code>${amount}</code> RUB</b></blockquote>
+<blockquote><b>Метод: Карта 💳</b></blockquote>
+<blockquote><b>Отправьте номер карты в следующем формате:</b></blockquote>
+<blockquote><b>2222333344445555 Игнат А. Сбербанк</b></blockquote>
+<blockquote><b>Либо выберите сохранённый реквизит ниже:</b></blockquote>`;
+
+    const buttons: any[] = [];
+
+    // If user has saved card requisite, show it as a button
+    if (savedCardNumber) {
+      // Extract just the card number if it has additional info
+      const cardDigits = savedCardNumber.replace(/\D/g, '').substring(0, 16);
+      const maskedCard =
+        cardDigits.substring(0, 4) + ' **** **** ' + cardDigits.substring(12);
+      buttons.push([
+        Markup.button.callback(
+          `💳 ${maskedCard}`,
+          `useSavedReq:Card:${amount}`,
+        ),
+      ]);
+    }
+
+    buttons.push([Markup.button.callback('🔙 Назад', 'withdraw')]);
 
     const filePath = this.getImagePath('bik_bet_5.jpg');
     const media: any = {
@@ -2896,9 +3261,7 @@ export class BikBetService {
     };
 
     await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Назад', 'withdraw')],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
   }
 
@@ -3041,11 +3404,48 @@ export class BikBetService {
   }
 
   async withdrawSBP(ctx: any, amount: number) {
-    const text = `
-<blockquote><b>💳 Вывод через СБП</b></blockquote>
-<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
-<blockquote><b>📝 Введите номер телефона для вывода</b></blockquote>
-<blockquote><b>Формат: +7XXXXXXXXXX</b></blockquote>`;
+    const userId = ctx.from.id;
+
+    // Get user with saved requisites
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['paymentPayoutRequisite'] },
+    );
+
+    // Set user state to waiting for phone number
+    this.userStates.set(userId, {
+      state: 'awaiting_withdraw_sbp',
+      withdrawAmount: amount,
+      withdrawMethod: 'SBP',
+      withdrawMethodId: 5, // Platega method ID
+    });
+
+    const savedPhone = user?.paymentPayoutRequisite?.sbp;
+
+    let text = `
+<blockquote><b>Сумма вывода: <code>${amount}</code> RUB</b></blockquote>
+<blockquote><b>Метод: СБП 💳</b></blockquote>
+<blockquote><b>Отправьте номер телефона в следующем формате:</b></blockquote>
+<blockquote><b>+79004006090 Игнат А. Сбербанк</b></blockquote>
+<blockquote><b>Либо выберите сохранённый реквизит ниже:</b></blockquote>`;
+
+    const buttons: any[] = [];
+
+    // If user has saved phone number, show it as a button
+    if (savedPhone) {
+      // Extract just the phone number if it has additional info
+      const phoneMatch = savedPhone.match(/\+?\d+/);
+      const displayPhone = phoneMatch ? phoneMatch[0] : savedPhone;
+      buttons.push([
+        Markup.button.callback(
+          `📱 ${displayPhone}`,
+          `useSavedReq:SBP:${amount}`,
+        ),
+      ]);
+    }
+
+    buttons.push([Markup.button.callback('🔙 Назад', 'withdraw')]);
 
     const filePath = this.getImagePath('bik_bet_5.jpg');
     const media: any = {
@@ -3056,9 +3456,7 @@ export class BikBetService {
     };
 
     await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Назад', 'withdraw')],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
   }
 }

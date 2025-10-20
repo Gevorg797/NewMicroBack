@@ -33,6 +33,7 @@ export class PaymentService {
         amount: body.amount,
         methodId: body.methodId,
         requisite: body.requisite,
+        params: body.params,
       });
 
       this.logger.log(`Payout request completed successfully`);

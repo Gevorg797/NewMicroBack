@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Min, IsObject } from 'class-validator';
 
 export class CreatePayoutProcessDto {
   @ApiProperty({ description: 'User ID' })
@@ -22,4 +22,12 @@ export class CreatePayoutProcessDto {
   @IsOptional()
   @IsString()
   requisite?: string;
+
+  @ApiProperty({
+    description: 'Additional parameters for the payout provider',
+    required: false,
+  })
+  @IsOptional()
+  @IsObject()
+  params?: Record<string, any>;
 }

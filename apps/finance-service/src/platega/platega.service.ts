@@ -157,8 +157,92 @@ export class PlategaService implements IPaymentProvider {
   }
 
   async createPayoutProcess(payload: PayoutPayload): Promise<any> {
-    // Platega payout implementation (if supported)
-    throw new BadRequestException('Payout not supported for Platega provider');
+    const { transactionId, amount, requisite, params } = payload;
+
+    const transaction = await this.transactionManager.getTransaction(
+      transactionId,
+      ['subMethod.method.providerSettings', 'subMethod.method', 'user'],
+    );
+
+    const providerSettings = transaction?.subMethod.method.providerSettings;
+    const merchantId = providerSettings.publicKey as string;
+    const secretKey = providerSettings.privateKey as string;
+
+    if (!merchantId || !secretKey) {
+      throw new BadRequestException(
+        'Platega credentials not configured properly',
+      );
+    }
+
+    const apiUrl = `${providerSettings.baseURL}/transaction/process`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-MerchantId': merchantId,
+      'X-Secret': secretKey,
+    };
+
+    // Generate UUID for Platega transaction ID
+    const plategaTransactionId = randomUUID();
+
+    // Determine payment method type from params
+    const paymentType = params?.paymentType || 'sbp'; // default to sbp
+    const paymentMethod = paymentType === 'card' ? 1 : 2; // 1 for card, 2 for SBP
+
+    const data = {
+      command: 'payout',
+      paymentMethod: paymentMethod,
+      id: plategaTransactionId,
+      paymentDetails: {
+        amount: parseInt(String(amount)),
+        currency: 'RUB',
+        cardNumber: paymentType === 'card' ? requisite : undefined,
+        phoneNumber: paymentType === 'sbp' ? requisite : undefined,
+      },
+      description: 'Вывод средств Bilumsmm',
+      payload: String(transaction.id),
+    };
+
+    try {
+      const response = await axios.post(apiUrl, data, { headers });
+      const result = response.data;
+
+      // Store Platega transaction ID for callback matching
+      transaction.paymentTransactionId = plategaTransactionId;
+      await this.financeTransactionRepo
+        .getEntityManager()
+        .persistAndFlush(transaction);
+
+      return {
+        success: true,
+        transactionId: plategaTransactionId,
+        requisite: requisite,
+        status: result.status || 'processing',
+      };
+    } catch (error) {
+      console.log(
+        'Platega payout error:',
+        error.response?.data || error.message,
+      );
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      const errorData = error.response?.data;
+      const errorDetails = errorData?.errors
+        ? JSON.stringify(errorData.errors)
+        : '';
+      const providerMessage =
+        errorData?.title ||
+        errorData?.message ||
+        errorData?.error ||
+        error.message;
+
+      throw new BadRequestException(
+        `Platega payout failed: ${providerMessage}${errorDetails ? ` | Validation errors: ${errorDetails}` : ''}`,
+      );
+    }
   }
 
   async handleCallback(payload: CallbackPayload): Promise<void> {

@@ -24,12 +24,10 @@ import {
   GameData,
 } from './games-data';
 import { PaymentService } from '../../client/payment/payment.service';
+import { StatsService } from '../../stats/stats.service';
 
 @Injectable()
 export class BikBetService {
-  private readonly totalPlayers = 1311;
-  private readonly gamesPlayed = 61192;
-  private readonly totalBets = '5973499.88 RUB';
   private readonly chatIdForDepositsAndWithdrawals = -1002939266999; // Replace with your actual chat ID
   private readonly userStates = new Map<
     number,
@@ -64,8 +62,9 @@ export class BikBetService {
     @InjectRepository(PaymentPayoutRequisite)
     private readonly paymentPayoutRequisiteRepository: EntityRepository<PaymentPayoutRequisite>,
     private readonly paymentService: PaymentService,
+    private readonly statsService: StatsService,
     private readonly em: EntityManager,
-  ) {}
+  ) { }
 
   // Game data for different operators (imported from games-data.ts)
   private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
@@ -260,13 +259,16 @@ export class BikBetService {
         }
       }
 
+      // Get real-time stats
+      const stats = await this.statsService.getMainStats();
+
       const text = `
 <blockquote><b>Добро пожаловать в <a href="${link}">BikBet!</a></b></blockquote>
-<blockquote>👥 <b>Всего игроков:</b> <code>${this.totalPlayers}</code></blockquote>
+<blockquote>👥 <b>Всего игроков:</b> <code>${stats.totalPlayers}</code></blockquote>
 <blockquote>🚀 <b>Сыграно игр:</b>
-⤷ <code>${this.gamesPlayed}</code>
+⤷ <code>${stats.gamesPlayed}</code>
 💸 <b>Сумма ставок:</b>
-⤷ <code>${this.totalBets}</code></blockquote>
+⤷ <code>${stats.totalBets.toFixed(2)} RUB</code></blockquote>
 `;
 
       const keyboard = Markup.inlineKeyboard([
@@ -409,13 +411,16 @@ export class BikBetService {
   }
 
   async start(ctx: any, link: string) {
+    // Get real-time stats
+    const stats = await this.statsService.getMainStats();
+
     const text = `
 <blockquote><b>Добро пожаловать в <a href="${link}">BikBet!</a></b></blockquote>
-<blockquote>👥 <b>Всего игроков:</b> <code>${this.totalPlayers}</code></blockquote>
+<blockquote>👥 <b>Всего игроков:</b> <code>${stats.totalPlayers}</code></blockquote>
 <blockquote>🚀 <b>Сыграно игр:</b>
-⤷ <code>${this.gamesPlayed}</code>
+⤷ <code>${stats.gamesPlayed}</code>
 💸 <b>Сумма ставок:</b>
-⤷ <code>${this.totalBets}</code></blockquote>
+⤷ <code>${stats.totalBets.toFixed(2)} RUB</code></blockquote>
 `;
 
     const filePath = this.getImagePath('bik_bet_8.jpg');
@@ -1328,41 +1333,32 @@ export class BikBetService {
   async profile(ctx: any) {
     const telegramId = String(ctx.from.id);
     const user = await this.userRepository.findOne({ telegramId });
-    let balanceValue = 0;
-    let bonusValue = 0;
-    let currencyCode = 'N/A';
-    if (user) {
-      // Get main balance
-      const mainBalance = await this.balancesRepository.findOne(
-        { user, type: BalanceType.MAIN },
-        { populate: ['currency'] },
-      );
-      // Get bonus balance
-      const bonusBalance = await this.balancesRepository.findOne(
-        { user, type: BalanceType.BONUS },
-        { populate: ['currency'] },
-      );
 
-      if (mainBalance) {
-        balanceValue = mainBalance.balance ?? 0;
-        currencyCode = mainBalance.currency?.name ?? 'N/A';
-      }
-      if (bonusBalance) {
-        bonusValue = bonusBalance.balance ?? 0;
-      }
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
     }
+
+    // Get real user statistics
+    const userStats = await this.statsService.getUserStats(user.id!);
+
+    // Get bonus balance
+    const bonusBalance = await this.balancesRepository.findOne({
+      user,
+      type: BalanceType.BONUS,
+    });
 
     const text = `
 <blockquote><b>📊 Статистика</b></blockquote>
 <blockquote><b>🆔 ID:</b> <code>${telegramId}</code></blockquote>
-<blockquote><b>🎮 Игр сыграно:</b> <code>1</code>
-<b>🏆 Игр выиграно: 0</b></blockquote>
-<blockquote><b>🎯 Винрейт: 0.00%</b>
- <b>🔥 Винстрик: 0 игр</b>
- <b>💥 Поражений подряд: 0 игр</b></blockquote>
-<blockquote><b>💰 Всего поставлено: 0 RUB</b> 
-<b>💰 Реально поставлено: 0 RUB</b>
-<b>💵 Баланс: 0 RUB</b></blockquote>
+<blockquote><b>🎮 Игр сыграно:</b> <code>${userStats.gamesPlayed}</code>
+<b>🏆 Игр выиграно: ${userStats.gamesWon}</b></blockquote>
+<blockquote><b>🎯 Винрейт: ${userStats.winrate}%</b>
+ <b>🔥 Винстрик: ${userStats.winstreak} игр</b>
+ <b>💥 Поражений подряд: ${userStats.losingStreak} игр</b></blockquote>
+<blockquote><b>💰 Реально поставлено: ${userStats.actualBet.toFixed(2)} RUB</b>
+<b>💵 Баланс: ${userStats.balance.toFixed(2)} RUB</b>
+<b>🎁 Бонусный баланс: ${(bonusBalance?.balance || 0).toFixed(2)} RUB</b></blockquote>
 
 `;
 
@@ -2194,20 +2190,17 @@ export class BikBetService {
   }
 
   async leaderboardWins(ctx: any) {
-    const text = `<b>🏆 Топ пользователей (по победам):</b>
+    const leaderboardData = await this.statsService.getLeaderboardByWins();
 
-<blockquote><b>🥇 1. - Synkov | побед - 4065</b></blockquote>
-<blockquote><b>🥈 2. - Юзер №2 | побед - 1952</b></blockquote>
-<blockquote><b>🥉 3. - Юзер №3 | побед - 1788</b></blockquote>
-<blockquote><b>🎖 4. - 13 | побед - 1717</b></blockquote>
-<blockquote><b>🎖 5. - Юзер №5 | побед - 714</b></blockquote>
-<blockquote><b>🎖 6. - Александра | побед - 703</b></blockquote>
-<blockquote><b>🎖 7. - Jimik | побед - 476</b></blockquote>
-<blockquote><b>🎖 8. - Maksi | побед - 440</b></blockquote>
-<blockquote><b>🎖 9. - Не | побед - 391</b></blockquote>
-<blockquote><b>🎖 10. - Алина | побед - 337</b></blockquote>
+    const entriesText = leaderboardData.entries
+      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | побед - ${entry.value}</b></blockquote>`)
+      .join('\n');
 
-<i>Отсортировано по количеству побед!</i>`;
+    const text = `<b>🏆 ${leaderboardData.title}</b>
+
+${entriesText}
+
+<i>${leaderboardData.footer}</i>`;
 
     const filePath = this.getImagePath('bik_bet_3.jpg');
     const media: any = {
@@ -2234,20 +2227,17 @@ export class BikBetService {
   }
 
   async leaderboardWinstreak(ctx: any) {
-    const text = `<b>🏆 Топ пользователей (по винстрику):</b>
+    const leaderboardData = await this.statsService.getLeaderboardByWinstreak();
 
-<blockquote><b>🥇 1. - Максим Андреевич | винстрик - 8</b></blockquote>
-<blockquote><b>🥈 2. - Xauceq | винстрик - 5</b></blockquote>
-<blockquote><b>🥉 3. - мотя xvii | винстрик - 5</b></blockquote>
-<blockquote><b>🎖 4. - Юзер №4 | винстрик - 4</b></blockquote>
-<blockquote><b>🎖 5. - Rostik🩸 | винстрик - 4</b></blockquote>
-<blockquote><b>🎖 6. - LORDIN | винстрик - 4</b></blockquote>
-<blockquote><b>🎖 7. - Korney | винстрик - 4</b></blockquote>
-<blockquote><b>🎖 8. - 13 | винстрик - 3</b></blockquote>
-<blockquote><b>🎖 9. - Михалы4 | винстрик - 3</b></blockquote>
-<blockquote><b>🎖 10. - Миша | винстрик - 3</b></blockquote>
+    const entriesText = leaderboardData.entries
+      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | винстрик - ${entry.value}</b></blockquote>`)
+      .join('\n');
 
-<i>Отсортировано по количеству побед подряд!</i>`;
+    const text = `<b>🏆 ${leaderboardData.title}</b>
+
+${entriesText}
+
+<i>${leaderboardData.footer}</i>`;
 
     const filePath = this.getImagePath('bik_bet_3.jpg');
     const media: any = {
@@ -2274,20 +2264,17 @@ export class BikBetService {
   }
 
   async leaderboardLoosestrick(ctx: any) {
-    const text = `<b>🏆 Топ пользователей (по лузстрику):</b>
+    const leaderboardData = await this.statsService.getLeaderboardByLosingStreak();
 
-<blockquote><b>🥇 1. - Pavel | лузстрик - 22</b></blockquote>
-<blockquote><b>🥈 2. - Натуля🎀 | лузстрик - 20</b></blockquote>
-<blockquote><b>🥉 3. - Рлл | лузстрик - 20</b></blockquote>
-<blockquote><b>🎖 4. - Perfect | лузстрик - 20</b></blockquote>
-<blockquote><b>🎖 5. - Frend | лузстрик - 19</b></blockquote>
-<blockquote><b>🎖 6. - 𝚂𝚂𝙰 | лузстрик - 18</b></blockquote>
-<blockquote><b>🎖 7. - серега | лузстрик - 17</b></blockquote>
-<blockquote><b>🎖 8. - Светлана | лузстрик - 17</b></blockquote>
-<blockquote><b>🎖 9. - Иван | лузстрик - 15</b></blockquote>
-<blockquote><b>🎖 10. - Borov | лузстрик - 15</b></blockquote>
+    const entriesText = leaderboardData.entries
+      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | лузстрик - ${entry.value}</b></blockquote>`)
+      .join('\n');
 
-<i>Отсортировано по количеству поражений подряд!</i>`;
+    const text = `<b>🏆 ${leaderboardData.title}</b>
+
+${entriesText}
+
+<i>${leaderboardData.footer}</i>`;
 
     const filePath = this.getImagePath('bik_bet_3.jpg');
     const media: any = {
@@ -2314,20 +2301,17 @@ export class BikBetService {
   }
 
   async leaderboardGames(ctx: any) {
-    const text = `<b>🏆 Топ пользователей (по кол-ву игр):</b>
+    const leaderboardData = await this.statsService.getLeaderboardByGames();
 
-<blockquote><b>🥇 1. - Synkov | игр - 7100</b></blockquote>
-<blockquote><b>🥈 2. - R3QU1EM | игр - 6213</b></blockquote>
-<blockquote><b>🥉 3. - Юзер №3 | игр - 3321</b></blockquote>
-<blockquote><b>🎖 4. - Юзер №4 | игр - 3067</b></blockquote>
-<blockquote><b>🎖 5. - 13 | игр - 2852</b></blockquote>
-<blockquote><b>🎖 6. - Александра | игр - 1973</b></blockquote>
-<blockquote><b>🎖 7. - Юзер №7 | игр - 1290</b></blockquote>
-<blockquote><b>🎖 8. - Игорь | игр - 1088</b></blockquote>
-<blockquote><b>🎖 9. - Юзер №9 | игр - 891</b></blockquote>
-<blockquote><b>🎖 10. - [𝗜𝗧] 𝗠𝗼𝗻𝗸 | игр - 867</b></blockquote>
+    const entriesText = leaderboardData.entries
+      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | игр - ${entry.value}</b></blockquote>`)
+      .join('\n');
 
-<i>Отсортировано по количеству игр!</i>`;
+    const text = `<b>🏆 ${leaderboardData.title}</b>
+
+${entriesText}
+
+<i>${leaderboardData.footer}</i>`;
 
     const filePath = this.getImagePath('bik_bet_3.jpg');
     const media: any = {
@@ -2354,20 +2338,17 @@ export class BikBetService {
   }
 
   async leaderboardBets(ctx: any) {
-    const text = `<b>🏆 Топ пользователей (по сумме ставок):</b>
+    const leaderboardData = await this.statsService.getLeaderboardByBets();
 
-<blockquote><b>🥇 1. - 62240 | ставок на 469367.2000000915 RUB</b></blockquote>
-<blockquote><b>🥈 2. - Буеда | ставок на 372955.5500000798 RUB</b></blockquote>
-<blockquote><b>🥉 3. - Антоха | ставок на 344004.7199999913 RUB</b></blockquote>
-<blockquote><b>🎖 4. - Юзер №4 | ставок на 246371.17000000295 RUB</b></blockquote>
-<blockquote><b>🎖 5. - Игорь | ставок на 202940.03000000017 RUB</b></blockquote>
-<blockquote><b>🎖 6. - 𝓐𝓷𝓰𝓮𝓵 ❤️‍🩹 | ставок на 195294.40000001568 RUB</b></blockquote>
-<blockquote><b>🎖 7. - Valfram👾 BITS | ставок на 193849.7600000002 RUB</b></blockquote>
-<blockquote><b>🎖 8. - van | ставок на 175589.27000000633 RUB</b></blockquote>
-<blockquote><b>🎖 9. - Дима | ставок на 166294.00000000108 RUB</b></blockquote>
-<blockquote><b>🎖 10. -                             | ставок на 163915.0100000036 RUB</b></blockquote>
+    const entriesText = leaderboardData.entries
+      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | ставок на ${entry.value.toFixed(2)} RUB</b></blockquote>`)
+      .join('\n');
 
-<i>Отсортировано по общей сумме ставок!</i>`;
+    const text = `<b>🏆 ${leaderboardData.title}</b>
+
+${entriesText}
+
+<i>${leaderboardData.footer}</i>`;
 
     const filePath = this.getImagePath('bik_bet_3.jpg');
     const media: any = {

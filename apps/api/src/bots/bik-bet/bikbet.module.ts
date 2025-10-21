@@ -16,6 +16,7 @@ import {
   PaymentPayoutRequisite,
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
+import { StatsModule } from '../../stats/stats.module';
 
 @Module({
   imports: [
@@ -35,9 +36,10 @@ import { PaymentModule } from '../../client/payment/payment.module';
       PaymentPayoutRequisite,
     ]),
     PaymentModule,
+    StatsModule,
   ],
   controllers: [BikBetController],
   providers: [BikBetService],
   exports: [BikBetService],
 })
-export class BikBetModule {}
+export class BikBetModule { }

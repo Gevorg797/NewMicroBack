@@ -15,14 +15,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import {
-  PLAYNGO_GAME_NAMES_WITH_IDS,
-  NOVOMATIC_GAME_NAMES_WITH_IDS,
+  GAMINATOR_GAME_NAMES_WITH_IDS,
+  GAMINATOR2_GAME_NAMES_WITH_IDS,
   NETENT_GAME_NAMES_WITH_IDS,
-  PRAGMATIC_GAME_NAMES_WITH_IDS,
-  PUSH_GAME_NAMES_WITH_IDS,
-  POPULAR_GAME_NAMES_WITH_IDS,
-  BETINHELL_GAME_NAMES_WITH_IDS,
-  PLAYTECH_GAME_NAMES_WITH_IDS,
+  EGT_GAME_NAMES_WITH_IDS,
+  WAZDAN_GAME_NAMES_WITH_IDS,
+  IGROSOFT_GAME_NAMES_WITH_IDS,
   GameData,
 } from './games-data';
 import { PaymentService } from '../../client/payment/payment.service';
@@ -70,7 +68,7 @@ export class BikBetService {
   ) {}
 
   // Game data for different operators (imported from games-data.ts)
-  private readonly PRAGMATIC_GAMES = PRAGMATIC_GAME_NAMES_WITH_IDS.map(
+  private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -84,7 +82,7 @@ export class BikBetService {
     provider: game.provider,
   }));
 
-  private readonly NOVOMATIC_GAMES = NOVOMATIC_GAME_NAMES_WITH_IDS.map(
+  private readonly NOVOMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -92,19 +90,19 @@ export class BikBetService {
     }),
   );
 
-  private readonly PLAYNGO_GAMES = PLAYNGO_GAME_NAMES_WITH_IDS.map((game) => ({
+  private readonly PLAYNGO_GAMES = EGT_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
     provider: game.provider,
   }));
 
-  private readonly PUSH_GAMES = PUSH_GAME_NAMES_WITH_IDS.map((game) => ({
+  private readonly PUSH_GAMES = WAZDAN_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
     provider: game.provider,
   }));
 
-  private readonly BETINHELL_GAMES = BETINHELL_GAME_NAMES_WITH_IDS.map(
+  private readonly BETINHELL_GAMES = IGROSOFT_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -112,7 +110,7 @@ export class BikBetService {
     }),
   );
 
-  private readonly PLAYTECH_GAMES = PLAYTECH_GAME_NAMES_WITH_IDS.map(
+  private readonly PLAYTECH_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -120,11 +118,13 @@ export class BikBetService {
     }),
   );
 
-  private readonly POPULAR_GAMES = POPULAR_GAME_NAMES_WITH_IDS.map((game) => ({
-    id: String(game.id),
-    name: game.name,
-    provider: game.provider,
-  }));
+  private readonly POPULAR_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+      provider: game.provider,
+    }),
+  );
 
   // Generate user authentication token
   private generateUserAuthToken(userId: number): string {
@@ -909,8 +909,6 @@ export class BikBetService {
     operatorName: string,
     providerName: string,
   ) {
-    console.log(1111);
-
     // Always answer callback query first to prevent timeout
     try {
       await ctx.answerCbQuery();
@@ -1113,8 +1111,6 @@ export class BikBetService {
   }
 
   async handlePopularGameSelection(ctx: any, callbackData: string) {
-    console.log(4444);
-
     const parts = callbackData.split('_');
     const gameId = parts[0];
     const game = this.POPULAR_GAMES.find((g) => g.id === gameId);

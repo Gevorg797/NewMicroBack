@@ -64,7 +64,7 @@ export class BikBetService {
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly em: EntityManager,
-  ) { }
+  ) {}
 
   // Game data for different operators (imported from games-data.ts)
   private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
@@ -2193,7 +2193,10 @@ export class BikBetService {
     const leaderboardData = await this.statsService.getLeaderboardByWins();
 
     const entriesText = leaderboardData.entries
-      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | побед - ${entry.value}</b></blockquote>`)
+      .map(
+        (entry) =>
+          `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | побед - ${entry.value}</b></blockquote>`,
+      )
       .join('\n');
 
     const text = `<b>🏆 ${leaderboardData.title}</b>
@@ -2230,7 +2233,10 @@ ${entriesText}
     const leaderboardData = await this.statsService.getLeaderboardByWinstreak();
 
     const entriesText = leaderboardData.entries
-      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | винстрик - ${entry.value}</b></blockquote>`)
+      .map(
+        (entry) =>
+          `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | винстрик - ${entry.value}</b></blockquote>`,
+      )
       .join('\n');
 
     const text = `<b>🏆 ${leaderboardData.title}</b>
@@ -2264,10 +2270,14 @@ ${entriesText}
   }
 
   async leaderboardLoosestrick(ctx: any) {
-    const leaderboardData = await this.statsService.getLeaderboardByLosingStreak();
+    const leaderboardData =
+      await this.statsService.getLeaderboardByLosingStreak();
 
     const entriesText = leaderboardData.entries
-      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | лузстрик - ${entry.value}</b></blockquote>`)
+      .map(
+        (entry) =>
+          `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | лузстрик - ${entry.value}</b></blockquote>`,
+      )
       .join('\n');
 
     const text = `<b>🏆 ${leaderboardData.title}</b>
@@ -2304,7 +2314,10 @@ ${entriesText}
     const leaderboardData = await this.statsService.getLeaderboardByGames();
 
     const entriesText = leaderboardData.entries
-      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | игр - ${entry.value}</b></blockquote>`)
+      .map(
+        (entry) =>
+          `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | игр - ${entry.value}</b></blockquote>`,
+      )
       .join('\n');
 
     const text = `<b>🏆 ${leaderboardData.title}</b>
@@ -2341,7 +2354,10 @@ ${entriesText}
     const leaderboardData = await this.statsService.getLeaderboardByBets();
 
     const entriesText = leaderboardData.entries
-      .map(entry => `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | ставок на ${entry.value.toFixed(2)} RUB</b></blockquote>`)
+      .map(
+        (entry) =>
+          `<blockquote><b>${entry.medal} ${entry.rank}. - ${entry.username} | ставок на ${entry.value.toFixed(2)} RUB</b></blockquote>`,
+      )
       .join('\n');
 
     const text = `<b>🏆 ${leaderboardData.title}</b>
@@ -2972,6 +2988,7 @@ ${entriesText}
         requisite: fullRequisite,
         params: { paymentType: 'card' },
       });
+      console.log(withdrawal);
 
       await this.sendMessageToAdminForWithdraw(
         ctx,

@@ -1336,41 +1336,32 @@ export class BikBetService {
   async profile(ctx: any) {
     const telegramId = String(ctx.from.id);
     const user = await this.userRepository.findOne({ telegramId });
-    let balanceValue = 0;
-    let bonusValue = 0;
-    let currencyCode = 'N/A';
-    if (user) {
-      // Get main balance
-      const mainBalance = await this.balancesRepository.findOne(
-        { user, type: BalanceType.MAIN },
-        { populate: ['currency'] },
-      );
-      // Get bonus balance
-      const bonusBalance = await this.balancesRepository.findOne(
-        { user, type: BalanceType.BONUS },
-        { populate: ['currency'] },
-      );
 
-      if (mainBalance) {
-        balanceValue = mainBalance.balance ?? 0;
-        currencyCode = mainBalance.currency?.name ?? 'N/A';
-      }
-      if (bonusBalance) {
-        bonusValue = bonusBalance.balance ?? 0;
-      }
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
     }
+
+    // Get real user statistics
+    const userStats = await this.statsService.getUserStats(user.id!);
+
+    // Get bonus balance
+    const bonusBalance = await this.balancesRepository.findOne({
+      user,
+      type: BalanceType.BONUS,
+    });
 
     const text = `
 <blockquote><b>📊 Статистика</b></blockquote>
 <blockquote><b>🆔 ID:</b> <code>${telegramId}</code></blockquote>
-<blockquote><b>🎮 Игр сыграно:</b> <code>1</code>
-<b>🏆 Игр выиграно: 0</b></blockquote>
-<blockquote><b>🎯 Винрейт: 0.00%</b>
- <b>🔥 Винстрик: 0 игр</b>
- <b>💥 Поражений подряд: 0 игр</b></blockquote>
-<blockquote><b>💰 Всего поставлено: 0 RUB</b> 
-<b>💰 Реально поставлено: 0 RUB</b>
-<b>💵 Баланс: 0 RUB</b></blockquote>
+<blockquote><b>🎮 Игр сыграно:</b> <code>${userStats.gamesPlayed}</code>
+<b>🏆 Игр выиграно: ${userStats.gamesWon}</b></blockquote>
+<blockquote><b>🎯 Винрейт: ${userStats.winrate}%</b>
+ <b>🔥 Винстрик: ${userStats.winstreak} игр</b>
+ <b>💥 Поражений подряд: ${userStats.losingStreak} игр</b></blockquote>
+<blockquote><b>💰 Реально поставлено: ${userStats.actualBet.toFixed(2)} RUB</b>
+<b>💵 Баланс: ${userStats.balance.toFixed(2)} RUB</b>
+<b>🎁 Бонусный баланс: ${(bonusBalance?.balance || 0).toFixed(2)} RUB</b></blockquote>
 
 `;
 

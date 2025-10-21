@@ -22,6 +22,19 @@ export interface LeaderboardData {
     footer: string;
 }
 
+export interface UserStats {
+    userId: number;
+    username: string;
+    gamesPlayed: number;
+    gamesWon: number;
+    winrate: number;
+    winstreak: number;
+    losingStreak: number;
+    totalBet: number;
+    actualBet: number;
+    balance: number;
+}
+
 @Injectable()
 export class StatsService {
     constructor(
@@ -40,7 +53,7 @@ export class StatsService {
     async getMainStats(): Promise<MainStats> {
         const [totalPlayers, gamesPlayed, totalBets] = await Promise.all([
             this.userRepository.count(),
-            this.gameSessionRepository.count(),
+            this.getGamesPlayedCount(),
             this.getTotalBetsAmount(),
         ]);
 
@@ -49,6 +62,18 @@ export class StatsService {
             gamesPlayed,
             totalBets,
         };
+    }
+
+    /**
+     * Get count of games played (only with valid outcomes)
+     */
+    private async getGamesPlayedCount(): Promise<number> {
+        const result = await this.em.getConnection().execute(
+            'SELECT COUNT(*) as count FROM "gameSessions" WHERE outcome IN (?, ?, ?)',
+            ['win', 'lost', 'draw']
+        );
+
+        return parseInt(result[0]?.count || '0');
     }
 
     /**
@@ -112,35 +137,36 @@ export class StatsService {
      */
     async getLeaderboardByWinstreak(): Promise<LeaderboardData> {
         const query = `
-      WITH user_winstreaks AS (
-        SELECT 
-          u.id,
-          u.name,
-          gs.outcome,
-          ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY gs.created_at DESC) as rn,
-          ROW_NUMBER() OVER (PARTITION BY u.id, gs.outcome ORDER BY gs.created_at DESC) as outcome_rn
-        FROM "user" u
-        LEFT JOIN "gameSessions" gs ON u.id = gs.user_id
-        WHERE gs.outcome IS NOT NULL
-      ),
-      current_streaks AS (
-        SELECT 
-          id,
-          name,
-          outcome,
-          ROW_NUMBER() OVER (PARTITION BY id ORDER BY rn) as streak_length
-        FROM user_winstreaks
-        WHERE rn = outcome_rn AND outcome = 'win'
-      )
-      SELECT 
-        name as username,
-        MAX(streak_length) as winstreak
-      FROM current_streaks
-      GROUP BY id, name
-      HAVING MAX(streak_length) > 0
-      ORDER BY winstreak DESC
-      LIMIT 10
-    `;
+            WITH user_games AS (
+                SELECT 
+                    u.id,
+                    u.name,
+                    gs.outcome,
+                    gs.created_at,
+                    ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY gs.created_at) - 
+                    ROW_NUMBER() OVER (PARTITION BY u.id, gs.outcome ORDER BY gs.created_at) as streak_group
+                FROM "user" u
+                INNER JOIN "gameSessions" gs ON u.id = gs.user_id
+                WHERE gs.outcome IN ('win', 'lost')
+            ),
+            win_streaks AS (
+                SELECT 
+                    id,
+                    name,
+                    COUNT(*) as streak_length
+                FROM user_games
+                WHERE outcome = 'win'
+                GROUP BY id, name, streak_group
+            )
+            SELECT 
+                name as username,
+                MAX(streak_length) as winstreak
+            FROM win_streaks
+            GROUP BY id, name
+            HAVING MAX(streak_length) > 0
+            ORDER BY winstreak DESC
+            LIMIT 10
+        `;
 
         const results = await this.em.getConnection().execute(query);
 
@@ -151,10 +177,22 @@ export class StatsService {
             medal: this.getMedalForRank(index + 1),
         }));
 
+        // Add fallback entries if no results
+        if (entries.length === 0) {
+            for (let i = 1; i <= 10; i++) {
+                entries.push({
+                    rank: i,
+                    username: `Player ${i}`,
+                    value: 0,
+                    medal: this.getMedalForRank(i),
+                });
+            }
+        }
+
         return {
             title: 'Топ пользователей (по винстрику):',
             entries,
-            footer: 'Отсортировано по количеству побед подряд!',
+            footer: 'Отсортировано по максимальному винстрику!',
         };
     }
 
@@ -163,35 +201,36 @@ export class StatsService {
      */
     async getLeaderboardByLosingStreak(): Promise<LeaderboardData> {
         const query = `
-      WITH user_losing_streaks AS (
-        SELECT 
-          u.id,
-          u.name,
-          gs.outcome,
-          ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY gs.created_at DESC) as rn,
-          ROW_NUMBER() OVER (PARTITION BY u.id, gs.outcome ORDER BY gs.created_at DESC) as outcome_rn
-        FROM "user" u
-        LEFT JOIN "gameSessions" gs ON u.id = gs.user_id
-        WHERE gs.outcome IS NOT NULL
-      ),
-      current_streaks AS (
-        SELECT 
-          id,
-          name,
-          outcome,
-          ROW_NUMBER() OVER (PARTITION BY id ORDER BY rn) as streak_length
-        FROM user_losing_streaks
-        WHERE rn = outcome_rn AND outcome = 'lost'
-      )
-      SELECT 
-        name as username,
-        MAX(streak_length) as losing_streak
-      FROM current_streaks
-      GROUP BY id, name
-      HAVING MAX(streak_length) > 0
-      ORDER BY losing_streak DESC
-      LIMIT 10
-    `;
+            WITH user_games AS (
+                SELECT 
+                    u.id,
+                    u.name,
+                    gs.outcome,
+                    gs.created_at,
+                    ROW_NUMBER() OVER (PARTITION BY u.id ORDER BY gs.created_at) - 
+                    ROW_NUMBER() OVER (PARTITION BY u.id, gs.outcome ORDER BY gs.created_at) as streak_group
+                FROM "user" u
+                INNER JOIN "gameSessions" gs ON u.id = gs.user_id
+                WHERE gs.outcome IN ('win', 'lost')
+            ),
+            losing_streaks AS (
+                SELECT 
+                    id,
+                    name,
+                    COUNT(*) as streak_length
+                FROM user_games
+                WHERE outcome = 'lost'
+                GROUP BY id, name, streak_group
+            )
+            SELECT 
+                name as username,
+                MAX(streak_length) as losing_streak
+            FROM losing_streaks
+            GROUP BY id, name
+            HAVING MAX(streak_length) > 0
+            ORDER BY losing_streak DESC
+            LIMIT 10
+        `;
 
         const results = await this.em.getConnection().execute(query);
 
@@ -202,10 +241,22 @@ export class StatsService {
             medal: this.getMedalForRank(index + 1),
         }));
 
+        // Add fallback entries if no results
+        if (entries.length === 0) {
+            for (let i = 1; i <= 10; i++) {
+                entries.push({
+                    rank: i,
+                    username: `Player ${i}`,
+                    value: 0,
+                    medal: this.getMedalForRank(i),
+                });
+            }
+        }
+
         return {
             title: 'Топ пользователей (по лузстрику):',
             entries,
-            footer: 'Отсортировано по количеству поражений подряд!',
+            footer: 'Отсортировано по максимальному лузстрику!',
         };
     }
 
@@ -216,11 +267,11 @@ export class StatsService {
         const query = `
       SELECT 
         u.name as username,
-        COUNT(gs.id) as games_count
+        COUNT(CASE WHEN gs.outcome IN ('win', 'lost', 'draw') THEN 1 END) as games_count
       FROM "user" u
       LEFT JOIN "gameSessions" gs ON u.id = gs.user_id
       GROUP BY u.id, u.name
-      HAVING COUNT(gs.id) > 0
+      HAVING COUNT(CASE WHEN gs.outcome IN ('win', 'lost', 'draw') THEN 1 END) > 0
       ORDER BY games_count DESC
       LIMIT 10
     `;
@@ -233,6 +284,18 @@ export class StatsService {
             value: parseInt(row.games_count),
             medal: this.getMedalForRank(index + 1),
         }));
+
+        // Add fallback entries if no results
+        if (entries.length === 0) {
+            for (let i = 1; i <= 10; i++) {
+                entries.push({
+                    rank: i,
+                    username: `Player ${i}`,
+                    value: 0,
+                    medal: this.getMedalForRank(i),
+                });
+            }
+        }
 
         return {
             title: 'Топ пользователей (по кол-ву игр):',
@@ -282,6 +345,107 @@ export class StatsService {
             title: 'Топ пользователей (по сумме ставок):',
             entries,
             footer: 'Отсортировано по общей сумме ставок!',
+        };
+    }
+
+    /**
+     * Get user statistics
+     */
+    async getUserStats(userId: number): Promise<UserStats> {
+        // Get user info
+        const userQuery = `
+            SELECT id, name, telegram_id
+            FROM "user"
+            WHERE id = ?
+        `;
+        const userResult = await this.em.getConnection().execute(userQuery, [userId]);
+        const user = userResult[0];
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Get games played and won count
+        const gamesQuery = `
+            SELECT 
+                COUNT(CASE WHEN outcome IN ('win', 'lost', 'draw') THEN 1 END) as games_played,
+                COUNT(CASE WHEN outcome = 'win' THEN 1 END) as games_won
+            FROM "gameSessions"
+            WHERE user_id = ?
+        `;
+        const gamesResult = await this.em.getConnection().execute(gamesQuery, [userId]);
+        const gamesPlayed = parseInt(gamesResult[0]?.games_played) || 0;
+        const gamesWon = parseInt(gamesResult[0]?.games_won) || 0;
+        const winrate = gamesPlayed > 0 ? (gamesWon / gamesPlayed) * 100 : 0;
+
+        // Get bet amounts
+        const betsQuery = `
+            SELECT 
+                COALESCE(SUM(CASE WHEN gt.type = 'bet' THEN gt.amount ELSE 0 END), 0) as total_bet,
+                COALESCE(SUM(CASE WHEN gt.type = 'withdraw' THEN gt.amount ELSE 0 END), 0) as actual_bet
+            FROM "gameTransactions" gt
+            INNER JOIN "gameSessions" gs ON gt.session_id = gs.id
+            WHERE gs.user_id = ?
+        `;
+        const betsResult = await this.em.getConnection().execute(betsQuery, [userId]);
+
+        // Get main balance only (not bonus)
+        const balanceQuery = `
+            SELECT COALESCE(balance, 0) as balance
+            FROM "balances"
+            WHERE user_id = ? AND type = 'main'
+        `;
+        const balanceResult = await this.em.getConnection().execute(balanceQuery, [userId]);
+
+        // Get maximum winstreak and losing streak for this user
+        const streakQuery = `
+            WITH user_games AS (
+                SELECT 
+                    outcome,
+                    created_at,
+                    ROW_NUMBER() OVER (ORDER BY created_at) - 
+                    ROW_NUMBER() OVER (PARTITION BY outcome ORDER BY created_at) as streak_group
+                FROM "gameSessions"
+                WHERE user_id = ? AND outcome IN ('win', 'lost')
+            ),
+            streaks AS (
+                SELECT 
+                    outcome,
+                    COUNT(*) as streak_length
+                FROM user_games
+                GROUP BY outcome, streak_group
+            )
+            SELECT 
+                outcome,
+                MAX(streak_length) as max_streak
+            FROM streaks
+            GROUP BY outcome
+        `;
+
+        const streakResult = await this.em.getConnection().execute(streakQuery, [userId]);
+
+        let winstreak = 0;
+        let losingStreak = 0;
+
+        for (const row of streakResult) {
+            if (row.outcome === 'win') {
+                winstreak = parseInt(row.max_streak) || 0;
+            } else if (row.outcome === 'lost') {
+                losingStreak = parseInt(row.max_streak) || 0;
+            }
+        }
+
+        return {
+            userId: parseInt(user.id),
+            username: user.name || `User ${user.telegram_id}`,
+            gamesPlayed,
+            gamesWon,
+            winrate: Math.round(winrate * 100) / 100,
+            winstreak,
+            losingStreak,
+            totalBet: parseFloat(betsResult[0]?.total_bet) || 0,
+            actualBet: parseFloat(betsResult[0]?.actual_bet) || 0,
+            balance: parseFloat(balanceResult[0]?.balance) || 0,
         };
     }
 

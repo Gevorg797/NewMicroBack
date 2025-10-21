@@ -28,6 +28,11 @@ export class BikBetController {
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
     });
 
+    // /admin handler - Get user by telegram ID
+    this.bot.command('admin', async (ctx) => {
+      await this.bikbetService.handleAdminCommand(ctx);
+    });
+
     // Button click handler
     this.bot.action('check_subscription', async (ctx) => {
       // Don't answer here - let checkSubscription handle it based on subscription status
@@ -812,9 +817,16 @@ export class BikBetController {
       await this.bikbetService.myBonuses(ctx);
     });
 
-    // Handle text messages for custom deposit/withdraw amounts
+    // Handle text messages for custom deposit/withdraw amounts and admin commands
     this.bot.on('text', async (ctx) => {
       try {
+        // Check if admin is waiting for telegram ID input
+        const handledAdmin =
+          await this.bikbetService.handleAdminTelegramIdInput(ctx);
+        if (handledAdmin) {
+          return;
+        }
+
         // Check if user is waiting to enter a custom deposit amount
         const handledDeposit =
           await this.bikbetService.handleCustomDepositAmount(ctx);

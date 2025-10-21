@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository, EntityManager } from '@mikro-orm/core';
 import {
@@ -51,7 +56,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   >();
   // Use SelfCleaningMap to prevent memory leaks from unbounded growth
   private readonly currentPage = new SelfCleaningMap<number, number>(5000, 0.3);
-  private readonly lastMessageId = new SelfCleaningMap<number, number>(5000, 0.3);
+  private readonly lastMessageId = new SelfCleaningMap<number, number>(
+    5000,
+    0.3,
+  );
   private readonly ITEMS_PER_PAGE = 10;
   private readonly SECRET_KEY = 'h553k34n45mktkm55143a';
   private cleanupInterval: NodeJS.Timeout;
@@ -3463,14 +3471,20 @@ ${entriesText}
     this.logger.log('Initializing periodic memory cleanup');
 
     // Run cleanup every 15 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.performMemoryCleanup();
-    }, 15 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => {
+        this.performMemoryCleanup();
+      },
+      15 * 60 * 1000,
+    );
 
     // Run initial cleanup after 5 minutes
-    setTimeout(() => {
-      this.performMemoryCleanup();
-    }, 5 * 60 * 1000);
+    setTimeout(
+      () => {
+        this.performMemoryCleanup();
+      },
+      5 * 60 * 1000,
+    );
   }
 
   /**
@@ -3555,5 +3569,127 @@ ${entriesText}
     this.userStates.delete(userId);
     this.currentPage.delete(userId);
     this.lastMessageId.delete(userId);
+  }
+
+  /**
+   * Admin command handler - Get user info by telegram ID
+   */
+  async handleAdminCommand(ctx: any) {
+    try {
+      const adminUserId = ctx.from.id;
+
+      const adminIds = [123456789, 987654321]; // Add your admin telegram IDs
+      if (!adminIds.includes(adminUserId)) {
+        await ctx.reply('⛔ У вас нет доступа к админ-панели');
+        return;
+      }
+
+      await ctx.reply(
+        '🔑 <b>Админ-панель</b>\n\n' +
+          'Отправьте Telegram ID пользователя для получения информации.\n\n' +
+          '<i>Например: 838474735</i>',
+        { parse_mode: 'HTML' },
+      );
+    } catch (error) {
+      console.error('Admin command error:', error);
+      await ctx.reply('❌ Ошибка выполнения команды');
+    }
+  }
+
+  /**
+   * Handle admin telegram ID input
+   */
+  async handleAdminTelegramIdInput(ctx: any): Promise<boolean> {
+    const adminUserId = ctx.from.id;
+    const userState = this.userStates.get(adminUserId);
+
+    if (!userState || userState.state !== 'waiting_for_admin_telegram_id') {
+      return false;
+    }
+
+    const telegramId = ctx.message?.text?.trim();
+
+    if (!telegramId) {
+      return false;
+    }
+
+    // Validate telegram ID format
+    if (!/^\d+$/.test(telegramId)) {
+      await ctx.reply('⚠️ Неверный формат Telegram ID. Введите только цифры.');
+      return true;
+    }
+
+    try {
+      // Find user by telegram ID
+      const user = await this.userRepository.findOne(
+        { telegramId },
+        { populate: ['balances', 'balances.currency'] },
+      );
+
+      if (!user) {
+        await ctx.reply(
+          `❌ Пользователь с Telegram ID <code>${telegramId}</code> не найден в базе данных.`,
+          { parse_mode: 'HTML' },
+        );
+        this.clearUserState(adminUserId);
+        return true;
+      }
+
+      // Get user balances
+      const mainBalance = await this.balancesRepository.findOne(
+        { user, type: BalanceType.MAIN },
+        { populate: ['currency'] },
+      );
+
+      const bonusBalance = await this.balancesRepository.findOne(
+        { user, type: BalanceType.BONUS },
+        { populate: ['currency'] },
+      );
+
+      // Get user statistics
+      const userStats = await this.statsService.getUserStats(user.id!);
+
+      // Format user info
+      const text = `
+<b>👤 Информация о пользователе</b>
+
+<blockquote>
+<b>🆔 ID в системе:</b> <code>${user.id}</code>
+<b>📱 Telegram ID:</b> <code>${user.telegramId}</code>
+<b>👤 Имя:</b> ${user.name || 'Не указано'}
+<b>📧 Email:</b> ${user.email || 'Не указан'}
+</blockquote>
+
+<blockquote>
+<b>💰 Основной баланс:</b> ${mainBalance?.balance?.toFixed(2) || '0.00'} ${mainBalance?.currency?.name || 'RUB'}
+<b>🎁 Бонусный баланс:</b> ${bonusBalance?.balance?.toFixed(2) || '0.00'} ${bonusBalance?.currency?.name || 'RUB'}
+</blockquote>
+
+<blockquote>
+<b>🎮 Игр сыграно:</b> ${userStats.gamesPlayed}
+<b>🏆 Игр выиграно:</b> ${userStats.gamesWon}
+<b>🎯 Винрейт:</b> ${userStats.winrate}%
+<b>🔥 Винстрик:</b> ${userStats.winstreak} игр
+<b>💥 Лузстрик:</b> ${userStats.losingStreak} игр
+<b>💰 Всего поставлено:</b> ${userStats.actualBet.toFixed(2)} RUB
+</blockquote>
+
+<blockquote>
+<b>📅 Дата регистрации:</b> ${user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : 'Неизвестно'}
+<b>🔄 Последнее обновление:</b> ${user.updatedAt ? new Date(user.updatedAt).toLocaleString('ru-RU') : 'Неизвестно'}
+</blockquote>
+`;
+
+      await ctx.reply(text, { parse_mode: 'HTML' });
+
+      // Clear state
+      this.clearUserState(adminUserId);
+      return true;
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+      await ctx.reply('❌ Ошибка при получении информации о пользователе');
+      this.clearUserState(adminUserId);
+      return true;
+    }
   }
 }

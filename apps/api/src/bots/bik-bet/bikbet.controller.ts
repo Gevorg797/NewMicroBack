@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { BikBetService } from './bikbet.service';
 import { Telegraf } from 'telegraf';
@@ -9,6 +9,14 @@ export class BikBetController {
   private bot: Telegraf;
   constructor(private readonly bikbetService: BikBetService) {
     this.bot = new Telegraf(process.env.BOT_TOKEN as string);
+  }
+
+  /**
+   * Get memory statistics for monitoring
+   */
+  @Get('memory-stats')
+  getMemoryStats() {
+    return this.bikbetService.getMemoryStats();
   }
 
   onModuleInit() {

@@ -520,6 +520,7 @@ export class BikBetService {
   ): number | null {
     try {
       const userId = parseInt(callbackData.split('_').pop() || '0');
+
       if (!userId || ctx.from.id !== userId) {
         return null;
       }
@@ -731,7 +732,10 @@ export class BikBetService {
         page === 0 && i < 2 ? `🔥 ${pageGames[i].name}` : pageGames[i].name;
 
       row.push(
-        Markup.button.callback(gameTitle, `${pageGames[i].id}_${userId}`),
+        Markup.button.callback(
+          gameTitle,
+          `${pageGames[i].id}_${userId}_${operatorName}`,
+        ),
       );
 
       if (i + 1 < pageGames.length) {
@@ -742,7 +746,7 @@ export class BikBetService {
         row.push(
           Markup.button.callback(
             secondGameTitle,
-            `${pageGames[i + 1].id}_${userId}`,
+            `${pageGames[i + 1].id}_${userId}_${operatorName}`,
           ),
         );
       }
@@ -919,6 +923,7 @@ export class BikBetService {
 
     try {
       const userId = this.validateUserAndExtractId(ctx, callbackData);
+
       if (!userId) {
         await ctx.answerCbQuery('⚠ Это действие недоступно', {
           show_alert: true,
@@ -942,7 +947,6 @@ export class BikBetService {
       const operatorId = 40272;
       const currency = 'RUB';
       const language = 'RU';
-      console.log(providerName);
 
       const baseUrl = `https://dev.bik-bet.com/gamesbycode/gamecode`;
       const params = {
@@ -960,7 +964,6 @@ export class BikBetService {
         .map(([key, value]) => `${key}=${value}`)
         .join('&');
       const webAppUrl = `${baseUrl}?${queryString}`;
-      console.log(webAppUrl);
       const keyboard = Markup.inlineKeyboard([
         [Markup.button.webApp(`🎮 Играть в ${gameName}`, webAppUrl)],
         [
@@ -990,8 +993,6 @@ export class BikBetService {
       await ctx.editMessageMedia(media, {
         reply_markup: keyboard.reply_markup,
       });
-
-      console.log(`Game URL generated for user ${userId}: ${webAppUrl}`);
     } catch (error) {
       console.error(`Error in handleGameSelection for ${operatorName}:`, error);
     }
@@ -1625,8 +1626,6 @@ export class BikBetService {
     const userId = ctx.from.id;
     // Check if user is in the correct state
     const messageText = ctx.message?.text?.trim();
-    console.log(1111);
-
     if (!messageText) {
       return false;
     }
@@ -2688,7 +2687,6 @@ export class BikBetService {
       });
       return;
     }
-    console.log(method);
 
     // Get saved requisite from database
     let requisite: string | undefined;

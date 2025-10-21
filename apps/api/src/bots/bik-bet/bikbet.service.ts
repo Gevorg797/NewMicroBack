@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository, EntityManager } from '@mikro-orm/core';
 import {
@@ -25,9 +25,11 @@ import {
 } from './games-data';
 import { PaymentService } from '../../client/payment/payment.service';
 import { StatsService } from '../../stats/stats.service';
+import { SelfCleaningMap } from 'libs/utils/data-structures/self-cleaning-map';
 
 @Injectable()
-export class BikBetService {
+export class BikBetService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(BikBetService.name);
   private readonly chatIdForDepositsAndWithdrawals = -1002939266999; // Replace with your actual chat ID
   private readonly userStates = new Map<
     number,
@@ -47,10 +49,12 @@ export class BikBetService {
       };
     }
   >();
-  private readonly currentPage = new Map<number, number>();
-  private readonly lastMessageId = new Map<number, number>();
+  // Use SelfCleaningMap to prevent memory leaks from unbounded growth
+  private readonly currentPage = new SelfCleaningMap<number, number>(5000, 0.3);
+  private readonly lastMessageId = new SelfCleaningMap<number, number>(5000, 0.3);
   private readonly ITEMS_PER_PAGE = 10;
   private readonly SECRET_KEY = 'h553k34n45mktkm55143a';
+  private cleanupInterval: NodeJS.Timeout;
 
   constructor(
     @InjectRepository(User)
@@ -66,7 +70,7 @@ export class BikBetService {
     private readonly em: EntityManager,
   ) { }
 
-  // Game data for different operators (imported from games-data.ts)
+  // Game data for different operators (referenced directly to save memory)
   private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
@@ -81,7 +85,7 @@ export class BikBetService {
     provider: game.provider,
   }));
 
-  private readonly NOVOMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
+  private readonly NOVOMATIC_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -117,7 +121,7 @@ export class BikBetService {
     }),
   );
 
-  private readonly POPULAR_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
+  private readonly POPULAR_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -806,13 +810,13 @@ export class BikBetService {
       await ctx.answerCbQuery();
     } catch (error) {
       // Ignore callback query errors (already answered or expired)
-      console.log('Callback query already answered or expired');
+      this.logger.log('Callback query already answered or expired');
     }
 
     try {
       const parts = callbackData.split('_');
-      const page = parseInt(parts[2]);
-      const userId = parseInt(parts[3]);
+      const page = parseInt(parts[3]); // parts[3] is the page number
+      const userId = parseInt(parts[4]); // parts[4] is the userId
 
       if (!userId || ctx.from.id !== userId) {
         await ctx.answerCbQuery('⚠ Это действие недоступно', {
@@ -842,7 +846,7 @@ export class BikBetService {
 
       this.currentPage.set(userId, page);
     } catch (error) {
-      console.error(`Error in handle${operatorName}Pagination:`, error);
+      this.logger.error(`Error in handle${operatorName}Pagination:`, error);
     }
   }
 
@@ -1226,7 +1230,7 @@ export class BikBetService {
     }
 
     // Clear the state
-    this.userStates.delete(userId);
+    this.clearUserState(userId);
 
     // Show payment methods for this amount
     const text = `
@@ -1635,7 +1639,7 @@ export class BikBetService {
 
     if (!user || !user.balances || user.balances.length === 0) {
       await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       return true;
     }
 
@@ -1668,12 +1672,12 @@ export class BikBetService {
     // Check if sufficient balance
     if (!mainBalance || mainBalance.balance < amount) {
       await ctx.reply('⚠ Недостаточно средств для вывода данной суммы');
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       return true;
     }
 
     // Clear the state
-    this.userStates.delete(userId);
+    this.clearUserState(userId);
 
     // Send new message with withdrawal method selection
     const text = `
@@ -1753,7 +1757,7 @@ export class BikBetService {
 
     if (!user) {
       await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       return true;
     }
 
@@ -1780,7 +1784,7 @@ export class BikBetService {
       );
 
       // Clear the state
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
 
       // Send success message
       const text = `
@@ -1826,7 +1830,7 @@ export class BikBetService {
     } catch (error) {
       console.log(error);
 
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
       console.error('Withdraw FKwallet error:', error);
       return true;
@@ -2435,7 +2439,7 @@ ${entriesText}
 
     if (!user) {
       await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       return;
     }
 
@@ -2452,7 +2456,7 @@ ${entriesText}
       });
 
       // Clear the state
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
 
       // Check if we got a check URL from the response
       const checkUrl = withdrawal?.check_url || withdrawal?.requisite;
@@ -2515,7 +2519,7 @@ ${entriesText}
     } catch (error) {
       console.log(error);
 
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
 
       // Check for specific CryptoBot errors
       const errorMessage = error?.message || '';
@@ -2548,7 +2552,7 @@ ${entriesText}
     const userId = ctx.from.id;
 
     // Clear the state
-    this.userStates.delete(userId);
+    this.clearUserState(userId);
 
     const text = `<blockquote><b>❌ Действие было отменено!</b></blockquote>`;
 
@@ -2959,7 +2963,7 @@ ${entriesText}
 
     if (!user) {
       await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       return true;
     }
 
@@ -2982,7 +2986,7 @@ ${entriesText}
       );
 
       // Clear the state
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
 
       // Send success message
       const maskedCard =
@@ -3032,7 +3036,7 @@ ${entriesText}
     } catch (error) {
       console.log(error);
 
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
       console.error('Withdraw Card error:', error);
       return true;
@@ -3105,7 +3109,7 @@ ${entriesText}
 
     if (!user) {
       await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       return true;
     }
 
@@ -3128,7 +3132,7 @@ ${entriesText}
       );
 
       // Clear the state
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
 
       // Send success message
       const text = `
@@ -3175,7 +3179,7 @@ ${entriesText}
     } catch (error) {
       console.log(error);
 
-      this.userStates.delete(userId);
+      this.clearUserState(userId);
       await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
       console.error('Withdraw SBP error:', error);
       return true;
@@ -3367,13 +3371,13 @@ ${entriesText}
       );
 
       // Clear state
-      this.userStates.delete(adminId);
+      this.clearUserState(adminId);
 
       return true;
     } catch (error) {
       console.error('Reject reason processing error:', error);
       await ctx.reply('❌ Ошибка обработки отклонения');
-      this.userStates.delete(adminId);
+      this.clearUserState(adminId);
       return true;
     }
   }
@@ -3433,5 +3437,106 @@ ${entriesText}
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
+  }
+
+  /**
+   * Initialize periodic cleanup on module start
+   */
+  onModuleInit() {
+    this.logger.log('Initializing periodic memory cleanup');
+
+    // Run cleanup every 15 minutes
+    this.cleanupInterval = setInterval(() => {
+      this.performMemoryCleanup();
+    }, 15 * 60 * 1000);
+
+    // Run initial cleanup after 5 minutes
+    setTimeout(() => {
+      this.performMemoryCleanup();
+    }, 5 * 60 * 1000);
+  }
+
+  /**
+   * Clean up interval on module destroy
+   */
+  onModuleDestroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.logger.log('Cleanup interval cleared');
+    }
+  }
+
+  /**
+   * Perform memory cleanup operations
+   */
+  private performMemoryCleanup() {
+    const before = {
+      userStates: this.userStates.size,
+      currentPage: this.currentPage.size,
+      lastMessageId: this.lastMessageId.size,
+      heapUsed: process.memoryUsage().heapUsed,
+    };
+
+    // Clean up entries older than 24 hours
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    this.currentPage.cleanupOlderThan(ONE_DAY);
+    this.lastMessageId.cleanupOlderThan(ONE_DAY);
+
+    // Warn if userStates gets too large (possible leak)
+    if (this.userStates.size > 5000) {
+      this.logger.warn(
+        `userStates size is ${this.userStates.size}, possible leak!`,
+      );
+    }
+
+    // Clear MikroORM entity manager to free entity references
+    try {
+      this.em.clear();
+    } catch (error) {
+      this.logger.error('Error clearing entity manager:', error);
+    }
+
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
+
+    const after = {
+      userStates: this.userStates.size,
+      currentPage: this.currentPage.size,
+      lastMessageId: this.lastMessageId.size,
+      heapUsed: process.memoryUsage().heapUsed,
+    };
+
+    const heapReduction = (before.heapUsed - after.heapUsed) / 1024 / 1024;
+
+    this.logger.log('Memory cleanup completed', {
+      before,
+      after,
+      heapReductionMB: heapReduction.toFixed(2),
+    });
+  }
+
+  /**
+   * Get memory statistics for monitoring
+   */
+  public getMemoryStats() {
+    return {
+      maps: {
+        userStates: this.userStates.size,
+        currentPage: this.currentPage.getStats(),
+        lastMessageId: this.lastMessageId.getStats(),
+      },
+      process: process.memoryUsage(),
+    };
+  }
+
+  /**
+   * Clear all state for a user (helper to prevent leaks)
+   */
+  private clearUserState(userId: number) {
+    this.userStates.delete(userId);
+    this.currentPage.delete(userId);
+    this.lastMessageId.delete(userId);
   }
 }

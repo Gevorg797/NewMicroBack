@@ -44,6 +44,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       withdrawAmount?: number;
       withdrawMethod?: string;
       withdrawMethodId?: number;
+      targetUserId?: number;
       rejectionData?: {
         withdrawalId: number;
         method: string;
@@ -3572,27 +3573,249 @@ ${entriesText}
   }
 
   /**
-   * Admin command handler - Get user info by telegram ID
+   * Admin command handler - Show admin menu
    */
   async handleAdminCommand(ctx: any) {
     try {
-      const adminUserId = ctx.from.id;
-
-      const adminIds = [123456789, 987654321]; // Add your admin telegram IDs
-      if (!adminIds.includes(adminUserId)) {
-        await ctx.reply('⛔ У вас нет доступа к админ-панели');
-        return;
-      }
-
-      await ctx.reply(
-        '🔑 <b>Админ-панель</b>\n\n' +
-          'Отправьте Telegram ID пользователя для получения информации.\n\n' +
-          '<i>Например: 838474735</i>',
-        { parse_mode: 'HTML' },
-      );
+      await this.showAdminMenu(ctx);
     } catch (error) {
       console.error('Admin command error:', error);
       await ctx.reply('❌ Ошибка выполнения команды');
+    }
+  }
+
+  /**
+   * Show admin menu with statistics
+   */
+  async showAdminMenu(ctx: any) {
+    try {
+      const username = ctx.from.username || 'Отсутствует';
+      const totalBalance = await this.getTotalBalance();
+      const stats = await this.getGlobalStats();
+
+      const message =
+        '<blockquote><b>🔐 Админ-меню</b></blockquote>\n' +
+        `<blockquote><b>👤 Администратор: @${username}</b></blockquote>\n` +
+        `<blockquote><b>📊 Количество пользователей: ${stats.total_users}</b></blockquote>\n` +
+        `<blockquote><b>💰 Общий баланс пользователей: ${Math.round(totalBalance)} RUB</b></blockquote>\n`;
+
+      const keyboard = Markup.inlineKeyboard([
+        [
+          Markup.button.callback('📊 Статистика', 'adminStats'),
+          Markup.button.callback('💬 Рассылка', 'spam'),
+        ],
+        [
+          Markup.button.callback('👤 Найти пользователя', 'search_user'),
+          Markup.button.callback('🎟 Промокоды', 'promos'),
+        ],
+        [Markup.button.callback('🎁 Бонусы', 'adminBonuses')],
+      ]);
+
+      await ctx.reply(message, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    } catch (error) {
+      console.error('Error showing admin menu:', error);
+      await ctx.reply('❌ Ошибка загрузки админ-панели');
+    }
+  }
+
+  /**
+   * Get total balance of all users
+   */
+  async getTotalBalance(): Promise<number> {
+    try {
+      const result = await this.em
+        .getConnection()
+        .execute('SELECT SUM(balance) as total FROM balances WHERE type = ?', [
+          BalanceType.MAIN,
+        ]);
+      console.log(result);
+
+      return parseFloat(result[0]?.total || '0');
+    } catch (error) {
+      console.error('Error getting total balance:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get global statistics
+   */
+  async getGlobalStats(): Promise<{ total_users: number }> {
+    try {
+      const totalUsers = await this.userRepository.count();
+      return { total_users: totalUsers };
+    } catch (error) {
+      console.error('Error getting global stats:', error);
+      return { total_users: 0 };
+    }
+  }
+
+  /**
+   * Show admin bonuses menu
+   */
+  async showAdminBonuses(ctx: any) {
+    try {
+      const message =
+        '<blockquote>⚙️ Здесь вы можете управлять бонусами:</blockquote>';
+
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎡 Колесо Фортуны', 'changeFortuneWheel')],
+        [Markup.button.callback('🔙 Назад', 'admin')],
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    } catch (error) {
+      console.error('Error showing admin bonuses:', error);
+      await ctx.reply('❌ Ошибка загрузки меню бонусов');
+    }
+  }
+
+  /**
+   * Handle search user action
+   */
+  async handleSearchUser(ctx: any) {
+    try {
+      const adminUserId = ctx.from.id;
+
+      // Set user state to waiting for user ID input
+      this.userStates.set(adminUserId, {
+        state: 'waiting_for_admin_telegram_id',
+      });
+
+      await ctx.editMessageText('👤 Введите ID пользователя:', {
+        parse_mode: 'HTML',
+      });
+    } catch (error) {
+      console.error('Error handling search user:', error);
+      await ctx.reply('❌ Ошибка при поиске пользователя');
+    }
+  }
+
+  /**
+   * Handle edit balance action
+   */
+  async handleEditBalance(ctx: any, userId: number) {
+    try {
+      const adminUserId = ctx.from.id;
+
+      // Set user state to waiting for new balance input
+      this.userStates.set(adminUserId, {
+        state: 'waiting_for_new_balance',
+        targetUserId: userId,
+      });
+
+      await ctx.editMessageText('Введите новую сумму баланса:', {
+        parse_mode: 'HTML',
+      });
+    } catch (error) {
+      console.error('Error handling edit balance:', error);
+      await ctx.reply('❌ Ошибка при изменении баланса');
+    }
+  }
+
+  /**
+   * Handle new balance input
+   */
+  async handleNewBalanceInput(ctx: any): Promise<boolean> {
+    const adminUserId = ctx.from.id;
+    const userState = this.userStates.get(adminUserId);
+
+    if (!userState || userState.state !== 'waiting_for_new_balance') {
+      return false;
+    }
+
+    const newBalanceText = ctx.message?.text?.trim();
+    if (!newBalanceText) {
+      return false;
+    }
+
+    // Validate balance format
+    const newBalance = parseFloat(newBalanceText);
+    if (isNaN(newBalance) || newBalance < 0) {
+      await ctx.reply('❌ Некорректная сумма. Введите положительное число.');
+      return true;
+    }
+
+    try {
+      const targetUserId = userState.targetUserId!;
+
+      // Find the target user
+      const targetUser = await this.userRepository.findOne({
+        id: targetUserId,
+      });
+      if (!targetUser) {
+        await ctx.reply('❌ Пользователь не найден.');
+        this.clearUserState(adminUserId);
+        return true;
+      }
+
+      // Get user's main balance
+      const mainBalance = await this.balancesRepository.findOne({
+        user: targetUser,
+        type: BalanceType.MAIN,
+      });
+
+      if (!mainBalance) {
+        await ctx.reply('❌ Баланс пользователя не найден.');
+        this.clearUserState(adminUserId);
+        return true;
+      }
+
+      // Update the balance
+      mainBalance.balance = newBalance;
+      await this.em.persistAndFlush(mainBalance);
+
+      // Send confirmation to admin
+      await ctx.reply(
+        `✅ Баланс успешно обновлен до ${Math.round(newBalance)} RUB`,
+      );
+
+      // Send notification to the user (with error handling)
+      try {
+        // Send first message
+        await ctx.telegram.sendMessage(
+          targetUser.telegramId,
+          '🔄 Ваш баланс был изменен администратором',
+        );
+
+        // Send second message with balance and play button
+        await ctx.telegram.sendMessage(
+          targetUser.telegramId,
+          '💰 Новый баланс: ' + Math.round(newBalance) + ' RUB',
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '🎰 Играть!',
+                    callback_data: 'games',
+                  },
+                ],
+              ],
+            },
+          },
+        );
+      } catch (userNotificationError) {
+        // User might not have started a conversation with the bot
+        // User might not have started a conversation with the bot - this is normal
+        // console.log(`Could not notify user ${targetUser.telegramId}:`, userNotificationError.message);
+        // Continue execution - balance was still updated successfully
+      }
+
+      // Clear state
+      this.clearUserState(adminUserId);
+      return true;
+    } catch (error) {
+      console.error('Error updating balance:', error);
+      await ctx.reply('❌ Ошибка при обновлении баланса.');
+      this.clearUserState(adminUserId);
+      return true;
     }
   }
 
@@ -3649,38 +3872,36 @@ ${entriesText}
       // Get user statistics
       const userStats = await this.statsService.getUserStats(user.id!);
 
-      // Format user info
-      const text = `
-<b>👤 Информация о пользователе</b>
+      // Get user PnL (profit/loss) - for now using actualBet as placeholder
+      const userPnL = userStats.actualBet || 0;
 
-<blockquote>
-<b>🆔 ID в системе:</b> <code>${user.id}</code>
-<b>📱 Telegram ID:</b> <code>${user.telegramId}</code>
-<b>👤 Имя:</b> ${user.name || 'Не указано'}
-<b>📧 Email:</b> ${user.email || 'Не указан'}
-</blockquote>
+      // Format user info according to the specified format
+      const text =
+        '<blockquote><b>Информация о пользователе:</b></blockquote>\n' +
+        `<blockquote>ID: ${user.telegramId}</blockquote>\n` +
+        `<blockquote>Имя: ${user.name || 'Не указано'}</blockquote>\n` +
+        `<blockquote>Username: @${user.name || 'Отсутствует'}</blockquote>\n` +
+        `<blockquote>Баланс: ${Math.round(mainBalance?.balance || 0)} RUB</blockquote>\n` +
+        `<blockquote>Бонусный баланс: ${Math.round(bonusBalance?.balance || 0)} RUB</blockquote>\n\n` +
+        `<blockquote>Доход от юзера: ${Math.round(userPnL)} RUB</blockquote>\n` +
+        `<blockquote>(☝️ Учтите, что в доход не входят\n активные заявки на вывод или пополнение)</blockquote>\n`;
 
-<blockquote>
-<b>💰 Основной баланс:</b> ${mainBalance?.balance?.toFixed(2) || '0.00'} ${mainBalance?.currency?.name || 'RUB'}
-<b>🎁 Бонусный баланс:</b> ${bonusBalance?.balance?.toFixed(2) || '0.00'} ${bonusBalance?.currency?.name || 'RUB'}
-</blockquote>
+      const keyboard = Markup.inlineKeyboard([
+        [
+          Markup.button.callback(
+            '✏️ Изменить баланс',
+            `edit_balance_${user.id}`,
+          ),
+        ],
+        [Markup.button.callback('🎁 Дать бонус', `give_bonus_${user.id}`)],
+        [Markup.button.callback('🎡 Колесо ВЫКЛ', `toggle_wheel_${user.id}`)],
+        [Markup.button.callback('⬅️ Назад', 'admin')],
+      ]);
 
-<blockquote>
-<b>🎮 Игр сыграно:</b> ${userStats.gamesPlayed}
-<b>🏆 Игр выиграно:</b> ${userStats.gamesWon}
-<b>🎯 Винрейт:</b> ${userStats.winrate}%
-<b>🔥 Винстрик:</b> ${userStats.winstreak} игр
-<b>💥 Лузстрик:</b> ${userStats.losingStreak} игр
-<b>💰 Всего поставлено:</b> ${userStats.actualBet.toFixed(2)} RUB
-</blockquote>
-
-<blockquote>
-<b>📅 Дата регистрации:</b> ${user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : 'Неизвестно'}
-<b>🔄 Последнее обновление:</b> ${user.updatedAt ? new Date(user.updatedAt).toLocaleString('ru-RU') : 'Неизвестно'}
-</blockquote>
-`;
-
-      await ctx.reply(text, { parse_mode: 'HTML' });
+      await ctx.reply(text, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
 
       // Clear state
       this.clearUserState(adminUserId);

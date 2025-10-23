@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { BikBetService } from './bikbet.service';
 import { Telegraf } from 'telegraf';
+import { checkIsTelegramAdmin } from 'libs/utils/decorator/telegram-admin.decorator';
 
 @ApiTags('clients')
 @Controller('clients')
@@ -28,9 +29,79 @@ export class BikBetController {
       await this.bikbetService.checkSubscription(ctx, channelId, channelLink);
     });
 
-    // /admin handler - Get user by telegram ID
+    // /admin handler - Show admin menu
     this.bot.command('admin', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
       await this.bikbetService.handleAdminCommand(ctx);
+    });
+
+    // Admin menu button handlers
+    this.bot.action('adminStats', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await ctx.reply('📊 <b>Статистика</b>\n\nФункция в разработке...', {
+        parse_mode: 'HTML',
+      });
+    });
+
+    this.bot.action('spam', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await ctx.reply('💬 <b>Рассылка</b>\n\nФункция в разработке...', {
+        parse_mode: 'HTML',
+      });
+    });
+
+    this.bot.action('search_user', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.handleSearchUser(ctx);
+    });
+
+    this.bot.action('promos', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await ctx.reply('🎟 <b>Промокоды</b>\n\nФункция в разработке...', {
+        parse_mode: 'HTML',
+      });
+    });
+
+    this.bot.action('adminBonuses', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.showAdminBonuses(ctx);
+    });
+
+    // Edit balance handler
+    this.bot.action(/edit_balance_(\d+)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const userId = parseInt(ctx.match[1]);
+      await this.bikbetService.handleEditBalance(ctx, userId);
+    });
+
+    this.bot.action('users_dumps', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await ctx.reply('🔍 <b>Дамп юзеров</b>\n\nФункция в разработке...', {
+        parse_mode: 'HTML',
+      });
     });
 
     // Button click handler
@@ -824,6 +895,13 @@ export class BikBetController {
         const handledAdmin =
           await this.bikbetService.handleAdminTelegramIdInput(ctx);
         if (handledAdmin) {
+          return;
+        }
+
+        // Check if admin is waiting for new balance input
+        const handledBalance =
+          await this.bikbetService.handleNewBalanceInput(ctx);
+        if (handledBalance) {
           return;
         }
 

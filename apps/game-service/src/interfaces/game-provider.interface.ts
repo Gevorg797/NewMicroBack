@@ -21,8 +21,8 @@ export interface ProviderPayload {
 export interface CloseSessionPayload {
     userId: number;
     siteId?: number; // Optional: determined from user's active session
+    params?: any
 }
-
 export interface LoadGamesPayload {
     siteId: number;
     providerName: string;
@@ -58,7 +58,7 @@ export interface IGameProvider {
     initGameSession(payload: ProviderPayload): Promise<any>;
     initGameDemoSession(payload: ProviderPayload): Promise<any>;
     gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any>;
-    closeSession(payload: ProviderPayload): Promise<any>;
+    closeSession(payload: CloseSessionPayload): Promise<any>;
 }
 
 /**

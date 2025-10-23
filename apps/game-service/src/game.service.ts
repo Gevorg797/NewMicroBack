@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ProviderStrategyFactory } from './strategies/provider-strategy.factory';
-import { SessionPayload, ProviderPayload, LoadGamesPayload } from './interfaces/game-provider.interface';
+import { SessionPayload, ProviderPayload, LoadGamesPayload, CloseSessionPayload } from './interfaces/game-provider.interface';
+import { SessionManagerService } from './repository/session-manager.service';
 
 /**
  * Main Game Service that routes requests to appropriate providers based on gameId
@@ -27,6 +28,7 @@ export class GameService {
 
     constructor(
         private readonly providerStrategyFactory: ProviderStrategyFactory,
+        private readonly sessionManager: SessionManagerService,
     ) {
         this.logger.log('GameService initialized with strategy pattern');
     }
@@ -82,9 +84,107 @@ export class GameService {
     }
 
     /**
+     * Closes an existing session using all information from the session object
+     */
+    private async closeExistingSession(existingSession: any): Promise<void> {
+        this.logger.debug(`Closing existing session ${existingSession.id}`);
+
+        try {
+            // Extract information from the existing session
+            const userId = existingSession.user?.id;
+            const siteId = existingSession.user?.site?.id;
+            const providerName = existingSession.game?.subProvider?.provider?.name?.toLowerCase();
+            const sessionUuid = existingSession.uuid;
+            const currency = existingSession.balance?.currency?.name || 'USD';
+
+            // Validate required fields
+            if (!providerName) {
+                throw new Error(`Cannot determine provider name from session ${existingSession.id}`);
+            }
+
+            if (!userId) {
+                throw new Error(`Cannot determine user ID from session ${existingSession.id}`);
+            }
+
+            // Create CloseSessionPayload
+            const closeSessionPayload: CloseSessionPayload = {
+                userId: userId,
+                siteId: siteId,
+                params: {
+                    gameToken: sessionUuid,
+                    currency: currency
+                }
+            };
+
+            // Close the session using the existing interface
+            await this.closeSessionWithPayload(closeSessionPayload, providerName);
+
+            this.logger.debug(`Successfully closed session ${existingSession.id} for user ${userId} with provider ${providerName}`);
+        } catch (error) {
+            this.logger.error(`Failed to close session ${existingSession.id}: ${error.message}`);
+            // Still close in database even if provider call fails
+            await this.sessionManager.closeSession(existingSession.id.toString());
+            throw error;
+        }
+    }
+
+    /**
+     * Closes a session using CloseSessionPayload interface
+     */
+    private async closeSessionWithPayload(
+        closeSessionPayload: CloseSessionPayload,
+        providerName: string
+    ): Promise<void> {
+        this.logger.debug(`Closing session for user ${closeSessionPayload.userId} with provider ${providerName}`);
+
+        // Get the provider strategy
+        const provider = this.providerStrategyFactory.getProviderStrategy(providerName);
+
+        // Close session with the provider using the CloseSessionPayload directly
+        await provider.closeSession(closeSessionPayload);
+    }
+
+    /**
      * Routes session creation requests to the appropriate provider
+     * Checks for existing alive sessions before creating new ones
      */
     async initGameSession(payload: SessionPayload): Promise<any> {
+        this.logger.debug(`Checking for existing sessions for user: ${payload.userId}, game: ${payload.gameId}`);
+
+        // Check for existing alive sessions for this user
+        const existingSessions = await this.sessionManager.getActiveSessions(payload.userId);
+
+        if (existingSessions && existingSessions.length > 0) {
+            this.logger.log(`Found ${existingSessions.length} active session(s) for user ${payload.userId}`);
+
+            // Check if user has an alive session for the same game
+            const sameGameSession = existingSessions.find(session =>
+                session.game && session.game.id === payload.gameId
+            );
+
+            if (sameGameSession) {
+                this.logger.log(`User ${payload.userId} already has an active session for game ${payload.gameId}, returning existing launch URL`);
+                return {
+                    launchUrl: sameGameSession.launchURL,
+                    sessionId: sameGameSession.id?.toString(),
+                    gameUuid: sameGameSession.game.uuid,
+                    currency: sameGameSession.balance?.currency?.name || 'USD',
+                    isExistingSession: true
+                };
+            }
+
+            // User has alive sessions but for different games - close the existing session
+            this.logger.log(`User ${payload.userId} has active session for different game, closing it first`);
+
+            // Close the existing session with all information from the session
+            const existingSession = existingSessions[0];
+            if (existingSession.game.id !== payload.gameId) {
+                await this.closeExistingSession(existingSession);
+                this.logger.log(`Closed existing session ${existingSession.id} for user ${payload.userId}`);
+            }
+        }
+
+        // Proceed with normal session creation
         return this.executeProviderOperation(
             payload,
             'initGameSession',

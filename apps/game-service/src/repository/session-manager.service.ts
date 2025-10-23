@@ -292,7 +292,7 @@ export class SessionManagerService {
                 user: { id: userId },
                 isAlive: true,
             },
-            { populate: ['balance', 'user.site'] }
+            { populate: ['balance', 'user.site', 'game.subProvider.provider.id'] }
         );
     }
 

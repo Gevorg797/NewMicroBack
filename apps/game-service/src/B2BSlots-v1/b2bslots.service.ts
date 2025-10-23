@@ -3,7 +3,7 @@ import { B2BSlotsProviderSettingsService } from './provider-settings.service';
 import { B2BSlotsApiService } from './b2bslots.api.service';
 import { B2BSlotsUtilsService } from './b2bslots.utils.service';
 import { SessionManagerService } from '../repository/session-manager.service';
-import { IGameProvider, ProviderPayload, GameLoadResult } from '../interfaces/game-provider.interface';
+import { IGameProvider, ProviderPayload, GameLoadResult, CloseSessionPayload } from '../interfaces/game-provider.interface';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
 import { Game, GameProvider, GameSubProvider } from '@lib/database';
@@ -174,6 +174,7 @@ export class B2BSlotsService implements IGameProvider {
 
     const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
 
+
     // Create database session first - generates our session ID
     const sessionResult = await this.sessionManager.createRealSession({
       userId: payload.userId,
@@ -253,7 +254,7 @@ export class B2BSlotsService implements IGameProvider {
     };
   }
 
-  async closeSession(payload: ProviderPayload): Promise<any> {
+  async closeSession(payload: CloseSessionPayload): Promise<any> {
     this.logger.debug(`Closing session for user: ${payload.userId}`);
 
     const { userId } = payload;
@@ -287,14 +288,14 @@ export class B2BSlotsService implements IGameProvider {
 
 
 
-    const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
+    const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId || 0);
 
     // Transform Superomatic-style payload to B2BSlots format
     const b2bPayload = {
       user_id: payload.userId.toString(),
-      user_ip: payload.params.userIp || '127.0.0.1',
-      user_game_token: payload.params.gameToken || payload.params.userGameToken,
-      currency: payload.params.currency || 'USD'
+      user_ip: payload.params?.userIp || '127.0.0.1',
+      user_game_token: payload.params?.gameToken || payload.params?.userGameToken,
+      currency: payload.params?.currency || 'USD'
     };
 
     const sign = this.utils.sign(b2bPayload, key);

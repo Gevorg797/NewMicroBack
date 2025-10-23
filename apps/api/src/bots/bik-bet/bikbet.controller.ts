@@ -104,6 +104,13 @@ export class BikBetController {
       await this.bikbetService.handleGiveBonus(ctx, userId);
     });
 
+    // Bonus click handler
+    this.bot.action(/bonus_(\d+)/, async (ctx) => {
+      await ctx.answerCbQuery();
+      const bonusId = parseInt(ctx.match[1]);
+      await this.bikbetService.handleBonusClick(ctx, bonusId);
+    });
+
     this.bot.action('users_dumps', async (ctx) => {
       const isAdmin = await checkIsTelegramAdmin(ctx);
       if (!isAdmin) return;

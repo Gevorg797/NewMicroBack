@@ -30,6 +30,7 @@ import { SiteSettings } from './site-settings.entity';
 import { Balances, BalanceType } from './balances.entity';
 import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 import { Bonuses, BonusStatus } from './bonuses.entity';
+import { BalancesHistory } from './balances-history.entity';
 
 // Export everything for convenient imports
 // export * from './balances.entity';
@@ -56,6 +57,7 @@ export const ENTITIES = [
   Balances,
   PaymentPayoutRequisite,
   Bonuses,
+  BalancesHistory,
 ];
 
 export {
@@ -89,4 +91,5 @@ export {
   PaymentPayoutRequisite,
   Bonuses,
   BonusStatus,
+  BalancesHistory,
 };

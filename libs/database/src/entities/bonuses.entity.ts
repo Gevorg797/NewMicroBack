@@ -4,7 +4,6 @@ import { User } from './user.entity';
 
 export enum BonusStatus {
   CREATED = 'Created',
-  FAILED = 'Failed',
   ISACTIVE = 'isActive',
   FINISHED = 'finished',
 }

@@ -15,6 +15,7 @@ import {
   GameSubProvider,
   PaymentPayoutRequisite,
   Bonuses,
+  BalancesHistory,
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
 import { StatsModule } from '../../stats/stats.module';
@@ -36,6 +37,7 @@ import { StatsModule } from '../../stats/stats.module';
       Game,
       PaymentPayoutRequisite,
       Bonuses,
+      BalancesHistory,
     ]),
     PaymentModule,
     StatsModule,

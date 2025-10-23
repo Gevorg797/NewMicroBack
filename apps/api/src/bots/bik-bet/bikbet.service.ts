@@ -16,6 +16,7 @@ import {
   PaymentPayoutRequisite,
   Bonuses,
   BonusStatus,
+  BalancesHistory,
 } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
@@ -78,6 +79,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly paymentPayoutRequisiteRepository: EntityRepository<PaymentPayoutRequisite>,
     @InjectRepository(Bonuses)
     private readonly bonusesRepository: EntityRepository<Bonuses>,
+    @InjectRepository(BalancesHistory)
+    private readonly balancesHistoryRepository: EntityRepository<BalancesHistory>,
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly em: EntityManager,
@@ -2030,32 +2033,180 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async myBonuses(ctx: any) {
-    const text = `
-<blockquote><b>🎁 Мои бонусы</b></blockquote>
-<blockquote><b>🟢 - Активный</b>
-<b>🟠 - Не использован
-</b>
-<b>🔴 - Использован
-</b></blockquote>
-<blockquote><b>Показаны последние 10 бонусов
-</b></blockquote>
-<blockquote><b>📍 Чтобы перейти к бонусу, нажмите на кнопку
-</b></blockquote>
-`;
+    try {
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
 
-    const filePath = this.getImagePath('bik_bet_6.jpg');
-    const media: any = {
-      type: 'photo',
-      media: { source: fs.readFileSync(filePath) },
-      caption: text,
-      parse_mode: 'HTML',
-    };
+      if (!user) {
+        await ctx.reply('❌ Пользователь не найден');
+        return;
+      }
 
-    await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('⬅️ Назад', 'profile')],
-      ]).reply_markup,
-    });
+      // Get user's bonuses (last 10, ordered by creation date)
+      const bonuses = await this.bonusesRepository.find(
+        { user },
+        {
+          orderBy: { createdAt: 'DESC' },
+          limit: 10,
+        },
+      );
+
+      let text = `<blockquote><b>🎁 Мои бонусы</b></blockquote>\n`;
+
+      text += `<blockquote><b>🟢 - Активный</b>\n`;
+      text += `<b>🟠 - Не использован</b>\n`;
+      text += `<b>🔴 - Использован</b></blockquote>\n\n`;
+
+      text += `<blockquote><b>Показаны последние 10 бонусов</b></blockquote>\n`;
+      text += `<blockquote><b>📍 Чтобы перейти к бонусу, нажмите на кнопку</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_6.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      // Create keyboard with bonus buttons and back button
+      const keyboardButtons: any[] = [];
+
+      if (bonuses.length > 0) {
+        // Add bonus buttons
+        bonuses.forEach((bonus) => {
+          const statusEmoji = this.getBonusStatusEmoji(bonus.status);
+          const amount = Math.round(parseFloat(bonus.amount));
+          const date =
+            bonus.createdAt?.toLocaleDateString('ru-RU') || 'Неизвестно';
+
+          const buttonText = `${statusEmoji} ${amount} RUB (${date})`;
+          const callbackData = `bonus_${bonus.id}`;
+
+          keyboardButtons.push([
+            Markup.button.callback(buttonText, callbackData),
+          ]);
+        });
+      }
+
+      // Add back button
+      keyboardButtons.push([Markup.button.callback('⬅️ Назад', 'profile')]);
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard(keyboardButtons).reply_markup,
+      });
+    } catch (error) {
+      console.error('Error fetching user bonuses:', error);
+      await ctx.reply('❌ Ошибка при получении бонусов');
+    }
+  }
+
+  /**
+   * Handle bonus button click
+   */
+  async handleBonusClick(ctx: any, bonusId: number) {
+    try {
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.reply('❌ Пользователь не найден');
+        return;
+      }
+
+      // Find the bonus
+      const bonus = await this.bonusesRepository.findOne({
+        id: bonusId,
+        user: user,
+      });
+
+      if (!bonus) {
+        await ctx.reply('❌ Бонус не найден');
+        return;
+      }
+
+      // Check if bonus status is CREATED and change it to ISACTIVE
+      if (bonus.status === BonusStatus.CREATED) {
+        // Update bonus status to ISACTIVE
+        bonus.status = BonusStatus.ISACTIVE;
+        await this.em.persistAndFlush(bonus);
+
+        // Add bonus to user's bonus balance
+        const bonusBalance = await this.balancesRepository.findOne({
+          user: user,
+          type: BalanceType.BONUS,
+        });
+
+        if (bonusBalance) {
+          const bonusAmount = parseFloat(bonus.amount);
+          const startedAmount = bonusBalance.balance || 0;
+          const finishedAmount = startedAmount + bonusAmount;
+
+          // Update bonus balance
+          bonusBalance.balance = finishedAmount;
+          await this.em.persistAndFlush(bonusBalance);
+
+          // Create balance history record
+          const balanceHistory = this.balancesHistoryRepository.create({
+            balance: bonusBalance,
+            balanceBefore: startedAmount.toString(),
+            amount: bonusAmount.toString(),
+            balanceAfter: finishedAmount.toString(),
+            description: `Bonus activation: ${Math.round(bonusAmount)} RUB`,
+          });
+          await this.em.persistAndFlush(balanceHistory);
+
+          await ctx.reply(
+            `✅ Бонус ${Math.round(bonusAmount)} RUB успешно активирован и добавлен на ваш бонусный баланс!`,
+          );
+        } else {
+          await ctx.reply('❌ Ошибка: бонусный баланс не найден');
+        }
+      } else if (bonus.status === BonusStatus.ISACTIVE) {
+        await ctx.reply(
+          'ℹ️ Этот бонус уже активен и доступен для использования',
+        );
+      } else if (bonus.status === BonusStatus.FINISHED) {
+        await ctx.reply('ℹ️ Этот бонус уже завершен');
+      }
+
+      // Refresh the bonuses list
+      await this.myBonuses(ctx);
+    } catch (error) {
+      console.error('Error handling bonus click:', error);
+      await ctx.reply('❌ Ошибка при обработке бонуса');
+    }
+  }
+
+  /**
+   * Get emoji for bonus status
+   */
+  private getBonusStatusEmoji(status: string): string {
+    switch (status) {
+      case BonusStatus.CREATED:
+        return '🟠'; // Не использован
+      case BonusStatus.ISACTIVE:
+        return '🟢'; // Активный
+      case BonusStatus.FINISHED:
+        return '🔴'; // Использован
+      default:
+        return '🟠';
+    }
+  }
+
+  /**
+   * Get text for bonus status
+   */
+  private getBonusStatusText(status: string): string {
+    switch (status) {
+      case BonusStatus.CREATED:
+        return 'Не использован';
+      case BonusStatus.ISACTIVE:
+        return 'Активный';
+      case BonusStatus.FINISHED:
+        return 'Использован';
+      default:
+        return 'Неизвестно';
+    }
   }
 
   async info(ctx: any, channelLink: string) {
@@ -3911,7 +4062,7 @@ ${entriesText}
                 [
                   {
                     text: '🎰 Играть!',
-                    callback_data: 'games',
+                    callback_data: 'myBonuses',
                   },
                 ],
               ],

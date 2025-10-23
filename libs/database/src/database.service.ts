@@ -6,7 +6,7 @@ import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 export class DatabaseSyncService implements OnModuleInit {
   private readonly logger = new LocalTimeLogger('DatabaseBootstrap');
 
-  constructor(private readonly orm: MikroORM) { }
+  constructor(private readonly orm: MikroORM) {}
 
   async onModuleInit() {
     // if (process.env.NODE_ENV === 'dev') {

@@ -390,44 +390,72 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async game(ctx: any) {
-    const text = `
+    try {
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.reply('❌ Пользователь не найден');
+        return;
+      }
+
+      // Get user's main balance
+      const mainBalance = await this.balancesRepository.findOne({
+        user: user,
+        type: BalanceType.MAIN,
+      });
+
+      // Get user's bonus balance
+      const bonusBalance = await this.balancesRepository.findOne({
+        user: user,
+        type: BalanceType.BONUS,
+      });
+
+      const mainBalanceAmount = Math.round(mainBalance?.balance || 0);
+      const bonusBalanceAmount = Math.round(bonusBalance?.balance || 0);
+
+      const text = `
 <blockquote><b>🎮 Выберите игру:</b></blockquote>
-<blockquote><b>💰 Ваш баланс:</b> <code>100</code></blockquote>
-<blockquote><b>🎁 Ваш бонусный баланс: 800</b></blockquote>
+<blockquote><b>💰 Ваш баланс:</b> <code>${mainBalanceAmount}</code></blockquote>
+<blockquote><b>🎁 Ваш бонусный баланс: ${bonusBalanceAmount}</b></blockquote>
 `;
 
-    const filePath = this.getImagePath('bik_bet_1.jpg');
-    const media: any = {
-      type: 'photo',
-      media: { source: fs.readFileSync(filePath) },
-      caption: text,
-      parse_mode: 'HTML',
-    };
+      const filePath = this.getImagePath('bik_bet_1.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
 
-    await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('Базовые игры', 'ignore_all')],
-        [
-          Markup.button.callback('🎲 Дайсы', 'ignore_all'),
-          Markup.button.callback('⚽️ Футбол', 'ignore_all'),
-          Markup.button.callback('🎯 Дартс', 'ignore_all'),
-        ],
-        [
-          Markup.button.callback('🎳 Боулинг', 'ignore_all'),
-          Markup.button.callback('🍭 Слот', 'ignore_all'),
-          Markup.button.callback('🏀 Баскетбол', 'ignore_all'),
-        ],
-        [Markup.button.callback('Настоящие игры', 'ignore_all')],
-        [Markup.button.callback('🎰 Слоты', 'slots')],
-        [Markup.button.callback('Мультиплеер', 'ignore_all')],
-        [
-          Markup.button.callback('⚔️ PVP', 'ignore_all'),
-          Markup.button.callback('💰 Аукцион', 'ignore_all'),
-        ],
-        [Markup.button.callback('💸 Пополнить баланс', 'donate')],
-        [Markup.button.callback('⬅️ Назад', 'start')],
-      ]).reply_markup,
-    });
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('Базовые игры', 'ignore_all')],
+          [
+            Markup.button.callback('🎲 Дайсы', 'ignore_all'),
+            Markup.button.callback('⚽️ Футбол', 'ignore_all'),
+            Markup.button.callback('🎯 Дартс', 'ignore_all'),
+          ],
+          [
+            Markup.button.callback('🎳 Боулинг', 'ignore_all'),
+            Markup.button.callback('🍭 Слот', 'ignore_all'),
+            Markup.button.callback('🏀 Баскетбол', 'ignore_all'),
+          ],
+          [Markup.button.callback('Настоящие игры', 'ignore_all')],
+          [Markup.button.callback('🎰 Слоты', 'slots')],
+          [Markup.button.callback('Мультиплеер', 'ignore_all')],
+          [
+            Markup.button.callback('⚔️ PVP', 'ignore_all'),
+            Markup.button.callback('💰 Аукцион', 'ignore_all'),
+          ],
+          [Markup.button.callback('💸 Пополнить баланс', 'donate')],
+          [Markup.button.callback('⬅️ Назад', 'start')],
+        ]).reply_markup,
+      });
+    } catch (error) {
+      console.error('Error in game function:', error);
+      await ctx.reply('❌ Ошибка при загрузке игр');
+    }
   }
 
   async start(ctx: any, link: string) {
@@ -3786,7 +3814,6 @@ ${entriesText}
         .execute('SELECT SUM(balance) as total FROM balances WHERE type = ?', [
           BalanceType.MAIN,
         ]);
-      console.log(result);
 
       return parseFloat(result[0]?.total || '0');
     } catch (error) {
@@ -3944,9 +3971,24 @@ ${entriesText}
         return true;
       }
 
+      // Record balance history before updating
+      const startedAmount = mainBalance.balance || 0;
+      const addedAmount = newBalance - startedAmount;
+      const finishedAmount = newBalance;
+
       // Update the balance
       mainBalance.balance = newBalance;
       await this.em.persistAndFlush(mainBalance);
+
+      // Create balance history record
+      const balanceHistory = this.balancesHistoryRepository.create({
+        balance: mainBalance,
+        balanceBefore: startedAmount.toString(),
+        amount: addedAmount.toString(),
+        balanceAfter: finishedAmount.toString(),
+        description: `Admin balance update: ${Math.round(addedAmount)} RUB (Admin: ${adminUserId})`,
+      });
+      await this.em.persistAndFlush(balanceHistory);
 
       // Send confirmation to admin
       await ctx.reply(

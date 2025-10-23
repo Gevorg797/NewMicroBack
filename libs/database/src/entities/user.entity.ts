@@ -14,6 +14,7 @@ import { Balances } from './balances.entity';
 import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { GameSession } from './game-sassion.entity';
 import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
+import { Bonuses } from './bonuses.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -49,4 +50,7 @@ export class User extends BaseEntity {
 
   @OneToOne(() => PaymentPayoutRequisite, (ppr) => ppr.user, { nullable: true })
   paymentPayoutRequisite?: PaymentPayoutRequisite;
+
+  @OneToMany(() => Bonuses, (b) => b.user)
+  bonuses = new Collection<Bonuses>(this);
 }

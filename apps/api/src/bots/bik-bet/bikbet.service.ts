@@ -14,6 +14,8 @@ import {
   Site,
   BalanceType,
   PaymentPayoutRequisite,
+  Bonuses,
+  BonusStatus,
 } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
@@ -74,6 +76,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly balancesRepository: EntityRepository<Balances>,
     @InjectRepository(PaymentPayoutRequisite)
     private readonly paymentPayoutRequisiteRepository: EntityRepository<PaymentPayoutRequisite>,
+    @InjectRepository(Bonuses)
+    private readonly bonusesRepository: EntityRepository<Bonuses>,
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly em: EntityManager,
@@ -3720,6 +3724,28 @@ ${entriesText}
   }
 
   /**
+   * Handle give bonus action
+   */
+  async handleGiveBonus(ctx: any, userId: number) {
+    try {
+      const adminUserId = ctx.from.id;
+
+      // Set user state to waiting for bonus amount input
+      this.userStates.set(adminUserId, {
+        state: 'waiting_for_bonus_amount',
+        targetUserId: userId,
+      });
+
+      await ctx.editMessageText('Введите сумму бонуса:', {
+        parse_mode: 'HTML',
+      });
+    } catch (error) {
+      console.error('Error handling give bonus:', error);
+      await ctx.reply('❌ Ошибка при выдаче бонуса');
+    }
+  }
+
+  /**
    * Handle new balance input
    */
   async handleNewBalanceInput(ctx: any): Promise<boolean> {
@@ -3814,6 +3840,98 @@ ${entriesText}
     } catch (error) {
       console.error('Error updating balance:', error);
       await ctx.reply('❌ Ошибка при обновлении баланса.');
+      this.clearUserState(adminUserId);
+      return true;
+    }
+  }
+
+  /**
+   * Handle bonus amount input
+   */
+  async handleBonusAmountInput(ctx: any): Promise<boolean> {
+    const adminUserId = ctx.from.id;
+    const userState = this.userStates.get(adminUserId);
+
+    if (!userState || userState.state !== 'waiting_for_bonus_amount') {
+      return false;
+    }
+
+    const bonusAmountText = ctx.message?.text?.trim();
+    if (!bonusAmountText) {
+      return false;
+    }
+
+    // Validate bonus amount format
+    const bonusAmount = parseFloat(bonusAmountText);
+    if (isNaN(bonusAmount) || bonusAmount <= 0) {
+      await ctx.reply('❌ Некорректная сумма. Введите положительное число.');
+      return true;
+    }
+
+    try {
+      const targetUserId = userState.targetUserId!;
+
+      // Find the target user
+      const targetUser = await this.userRepository.findOne({
+        id: targetUserId,
+      });
+      if (!targetUser) {
+        await ctx.reply('❌ Пользователь не найден.');
+        this.clearUserState(adminUserId);
+        return true;
+      }
+
+      // Create bonus record
+      const bonus = this.bonusesRepository.create({
+        user: targetUser,
+        amount: bonusAmount.toString(),
+        status: BonusStatus.CREATED,
+      });
+
+      await this.em.persistAndFlush(bonus);
+
+      // Send confirmation to admin
+      await ctx.reply(
+        `✅ Бонус ${Math.round(bonusAmount)} RUB успешно выдан пользователю ${targetUser.name || targetUser.telegramId}`,
+      );
+
+      // Send notification to the user (with error handling)
+      try {
+        await ctx.telegram.sendMessage(
+          targetUser.telegramId,
+          `🎁 Вам выдан бонус: ${Math.round(bonusAmount)} RUB`,
+        );
+
+        await ctx.telegram.sendMessage(
+          targetUser.telegramId,
+          '💰 Проверьте свой бонусный баланс в профиле!',
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '🎰 Играть!',
+                    callback_data: 'games',
+                  },
+                ],
+              ],
+            },
+          },
+        );
+      } catch (userNotificationError) {
+        // User might not have started a conversation with the bot - this is normal
+        console.log(
+          `Could not notify user ${targetUser.telegramId}:`,
+          userNotificationError.message,
+        );
+      }
+
+      // Clear state
+      this.clearUserState(adminUserId);
+      return true;
+    } catch (error) {
+      console.error('Error creating bonus:', error);
+      await ctx.reply('❌ Ошибка при создании бонуса.');
       this.clearUserState(adminUserId);
       return true;
     }

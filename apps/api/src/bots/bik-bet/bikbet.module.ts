@@ -14,6 +14,7 @@ import {
   GamesProviderSettingGroup,
   GameSubProvider,
   PaymentPayoutRequisite,
+  Bonuses,
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
 import { StatsModule } from '../../stats/stats.module';
@@ -34,6 +35,7 @@ import { StatsModule } from '../../stats/stats.module';
       GamesProviderSettingGroup,
       Game,
       PaymentPayoutRequisite,
+      Bonuses,
     ]),
     PaymentModule,
     StatsModule,
@@ -42,4 +44,4 @@ import { StatsModule } from '../../stats/stats.module';
   providers: [BikBetService],
   exports: [BikBetService],
 })
-export class BikBetModule { }
+export class BikBetModule {}

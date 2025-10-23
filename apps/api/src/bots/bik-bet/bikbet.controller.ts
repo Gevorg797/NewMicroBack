@@ -94,6 +94,16 @@ export class BikBetController {
       await this.bikbetService.handleEditBalance(ctx, userId);
     });
 
+    // Give bonus handler
+    this.bot.action(/give_bonus_(\d+)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const userId = parseInt(ctx.match[1]);
+      await this.bikbetService.handleGiveBonus(ctx, userId);
+    });
+
     this.bot.action('users_dumps', async (ctx) => {
       const isAdmin = await checkIsTelegramAdmin(ctx);
       if (!isAdmin) return;
@@ -902,6 +912,13 @@ export class BikBetController {
         const handledBalance =
           await this.bikbetService.handleNewBalanceInput(ctx);
         if (handledBalance) {
+          return;
+        }
+
+        // Check if admin is waiting for bonus amount input
+        const handledBonus =
+          await this.bikbetService.handleBonusAmountInput(ctx);
+        if (handledBonus) {
           return;
         }
 

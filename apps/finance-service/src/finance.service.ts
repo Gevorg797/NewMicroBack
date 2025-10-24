@@ -269,33 +269,33 @@ export class FinanceService {
       subMethod.method.providerSettings.provider.name.toLowerCase();
 
     // Only process automated payouts for CryptoBot
-    if (providerName === 'cryptobot') {
-      try {
-        const result = await this.createPayoutOrder(providerName, {
-          transactionId: transaction.id as number,
-          amount: data.amount,
-          requisite: data.requisite,
-          to: data.requisite,
-        });
+    // if (providerName === 'cryptobot') {
+    //   try {
+    //     const result = await this.createPayoutOrder(providerName, {
+    //       transactionId: transaction.id as number,
+    //       amount: data.amount,
+    //       requisite: data.requisite,
+    //       to: data.requisite,
+    //     });
 
-        this.logger.log(
-          `Payout initiated successfully for transaction ${transaction.id}`,
-        );
-        return result;
-      } catch (error) {
-        // Mark transaction as failed and refund balance
-        this.logger.warn(
-          `CryptoBot payout failed for transaction ${transaction.id}: ${error.message}. Refunding balance...`,
-        );
-        await this.transactionManager.failPayoutAndRefund(
-          transaction.id as number,
-        );
-        this.logger.log(
-          `Balance refunded for failed transaction ${transaction.id}`,
-        );
-        throw error;
-      }
-    }
+    //     this.logger.log(
+    //       `Payout initiated successfully for transaction ${transaction.id}`,
+    //     );
+    //     return result;
+    //   } catch (error) {
+    //     // Mark transaction as failed and refund balance
+    //     this.logger.warn(
+    //       `CryptoBot payout failed for transaction ${transaction.id}: ${error.message}. Refunding balance...`,
+    //     );
+    //     await this.transactionManager.failPayoutAndRefund(
+    //       transaction.id as number,
+    //     );
+    //     this.logger.log(
+    //       `Balance refunded for failed transaction ${transaction.id}`,
+    //     );
+    //     throw error;
+    //   }
+    // }
 
     // For other providers (manual processing), just return the transaction
     return transaction;

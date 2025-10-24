@@ -35,6 +35,14 @@ import { PaymentService } from '../../client/payment/payment.service';
 import { StatsService } from '../../stats/stats.service';
 import { SelfCleaningMap } from 'libs/utils/data-structures/self-cleaning-map';
 import { log } from 'console';
+import {
+  FREEKASSA_METHOD_ID,
+  SBP_METHOD_ID,
+  CARD_METHOD_ID,
+  YOOMONEY_METHOD_ID,
+  PLATEGA_METHOD_ID,
+  USDT20_METHOD_ID,
+} from './payments-method-ids';
 
 @Injectable()
 export class BikBetService implements OnModuleInit, OnModuleDestroy {
@@ -2029,7 +2037,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 1, // FKwallet method ID
+        methodId: FREEKASSA_METHOD_ID, // FKwallet method ID
       });
 
       await ctx.editMessageMedia(media, {
@@ -2074,7 +2082,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 2, // YooMoney method ID
+        methodId: YOOMONEY_METHOD_ID, // YooMoney method ID
       });
 
       await ctx.editMessageMedia(media, {
@@ -3024,15 +3032,15 @@ ${entriesText}
 
     try {
       // Determine methodId based on payment method
-      let methodId = 1; // Default to FKwallet
+      let methodId = FREEKASSA_METHOD_ID; // Default to FKwallet
       if (method === 'FKwallet') {
-        methodId = 1;
+        methodId = FREEKASSA_METHOD_ID;
       } else if (method === 'CryptoBot') {
         methodId = 4;
       } else if (method === 'Card' || method === 'SBP') {
-        methodId = 5; // Platega
+        methodId = PLATEGA_METHOD_ID; // Platega
       } else if (method === 'USDT20') {
-        methodId = 6; // USDT20
+        methodId = USDT20_METHOD_ID; // USDT20
       }
 
       // Determine payment type params for Platega
@@ -3183,7 +3191,7 @@ ${entriesText}
       state: 'awaiting_withdraw_fkwallet',
       withdrawAmount: amount,
       withdrawMethod: 'FKwallet',
-      withdrawMethodId: 1, // FKwallet method ID
+      withdrawMethodId: FREEKASSA_METHOD_ID, // FKwallet method ID
     });
 
     const savedFKwalletId = user?.paymentPayoutRequisite?.freekassa_id;
@@ -3237,7 +3245,7 @@ ${entriesText}
       state: 'awaiting_withdraw_usdt20',
       withdrawAmount: amount,
       withdrawMethod: 'USDT20',
-      withdrawMethodId: 6, // USDT20 method ID
+      withdrawMethodId: USDT20_METHOD_ID, // USDT20 method ID
     });
 
     const savedUSDT20Address = user?.paymentPayoutRequisite?.usdt_trc20;

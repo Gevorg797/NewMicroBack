@@ -2236,11 +2236,19 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
             bonus.createdAt?.toLocaleDateString('ru-RU') || 'Неизвестно';
 
           const buttonText = `${statusEmoji} ${amount} RUB (${date})`;
-          const callbackData = `bonus_${bonus.id}`;
 
-          keyboardButtons.push([
-            Markup.button.callback(buttonText, callbackData),
-          ]);
+          // Only make button clickable if status is CREATED
+          if (bonus.status === BonusStatus.CREATED) {
+            const callbackData = `bonus_${bonus.id}`;
+            keyboardButtons.push([
+              Markup.button.callback(buttonText, callbackData),
+            ]);
+          } else {
+            // Disabled button for non-CREATED status
+            keyboardButtons.push([
+              Markup.button.callback(buttonText, 'disabled_button'),
+            ]);
+          }
         });
       }
 
@@ -2284,6 +2292,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       if (bonus.status === BonusStatus.CREATED) {
         // Update bonus status to ISACTIVE
         bonus.status = BonusStatus.ACTIVE;
+        bonus.activatedAt = new Date();
         await this.em.persistAndFlush(bonus);
 
         // Add bonus to user's bonus balance

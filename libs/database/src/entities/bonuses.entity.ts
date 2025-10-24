@@ -26,8 +26,8 @@ export class Bonuses extends BaseEntity {
   @Enum(() => BonusStatus)
   status!: BonusStatus;
 
-  @Enum(() => BonusType)
-  type!: BonusType;
+  @Property({ type: 'text', nullable: true })
+  type?: BonusType;
 
   @Property({ columnType: 'timestamptz', nullable: true })
   expiresAt?: Date;

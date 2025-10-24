@@ -111,6 +111,12 @@ export class BikBetController {
       await this.bikbetService.handleBonusClick(ctx, bonusId);
     });
 
+    // Disabled bonus handler
+    this.bot.action('disabled_button', async (ctx) => {
+      await ctx.answerCbQuery();
+      return;
+    });
+
     this.bot.action('users_dumps', async (ctx) => {
       const isAdmin = await checkIsTelegramAdmin(ctx);
       if (!isAdmin) return;

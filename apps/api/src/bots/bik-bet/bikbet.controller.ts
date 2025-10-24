@@ -55,9 +55,7 @@ export class BikBetController {
       if (!isAdmin) return;
 
       await ctx.answerCbQuery();
-      await ctx.reply('📊 <b>Статистика</b>\n\nФункция в разработке...', {
-        parse_mode: 'HTML',
-      });
+      await this.bikbetService.handleAdminStats(ctx);
     });
 
     this.bot.action('spam', async (ctx) => {

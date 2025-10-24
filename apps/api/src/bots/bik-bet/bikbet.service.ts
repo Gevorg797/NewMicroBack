@@ -3979,6 +3979,80 @@ ${entriesText}
   }
 
   /**
+   * Handle admin statistics display
+   */
+  async handleAdminStats(ctx: any) {
+    try {
+      const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+      if (!user) {
+        await ctx.reply('❌ Пользователь не найден');
+        return;
+      }
+
+      const financialStats = await this.getFinancialStats(user.site.id!);
+      if (!financialStats) {
+        await ctx.reply('❌ Ошибка при получении статистики');
+        return;
+      }
+
+      const text = `
+📊 <b>Общая статистика</b>
+
+💰 <b>Доход</b>
+🕐 <b>За все время:</b> ${financialStats.income.allTimeRUB.toFixed(2)} RUB ${financialStats.income.allTimeUSDT.toFixed(2)} USDT
+⏰ <b>За сутки:</b> ${financialStats.income.dailyRUB.toFixed(2)} RUB ${financialStats.income.dailyUSDT.toFixed(2)} USDT
+
+📤 <b>Выводы</b>
+🕐 <b>За все время:</b> ${financialStats.withdrawals.allTime.toFixed(2)} RUB
+⏰ <b>За сутки:</b> ${financialStats.withdrawals.daily.toFixed(2)} RUB
+
+💳 <b>Платежные системы</b>
+
+🤖 <b>CryptoBot</b>
+📥 Депозитов (за все время): ${financialStats.paymentSystems.cryptoBot.depositsAllTime.toFixed(2)}
+📥 Депозитов (за 24ч): ${financialStats.paymentSystems.cryptoBot.depositsDaily.toFixed(2)}
+📤 Выводов (за все время): ${financialStats.paymentSystems.cryptoBot.withdrawalsAllTime.toFixed(2)}
+📤 Выводов (за 24ч): ${financialStats.paymentSystems.cryptoBot.withdrawalsDaily.toFixed(2)}
+
+💳 <b>Карты</b>
+📥 Депозитов (за все время): ${financialStats.paymentSystems.cards.depositsAllTime.toFixed(2)}
+📥 Депозитов (за 24ч): ${financialStats.paymentSystems.cards.depositsDaily.toFixed(2)}
+📤 Выводов (за все время): ${financialStats.paymentSystems.cards.withdrawalsAllTime.toFixed(2)}
+📤 Выводов (за 24ч): ${financialStats.paymentSystems.cards.withdrawalsDaily.toFixed(2)}
+
+🛡 <b>FreeKassa</b>
+📥 Депозитов (за все время): ${financialStats.paymentSystems.freeKassa.depositsAllTime.toFixed(2)}
+📥 Депозитов (за 24ч): ${financialStats.paymentSystems.freeKassa.depositsDaily.toFixed(2)}
+📤 Выводов (за все время): ${financialStats.paymentSystems.freeKassa.withdrawalsAllTime.toFixed(2)}
+📤 Выводов (за 24ч): ${financialStats.paymentSystems.freeKassa.withdrawalsDaily.toFixed(2)}
+
+☁ <b>CryptoCloud</b>
+📥 Депозитов (за все время): ${financialStats.paymentSystems.cryptoCloud.depositsAllTime.toFixed(2)}
+📥 Депозитов (за 24ч): ${financialStats.paymentSystems.cryptoCloud.depositsDaily.toFixed(2)}
+📤 Выводов (за все время): ${financialStats.paymentSystems.cryptoCloud.withdrawalsAllTime.toFixed(2)}
+📤 Выводов (за 24ч): ${financialStats.paymentSystems.cryptoCloud.withdrawalsDaily.toFixed(2)}
+
+🪙 <b>USDT</b>
+📥 Депозитов (за все время): ${financialStats.paymentSystems.usdt.depositsAllTime.toFixed(2)}
+📥 Депозитов (за 24ч): ${financialStats.paymentSystems.usdt.depositsDaily.toFixed(2)}
+📤 Выводов (за все время): ${financialStats.paymentSystems.usdt.withdrawalsAllTime.toFixed(2)}
+📤 Выводов (за 24ч): ${financialStats.paymentSystems.usdt.withdrawalsDaily.toFixed(2)}
+
+📱 <b>QR</b>
+📥 Депозитов (за все время): ${financialStats.paymentSystems.qr.depositsAllTime.toFixed(2)}
+📥 Депозитов (за 24ч): ${financialStats.paymentSystems.qr.depositsDaily.toFixed(2)}
+📤 Выводов (за все время): ${financialStats.paymentSystems.qr.withdrawalsAllTime.toFixed(2)}
+📤 Выводов (за 24ч): ${financialStats.paymentSystems.qr.withdrawalsDaily.toFixed(2)}
+`;
+
+      await ctx.reply(text, { parse_mode: 'HTML' });
+    } catch (error) {
+      console.error('Error handling admin stats:', error);
+      await ctx.reply('❌ Ошибка при получении статистики');
+    }
+  }
+
+  /**
    * Clear all state for a user (helper to prevent leaks)
    */
   private clearUserState(userId: number) {

@@ -43,12 +43,14 @@ export enum MethodEnum {
   FREEKASSA = 'freekasa',
   YUMANI = 'PC',
   CRYPTOBOT = 'cryptobot',
+  USDT20 = 'USDT20',
 }
 
 export enum MethodNameEnum {
   SBP = 'SBP',
   CARD = 'CARD',
   WALLET = 'WALLET',
+  CRYPTO = 'CRYPTO',
 }
 
 @Entity({ tableName: 'financeProviderMethods' })

@@ -15,4 +15,7 @@ export class PaymentPayoutRequisite extends BaseEntity {
 
   @Property({ nullable: true })
   card?: string;
+
+  @Property({ nullable: true })
+  usdt_trc20?: string;
 }

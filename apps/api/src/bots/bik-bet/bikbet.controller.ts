@@ -240,8 +240,6 @@ export class BikBetController {
 
     // Withdraw USDT (trc-20) handler: withdrCrypto_usdt20_<amount>
     this.bot.action(/withdrCrypto_usdt20_(.+)/, async (ctx) => {
-      await ctx.answerCbQuery('⏳ В разработке');
-      return;
       try {
         const amount = Number((ctx as any).match?.[1]);
         if (!Number.isFinite(amount)) {
@@ -249,11 +247,11 @@ export class BikBetController {
           return;
         }
         if (amount < 500) {
-          await ctx.answerCbQuery('Минимальная сумма вывода 10 USDT');
+          await ctx.answerCbQuery('Минимальная сумма вывода USDT 500 RUB');
           return;
         }
-        // await ctx.answerCbQuery();
-        // await this.bikbetService.withdrawUSDT20(ctx, amount);
+        await ctx.answerCbQuery();
+        await this.bikbetService.withdrawUSDT20(ctx, amount);
       } catch (error) {
         console.error('Withdraw USDT handler error:', error);
         try {

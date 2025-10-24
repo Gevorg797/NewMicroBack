@@ -1649,6 +1649,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       return true;
     }
 
+    if (userState.state === 'awaiting_withdraw_usdt20') {
+      await this.handleWithdrawUSDT20Requisite(ctx);
+      return true;
+    }
+
     if (userState.state === 'awaiting_withdraw_card') {
       await this.handleWithdrawCardRequisite(ctx);
       return true;
@@ -1878,6 +1883,120 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       this.clearUserState(userId);
       await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
       console.error('Withdraw FKwallet error:', error);
+      return true;
+    }
+  }
+
+  async handleWithdrawUSDT20Requisite(ctx: any) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // Check if user is in the correct state
+    if (!userState || userState.state !== 'awaiting_withdraw_usdt20') {
+      const message = '⚠ Ошибка. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    const messageText = ctx.message?.text?.trim();
+
+    if (!messageText) {
+      return false;
+    }
+
+    const usdtAddress = messageText;
+    const amount = userState.withdrawAmount!;
+    const methodId = userState.withdrawMethodId!;
+
+    // Get user from database with paymentPayoutRequisite relation
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      {
+        telegramId,
+      },
+      {
+        populate: ['paymentPayoutRequisite'],
+      },
+    );
+
+    if (!user) {
+      await ctx.reply('⚠ Пользователь не найден. Нажмите /start');
+      this.clearUserState(userId);
+      return true;
+    }
+
+    // Check if user has saved usdt_trc20 address
+    const hasSavedRequisite =
+      user.paymentPayoutRequisite?.usdt_trc20 !== null &&
+      user.paymentPayoutRequisite?.usdt_trc20 !== undefined;
+
+    try {
+      // Create payout request using PaymentService (same as payin)
+      const withdrawal = await this.paymentService.payout({
+        userId: user.id!,
+        amount: amount,
+        methodId: methodId,
+        requisite: usdtAddress,
+      });
+
+      await this.sendMessageToAdminForWithdraw(
+        ctx,
+        withdrawal,
+        'USDT20',
+        amount,
+        usdtAddress,
+      );
+
+      // Clear the state
+      this.clearUserState(userId);
+
+      // Send success message
+      const text = `
+<blockquote><b>✅ Заявка на вывод создана!</b></blockquote>
+<blockquote><b>💳 ID Вывода: <code>№${withdrawal.id}</code></b></blockquote>
+<blockquote><b>💰 Сумма: <code>${amount} RUB</code></b></blockquote>
+<blockquote><b>📝 Реквизит: <code>${usdtAddress}</code></b></blockquote>
+<blockquote><b>⏳ Ожидайте обработки запроса.\n <a href='https://t.me/bikbetofficial'>C уважением BikBet!</a></b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_5.jpg');
+
+      // Build inline keyboard buttons
+      const buttons: any[] = [
+        [
+          Markup.button.url(
+            '👨‍💻 Техническая поддержка',
+            'https://t.me/bikbetsupport',
+          ),
+        ],
+        [Markup.button.callback('⬅️ Вернуться назад', 'donate_menu')],
+      ];
+
+      // Add "Save USDT20 address" button only if user doesn't have one saved
+      if (!hasSavedRequisite) {
+        buttons.unshift([
+          Markup.button.callback(
+            '💾 Сохранить адрес USDT',
+            `saveReq:USDT20:${withdrawal.id}`,
+          ),
+        ]);
+      }
+
+      await ctx.replyWithPhoto(
+        { source: fs.readFileSync(filePath) },
+        {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
+        },
+      );
+
+      return true;
+    } catch (error) {
+      console.log(error);
+
+      this.clearUserState(userId);
+      await ctx.reply('❌ Ошибка создания заявки на вывод. Попробуйте позже.');
+      console.error('Withdraw USDT20 error:', error);
       return true;
     }
   }
@@ -2825,6 +2944,8 @@ ${entriesText}
         payoutRequisite.card = requisite;
       } else if (method === 'SBP') {
         payoutRequisite.sbp = requisite;
+      } else if (method === 'USDT20') {
+        payoutRequisite.usdt_trc20 = requisite;
       }
 
       await this.em.persistAndFlush(payoutRequisite);
@@ -2890,6 +3011,8 @@ ${entriesText}
       requisite = user.paymentPayoutRequisite?.card;
     } else if (method === 'SBP') {
       requisite = user.paymentPayoutRequisite?.sbp;
+    } else if (method === 'USDT20') {
+      requisite = user.paymentPayoutRequisite?.usdt_trc20;
     }
 
     if (!requisite) {
@@ -2908,6 +3031,8 @@ ${entriesText}
         methodId = 4;
       } else if (method === 'Card' || method === 'SBP') {
         methodId = 5; // Platega
+      } else if (method === 'USDT20') {
+        methodId = 6; // USDT20
       }
 
       // Determine payment type params for Platega
@@ -3098,10 +3223,45 @@ ${entriesText}
   }
 
   async withdrawUSDT20(ctx: any, amount: number) {
-    const text = `
-<blockquote><b>🛡 Вывод USDT (trc-20)</b></blockquote>
-<blockquote><b>💰 Сумма вывода: ${amount} RUB</b></blockquote>
-<blockquote><b>📝 Введите ваш USDT (trc-20) адрес для вывода</b></blockquote>`;
+    const userId = ctx.from.id;
+
+    // Get user with saved requisites
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne(
+      { telegramId },
+      { populate: ['paymentPayoutRequisite'] },
+    );
+
+    // Set user state to waiting for USDT20 address
+    this.userStates.set(userId, {
+      state: 'awaiting_withdraw_usdt20',
+      withdrawAmount: amount,
+      withdrawMethod: 'USDT20',
+      withdrawMethodId: 6, // USDT20 method ID
+    });
+
+    const savedUSDT20Address = user?.paymentPayoutRequisite?.usdt_trc20;
+
+    let text = `
+<blockquote><b>Сумма вывода: <code>${amount}</code>  RUB</b></blockquote>
+<blockquote><b>Метод: USDT (trc-20) 🛡</b></blockquote>
+<blockquote><b>Отправьте свой USDT (trc-20) адрес в следующем формате:</b></blockquote>
+<blockquote><b>TXyZ1234567890abcdefghijklmnopqr</b></blockquote>
+<blockquote><b>Либо выберите сохранённый реквизит ниже:</b></blockquote>`;
+
+    const buttons: any[] = [];
+
+    // If user has saved USDT20 address, show it as a button
+    if (savedUSDT20Address) {
+      buttons.push([
+        Markup.button.callback(
+          `🛡 ${savedUSDT20Address}`,
+          `useSavedReq:USDT20:${amount}`,
+        ),
+      ]);
+    }
+
+    buttons.push([Markup.button.callback('🔙 Назад', 'withdraw')]);
 
     const filePath = this.getImagePath('bik_bet_5.jpg');
     const media: any = {
@@ -3112,9 +3272,7 @@ ${entriesText}
     };
 
     await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('🔙 Назад', 'withdraw')],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
   }
 

@@ -2283,7 +2283,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       // Check if bonus status is CREATED and change it to ISACTIVE
       if (bonus.status === BonusStatus.CREATED) {
         // Update bonus status to ISACTIVE
-        bonus.status = BonusStatus.ISACTIVE;
+        bonus.status = BonusStatus.ACTIVE;
         await this.em.persistAndFlush(bonus);
 
         // Add bonus to user's bonus balance
@@ -2311,17 +2311,18 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           });
           await this.em.persistAndFlush(balanceHistory);
 
-          await ctx.reply(
+          await ctx.answerCbQuery(
             `✅ Бонус ${Math.round(bonusAmount)} RUB успешно активирован и добавлен на ваш бонусный баланс!`,
+            { show_alert: true },
           );
         } else {
           await ctx.reply('❌ Ошибка: бонусный баланс не найден');
         }
-      } else if (bonus.status === BonusStatus.ISACTIVE) {
+      } else if (bonus.status === BonusStatus.ACTIVE) {
         await ctx.reply(
           'ℹ️ Этот бонус уже активен и доступен для использования',
         );
-      } else if (bonus.status === BonusStatus.FINISHED) {
+      } else if (bonus.status === BonusStatus.USED) {
         await ctx.reply('ℹ️ Этот бонус уже завершен');
       }
 
@@ -2340,9 +2341,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     switch (status) {
       case BonusStatus.CREATED:
         return '🟠'; // Не использован
-      case BonusStatus.ISACTIVE:
+      case BonusStatus.ACTIVE:
         return '🟢'; // Активный
-      case BonusStatus.FINISHED:
+      case BonusStatus.USED:
+      case BonusStatus.EXPIRED:
         return '🔴'; // Использован
       default:
         return '🟠';
@@ -2356,9 +2358,9 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     switch (status) {
       case BonusStatus.CREATED:
         return 'Не использован';
-      case BonusStatus.ISACTIVE:
+      case BonusStatus.ACTIVE:
         return 'Активный';
-      case BonusStatus.FINISHED:
+      case BonusStatus.USED:
         return 'Использован';
       default:
         return 'Неизвестно';
@@ -4251,6 +4253,7 @@ ${entriesText}
         user: targetUser,
         amount: bonusAmount.toString(),
         status: BonusStatus.CREATED,
+        type: 'Freespin' as any, // Default type
       });
 
       await this.em.persistAndFlush(bonus);

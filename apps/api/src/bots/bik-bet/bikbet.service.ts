@@ -2290,27 +2290,41 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
       // Check if bonus status is CREATED and change it to ISACTIVE
       if (bonus.status === BonusStatus.CREATED) {
-        // Update bonus status to ISACTIVE
-        bonus.status = BonusStatus.ACTIVE;
-        bonus.activatedAt = new Date();
-        await this.em.persistAndFlush(bonus);
-
-        // Add bonus to user's bonus balance
+        // Check user's current bonus balance
         const bonusBalance = await this.balancesRepository.findOne({
           user: user,
           type: BalanceType.BONUS,
         });
 
+        const currentBonusBalance = bonusBalance?.balance || 0;
+
+        // Only allow activation if bonus balance is 0
+        if (currentBonusBalance > 0) {
+          await ctx.answerCbQuery(
+            '❌ Вы должны использовать свой текущий бонус перед активацией нового бонуса!',
+            {
+              show_alert: true,
+            },
+          );
+          return;
+        }
+
+        const bonusAmount = parseFloat(bonus.amount);
+        const startedAmount = currentBonusBalance;
+        const finishedAmount = startedAmount + bonusAmount;
+
+        // Update bonus status to ISACTIVE
+        bonus.status = BonusStatus.ACTIVE;
+        bonus.activatedAt = new Date();
+        await this.em.persistAndFlush(bonus);
+        // Update bonus balance
         if (bonusBalance) {
-          const bonusAmount = parseFloat(bonus.amount);
-          const startedAmount = bonusBalance.balance || 0;
-          const finishedAmount = startedAmount + bonusAmount;
-
-          // Update bonus balance
-          bonusBalance.balance = finishedAmount;
+          bonusBalance.balance = bonusAmount;
           await this.em.persistAndFlush(bonusBalance);
+        }
 
-          // Create balance history record
+        // Create balance history record
+        if (bonusBalance) {
           const balanceHistory = this.balancesHistoryRepository.create({
             balance: bonusBalance,
             balanceBefore: startedAmount.toString(),
@@ -2319,22 +2333,15 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
             description: `Bonus activation: ${Math.round(bonusAmount)} RUB`,
           });
           await this.em.persistAndFlush(balanceHistory);
-
-          await ctx.answerCbQuery(
-            `✅ Бонус ${Math.round(bonusAmount)} RUB успешно активирован и добавлен на ваш бонусный баланс!`,
-            { show_alert: true },
-          );
-        } else {
-          await ctx.reply('❌ Ошибка: бонусный баланс не найден');
         }
-      } else if (bonus.status === BonusStatus.ACTIVE) {
-        await ctx.reply(
-          'ℹ️ Этот бонус уже активен и доступен для использования',
-        );
-      } else if (bonus.status === BonusStatus.USED) {
-        await ctx.reply('ℹ️ Этот бонус уже завершен');
-      }
 
+        await ctx.answerCbQuery(
+          `✅ Бонус ${Math.round(bonusAmount)} RUB успешно активирован и добавлен на ваш бонусный баланс!`,
+          { show_alert: true },
+        );
+      } else {
+        await ctx.reply('❌ Ошибка: бонусный баланс не найден');
+      }
       // Refresh the bonuses list
       await this.myBonuses(ctx);
     } catch (error) {
@@ -4287,7 +4294,7 @@ ${entriesText}
               inline_keyboard: [
                 [
                   {
-                    text: '🎰 Играть!',
+                    text: '🎁 Мои бонусы',
                     callback_data: 'myBonuses',
                   },
                 ],

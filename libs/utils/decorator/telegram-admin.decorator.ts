@@ -6,7 +6,7 @@ import {
 
 // Utility function that can be called directly
 export const checkIsTelegramAdmin = async (ctx: any): Promise<boolean> => {
-  const adminIds = [838474735, 987654321]; // Add your admin telegram IDs
+  const adminIds = [838474735, 923465091]; // Add your admin telegram IDs
   const userId = ctx?.from?.id;
 
   if (!adminIds.includes(userId)) {

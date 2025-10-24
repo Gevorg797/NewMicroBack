@@ -1,7 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository, EntityManager } from '@mikro-orm/core';
-import { User, GameSession, GameTransaction, GameOutcome } from '@lib/database';
+import {
+    User,
+    GameSession,
+    GameTransaction,
+    GameOutcome,
+    FinanceTransactions,
+    PaymentTransactionType,
+    PaymentTransactionStatus,
+    FinanceProviderSubMethods,
+    FinanceProviderMethods
+} from '@lib/database';
+import { MethodEnum } from '../../../../libs/database/src/entities/finance-provider-methods.entity';
 
 export interface MainStats {
     totalPlayers: number;
@@ -35,6 +46,38 @@ export interface UserStats {
     balance: number;
 }
 
+export interface GeneralIncomeStats {
+    allTimeRUB: number;
+    allTimeUSDT: number;
+    dailyRUB: number;
+    dailyUSDT: number;
+}
+
+export interface GeneralWithdrawalStats {
+    allTime: number;
+    daily: number;
+}
+
+export interface PaymentSystemStats {
+    depositsAllTime: number;
+    depositsDaily: number;
+    withdrawalsAllTime: number;
+    withdrawalsDaily: number;
+}
+
+export interface FinancialStats {
+    income: GeneralIncomeStats;
+    withdrawals: GeneralWithdrawalStats;
+    paymentSystems: {
+        cryptoBot: PaymentSystemStats;
+        cards: PaymentSystemStats;
+        freeKassa: PaymentSystemStats;
+        cryptoCloud: PaymentSystemStats;
+        usdt: PaymentSystemStats;
+        qr: PaymentSystemStats;
+    };
+}
+
 @Injectable()
 export class StatsService {
     constructor(
@@ -44,17 +87,19 @@ export class StatsService {
         private readonly gameSessionRepository: EntityRepository<GameSession>,
         @InjectRepository(GameTransaction)
         private readonly gameTransactionRepository: EntityRepository<GameTransaction>,
+        @InjectRepository(FinanceTransactions)
+        private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
         private readonly em: EntityManager,
     ) { }
 
     /**
      * Get main platform statistics
      */
-    async getMainStats(): Promise<MainStats> {
+    async getMainStats(siteId: number): Promise<MainStats> {
         const [totalPlayers, gamesPlayed, totalBets] = await Promise.all([
-            this.userRepository.count(),
-            this.getGamesPlayedCount(),
-            this.getTotalBetsAmount(),
+            this.userRepository.count({ site: siteId }),
+            this.getGamesPlayedCount(siteId),
+            this.getTotalBetsAmount(siteId),
         ]);
 
         return {
@@ -67,10 +112,14 @@ export class StatsService {
     /**
      * Get count of games played (only with valid outcomes)
      */
-    private async getGamesPlayedCount(): Promise<number> {
+    private async getGamesPlayedCount(siteId: number): Promise<number> {
         const result = await this.em.getConnection().execute(
-            'SELECT COUNT(*) as count FROM "gameSessions" WHERE outcome IN (?, ?, ?)',
-            ['win', 'lost', 'draw']
+            `SELECT COUNT(*) as count 
+             FROM "gameSessions" gs
+             INNER JOIN "user" u ON gs.user_id = u.id
+             WHERE gs.outcome IN (?, ?, ?) 
+             AND u.site_id = ?`,
+            ['win', 'lost', 'draw', siteId]
         );
 
         return parseInt(result[0]?.count || '0');
@@ -79,10 +128,15 @@ export class StatsService {
     /**
      * Get total bets amount in RUB
      */
-    private async getTotalBetsAmount(): Promise<number> {
+    private async getTotalBetsAmount(siteId: number): Promise<number> {
         const result = await this.em.getConnection().execute(
-            'SELECT SUM(amount) as total FROM "gameTransactions" WHERE type = ?',
-            ['withdraw']
+            `SELECT SUM(gt.amount) as total 
+             FROM "gameTransactions" gt
+             INNER JOIN "gameSessions" gs ON gt.session_id = gs.id
+             INNER JOIN "user" u ON gs.user_id = u.id
+             WHERE gt.type = ? 
+             AND u.site_id = ?`,
+            ['withdraw', siteId]
         );
 
         return parseFloat(result[0]?.total || '0');
@@ -91,20 +145,21 @@ export class StatsService {
     /**
      * Get leaderboard by wins
      */
-    async getLeaderboardByWins(): Promise<LeaderboardData> {
+    async getLeaderboardByWins(siteId: number): Promise<LeaderboardData> {
         const query = `
       SELECT 
         u.name as username,
         COUNT(CASE WHEN gs.outcome = 'win' THEN 1 END) as wins
       FROM "user" u
       LEFT JOIN "gameSessions" gs ON u.id = gs.user_id
+      WHERE u.site_id = ?
       GROUP BY u.id, u.name
       HAVING COUNT(CASE WHEN gs.outcome = 'win' THEN 1 END) > 0
       ORDER BY wins DESC
       LIMIT 10
     `;
 
-        const results = await this.em.getConnection().execute(query);
+        const results = await this.em.getConnection().execute(query, [siteId]);
 
         const entries: LeaderboardEntry[] = results.map((row: any, index: number) => ({
             rank: index + 1,
@@ -135,7 +190,7 @@ export class StatsService {
     /**
      * Get leaderboard by winstreak
      */
-    async getLeaderboardByWinstreak(): Promise<LeaderboardData> {
+    async getLeaderboardByWinstreak(siteId: number): Promise<LeaderboardData> {
         const query = `
             WITH user_games AS (
                 SELECT 
@@ -148,6 +203,7 @@ export class StatsService {
                 FROM "user" u
                 INNER JOIN "gameSessions" gs ON u.id = gs.user_id
                 WHERE gs.outcome IN ('win', 'lost')
+                AND u.site_id = ?
             ),
             win_streaks AS (
                 SELECT 
@@ -168,7 +224,7 @@ export class StatsService {
             LIMIT 10
         `;
 
-        const results = await this.em.getConnection().execute(query);
+        const results = await this.em.getConnection().execute(query, [siteId]);
 
         const entries: LeaderboardEntry[] = results.map((row: any, index: number) => ({
             rank: index + 1,
@@ -199,7 +255,7 @@ export class StatsService {
     /**
      * Get leaderboard by losing streak
      */
-    async getLeaderboardByLosingStreak(): Promise<LeaderboardData> {
+    async getLeaderboardByLosingStreak(siteId: number): Promise<LeaderboardData> {
         const query = `
             WITH user_games AS (
                 SELECT 
@@ -212,6 +268,7 @@ export class StatsService {
                 FROM "user" u
                 INNER JOIN "gameSessions" gs ON u.id = gs.user_id
                 WHERE gs.outcome IN ('win', 'lost')
+                AND u.site_id = ?
             ),
             losing_streaks AS (
                 SELECT 
@@ -232,7 +289,7 @@ export class StatsService {
             LIMIT 10
         `;
 
-        const results = await this.em.getConnection().execute(query);
+        const results = await this.em.getConnection().execute(query, [siteId]);
 
         const entries: LeaderboardEntry[] = results.map((row: any, index: number) => ({
             rank: index + 1,
@@ -263,20 +320,21 @@ export class StatsService {
     /**
      * Get leaderboard by number of games
      */
-    async getLeaderboardByGames(): Promise<LeaderboardData> {
+    async getLeaderboardByGames(siteId: number): Promise<LeaderboardData> {
         const query = `
       SELECT 
         u.name as username,
         COUNT(CASE WHEN gs.outcome IN ('win', 'lost', 'draw') THEN 1 END) as games_count
       FROM "user" u
       LEFT JOIN "gameSessions" gs ON u.id = gs.user_id
+      WHERE u.site_id = ?
       GROUP BY u.id, u.name
       HAVING COUNT(CASE WHEN gs.outcome IN ('win', 'lost', 'draw') THEN 1 END) > 0
       ORDER BY games_count DESC
       LIMIT 10
     `;
 
-        const results = await this.em.getConnection().execute(query);
+        const results = await this.em.getConnection().execute(query, [siteId]);
 
         const entries: LeaderboardEntry[] = results.map((row: any, index: number) => ({
             rank: index + 1,
@@ -307,7 +365,7 @@ export class StatsService {
     /**
      * Get leaderboard by total bets amount
      */
-    async getLeaderboardByBets(): Promise<LeaderboardData> {
+    async getLeaderboardByBets(siteId: number): Promise<LeaderboardData> {
         const query = `
        SELECT 
          u.name as username,
@@ -315,12 +373,13 @@ export class StatsService {
        FROM "user" u
        LEFT JOIN "gameSessions" gs ON u.id = gs.user_id
        LEFT JOIN "gameTransactions" gt ON gs.id = gt.session_id AND gt.type = 'withdraw'
+       WHERE u.site_id = ?
        GROUP BY u.id, u.name
        ORDER BY total_bets DESC
        LIMIT 10
      `;
 
-        const results = await this.em.getConnection().execute(query);
+        const results = await this.em.getConnection().execute(query, [siteId]);
 
         const entries: LeaderboardEntry[] = results.map((row: any, index: number) => ({
             rank: index + 1,
@@ -463,5 +522,132 @@ export class StatsService {
             default:
                 return '🎖';
         }
+    }
+
+    /**
+     * Get comprehensive financial statistics
+     */
+    async getFinancialStats(siteId: number): Promise<FinancialStats> {
+        const [incomeStats, withdrawalStats, paymentSystemStats] = await Promise.all([
+            this.getGeneralIncomeStats(siteId),
+            this.getGeneralWithdrawalStats(siteId),
+            this.getPaymentSystemStats(siteId),
+        ]);
+
+        return {
+            income: incomeStats,
+            withdrawals: withdrawalStats,
+            paymentSystems: paymentSystemStats,
+        };
+    }
+
+    /**
+     * Get general income statistics (deposits)
+     */
+    private async getGeneralIncomeStats(siteId: number): Promise<GeneralIncomeStats> {
+        const query = `
+            SELECT 
+                SUM(CASE WHEN c.name = 'RUB' THEN ft.amount ELSE 0 END) as total_rub,
+                SUM(CASE WHEN c.name = 'USD' THEN ft.amount ELSE 0 END) as total_usdt,
+                SUM(CASE WHEN c.name = 'RUB' AND ft.created_at >= NOW() - INTERVAL '24 hours' THEN ft.amount ELSE 0 END) as daily_rub,
+                SUM(CASE WHEN c.name = 'USD' AND ft.created_at >= NOW() - INTERVAL '24 hours' THEN ft.amount ELSE 0 END) as daily_usdt
+            FROM "financeTransactions" ft
+            INNER JOIN "financeProviderSubMethods" fsm ON ft.sub_method_id = fsm.id
+            INNER JOIN "financeProviderMethods" fm ON fsm.method_id = fm.id
+            INNER JOIN "currencies" c ON ft.currency_id = c.id
+            WHERE ft.type = 'Payin' 
+            AND ft.status = 'Completed'
+            AND fsm.site_id = ?
+        `;
+
+        const result = await this.em.getConnection().execute(query, [siteId]);
+        const row = result[0];
+
+        return {
+            allTimeRUB: parseFloat(row?.total_rub || '0'),
+            allTimeUSDT: parseFloat(row?.total_usdt || '0'),
+            dailyRUB: parseFloat(row?.daily_rub || '0'),
+            dailyUSDT: parseFloat(row?.daily_usdt || '0'),
+        };
+    }
+
+    /**
+     * Get general withdrawal statistics
+     */
+    private async getGeneralWithdrawalStats(siteId: number): Promise<GeneralWithdrawalStats> {
+        const query = `
+            SELECT 
+                SUM(CASE WHEN c.name = 'RUB' THEN ft.amount ELSE 0 END) as total_rub,
+                SUM(CASE WHEN c.name = 'RUB' AND ft.created_at >= NOW() - INTERVAL '24 hours' THEN ft.amount ELSE 0 END) as daily_rub
+            FROM "financeTransactions" ft
+            INNER JOIN "financeProviderSubMethods" fsm ON ft.sub_method_id = fsm.id
+            INNER JOIN "financeProviderMethods" fm ON fsm.method_id = fm.id
+            INNER JOIN "currencies" c ON ft.currency_id = c.id
+            WHERE ft.type = 'Payout' 
+            AND ft.status = 'Completed'
+            AND fsm.site_id = ?
+        `;
+
+        const result = await this.em.getConnection().execute(query, [siteId]);
+        const row = result[0];
+
+        return {
+            allTime: parseFloat(row?.total_rub || '0'),
+            daily: parseFloat(row?.daily_rub || '0'),
+        };
+    }
+
+    /**
+     * Get payment system statistics for all providers
+     */
+    private async getPaymentSystemStats(siteId: number): Promise<FinancialStats['paymentSystems']> {
+        const [cryptoBot, cards, freeKassa, cryptoCloud, usdt, qr] = await Promise.all([
+            this.getPaymentSystemStatsByMethod(MethodEnum.CRYPTOBOT, siteId),
+            this.getPaymentSystemStatsByMethod(MethodEnum.CARD, siteId),
+            this.getPaymentSystemStatsByMethod(MethodEnum.FREEKASSA, siteId),
+            this.getPaymentSystemStatsByMethod('cryptocloud', siteId), // Assuming this is the method enum value
+            this.getPaymentSystemStatsByMethod(MethodEnum.USDT20, siteId),
+            this.getPaymentSystemStatsByMethod('qr', siteId), // Assuming this is the method enum value
+        ]);
+
+        return {
+            cryptoBot,
+            cards,
+            freeKassa,
+            cryptoCloud,
+            usdt,
+            qr,
+        };
+    }
+
+    /**
+     * Get payment system statistics for a specific method
+     */
+    private async getPaymentSystemStatsByMethod(methodValue: string, siteId: number): Promise<PaymentSystemStats> {
+        const query = `
+            SELECT 
+                SUM(CASE WHEN ft.type = 'Payin' THEN ft.amount ELSE 0 END) as deposits_all_time,
+                SUM(CASE WHEN ft.type = 'Payin' AND ft.created_at >= NOW() - INTERVAL '24 hours' THEN ft.amount ELSE 0 END) as deposits_daily,
+                SUM(CASE WHEN ft.type = 'Payout' THEN ft.amount ELSE 0 END) as withdrawals_all_time,
+                SUM(CASE WHEN ft.type = 'Payout' AND ft.created_at >= NOW() - INTERVAL '24 hours' THEN ft.amount ELSE 0 END) as withdrawals_daily
+            FROM "financeTransactions" ft
+            INNER JOIN "financeProviderSubMethods" fsm ON ft.sub_method_id = fsm.id
+            INNER JOIN "financeProviderMethods" fm ON fsm.method_id = fm.id
+            INNER JOIN "currencies" c ON ft.currency_id = c.id
+            WHERE fm.value = ? 
+            AND ft.status = 'Completed'
+            AND c.name = 'RUB'
+            AND fsm.site_id = ?
+        `;
+
+        const result = await this.em.getConnection().execute(query, [methodValue, siteId]);
+        const row = result[0];
+
+        return {
+            depositsAllTime: parseFloat(row?.deposits_all_time || '0'),
+            depositsDaily: parseFloat(row?.deposits_daily || '0'),
+            withdrawalsAllTime: parseFloat(row?.withdrawals_all_time || '0'),
+            withdrawalsDaily: parseFloat(row?.withdrawals_daily || '0'),
+        };
     }
 }

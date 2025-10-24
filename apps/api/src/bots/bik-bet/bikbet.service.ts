@@ -93,7 +93,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly em: EntityManager,
-  ) {}
+  ) { }
 
   // Game data for different operators (referenced directly to save memory)
   private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
@@ -289,7 +289,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Get real-time stats
-      const stats = await this.statsService.getMainStats();
+      const stats = await this.statsService.getMainStats(user!.site.id!);
 
       const text = `
 <blockquote><b>Добро пожаловать в <a href="${link}">BikBet!</a></b></blockquote>
@@ -468,8 +468,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async start(ctx: any, link: string) {
+    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    if (!user) {
+      await ctx.reply('❌ Пользователь не найден');
+      return;
+    }
+
     // Get real-time stats
-    const stats = await this.statsService.getMainStats();
+    const stats = await this.statsService.getMainStats(user.site.id!);
 
     const text = `
 <blockquote><b>Добро пожаловать в <a href="${link}">BikBet!</a></b></blockquote>
@@ -2532,7 +2538,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async leaderboardWins(ctx: any) {
-    const leaderboardData = await this.statsService.getLeaderboardByWins();
+    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
+    const leaderboardData = await this.statsService.getLeaderboardByWins(user.site.id!);
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2572,7 +2584,13 @@ ${entriesText}
   }
 
   async leaderboardWinstreak(ctx: any) {
-    const leaderboardData = await this.statsService.getLeaderboardByWinstreak();
+    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
+    const leaderboardData = await this.statsService.getLeaderboardByWinstreak(user.site.id!);
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2612,8 +2630,14 @@ ${entriesText}
   }
 
   async leaderboardLoosestrick(ctx: any) {
+    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
     const leaderboardData =
-      await this.statsService.getLeaderboardByLosingStreak();
+      await this.statsService.getLeaderboardByLosingStreak(user.site.id!);
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2653,7 +2677,13 @@ ${entriesText}
   }
 
   async leaderboardGames(ctx: any) {
-    const leaderboardData = await this.statsService.getLeaderboardByGames();
+    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
+    const leaderboardData = await this.statsService.getLeaderboardByGames(user.site.id!);
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2693,7 +2723,13 @@ ${entriesText}
   }
 
   async leaderboardBets(ctx: any) {
-    const leaderboardData = await this.statsService.getLeaderboardByBets();
+    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
+    const leaderboardData = await this.statsService.getLeaderboardByBets(user.site.id!);
 
     const entriesText = leaderboardData.entries
       .map(
@@ -3928,6 +3964,18 @@ ${entriesText}
       },
       process: process.memoryUsage(),
     };
+  }
+
+  /**
+   * Get financial statistics for admin panel
+   */
+  async getFinancialStats(siteId: number) {
+    try {
+      return await this.statsService.getFinancialStats(siteId);
+    } catch (error) {
+      console.error('Error getting financial stats:', error);
+      return null;
+    }
   }
 
   /**

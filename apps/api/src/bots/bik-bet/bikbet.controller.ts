@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { BikBetService } from './bikbet.service';
 import { Telegraf } from 'telegraf';
@@ -18,6 +18,18 @@ export class BikBetController {
   @Get('memory-stats')
   getMemoryStats() {
     return this.bikbetService.getMemoryStats();
+  }
+
+  /**
+   * Get financial statistics for admin panel
+   */
+  @Get('financial-stats')
+  async getFinancialStats(@Query('siteId') siteId: string) {
+    const siteIdNumber = parseInt(siteId, 10);
+    if (isNaN(siteIdNumber)) {
+      throw new Error('Invalid siteId parameter');
+    }
+    return this.bikbetService.getFinancialStats(siteIdNumber);
   }
 
   onModuleInit() {

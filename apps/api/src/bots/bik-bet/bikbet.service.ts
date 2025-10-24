@@ -34,6 +34,7 @@ import {
 import { PaymentService } from '../../client/payment/payment.service';
 import { StatsService } from '../../stats/stats.service';
 import { SelfCleaningMap } from 'libs/utils/data-structures/self-cleaning-map';
+import { log } from 'console';
 
 @Injectable()
 export class BikBetService implements OnModuleInit, OnModuleDestroy {
@@ -1853,7 +1854,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       buttons.push([
         Markup.button.callback(
           '💾 Сохранить реквизиты',
-          `saveReq:FKwallet:${fkwalletId}`,
+          `saveReq:FKwallet:${withdrawal.id}`,
         ),
       ]);
 
@@ -3076,7 +3077,7 @@ ${entriesText}
       buttons.push([
         Markup.button.callback(
           ` ${savedFKwalletId}`,
-          `useSavedReq:FKwallet:${savedFKwalletId}:${amount}`,
+          `useSavedReq:FKwallet:${amount}`,
         ),
       ]);
     }
@@ -3184,7 +3185,6 @@ ${entriesText}
         requisite: fullRequisite,
         params: { paymentType: 'card' },
       });
-      console.log(withdrawal);
 
       await this.sendMessageToAdminForWithdraw(
         ctx,
@@ -3949,83 +3949,89 @@ ${entriesText}
     try {
       const targetUserId = userState.targetUserId!;
 
-      // Find the target user
-      const targetUser = await this.userRepository.findOne({
-        id: targetUserId,
-      });
-      if (!targetUser) {
-        await ctx.reply('❌ Пользователь не найден.');
-        this.clearUserState(adminUserId);
-        return true;
-      }
+      // Use database transaction to ensure atomicity
+      await this.em.transactional(async (em) => {
+        // Find the target user
+        const targetUser = await em.findOne(User, {
+          id: targetUserId,
+        });
+        if (!targetUser) {
+          await ctx.reply('❌ Пользователь не найден.');
+          this.clearUserState(adminUserId);
+          return;
+        }
 
-      // Get user's main balance
-      const mainBalance = await this.balancesRepository.findOne({
-        user: targetUser,
-        type: BalanceType.MAIN,
-      });
+        // Get user's main balance
+        const mainBalance = await em.findOne(Balances, {
+          user: targetUser,
+          type: BalanceType.MAIN,
+        });
 
-      if (!mainBalance) {
-        await ctx.reply('❌ Баланс пользователя не найден.');
-        this.clearUserState(adminUserId);
-        return true;
-      }
+        if (!mainBalance) {
+          await ctx.reply('❌ Баланс пользователя не найден.');
+          this.clearUserState(adminUserId);
+          return;
+        }
 
-      // Record balance history before updating
-      const startedAmount = mainBalance.balance || 0;
-      const addedAmount = newBalance - startedAmount;
-      const finishedAmount = newBalance;
+        // Record balance history before updating
+        const startedAmount = mainBalance.balance || 0;
+        const addedAmount = newBalance - startedAmount;
+        const finishedAmount = newBalance;
 
-      // Update the balance
-      mainBalance.balance = newBalance;
-      await this.em.persistAndFlush(mainBalance);
+        // Update the balance
+        mainBalance.balance = newBalance;
+        em.persist(mainBalance);
 
-      // Create balance history record
-      const balanceHistory = this.balancesHistoryRepository.create({
-        balance: mainBalance,
-        balanceBefore: startedAmount.toString(),
-        amount: addedAmount.toString(),
-        balanceAfter: finishedAmount.toString(),
-        description: `Admin balance update: ${Math.round(addedAmount)} RUB (Admin: ${adminUserId})`,
-      });
-      await this.em.persistAndFlush(balanceHistory);
+        // Create balance history record
+        const balanceHistory = em.create(BalancesHistory, {
+          balance: mainBalance,
+          balanceBefore: startedAmount.toString(),
+          amount: addedAmount.toString(),
+          balanceAfter: finishedAmount.toString(),
+          description: `Admin balance update: ${Math.round(addedAmount)} RUB (Admin: ${adminUserId})`,
+        });
+        em.persist(balanceHistory);
 
-      // Send confirmation to admin
-      await ctx.reply(
-        `✅ Баланс успешно обновлен до ${Math.round(newBalance)} RUB`,
-      );
+        // Flush all changes in the transaction
+        await em.flush();
 
-      // Send notification to the user (with error handling)
-      try {
-        // Send first message
-        await ctx.telegram.sendMessage(
-          targetUser.telegramId,
-          '🔄 Ваш баланс был изменен администратором',
+        // Send confirmation to admin
+        await ctx.reply(
+          `✅ Баланс успешно обновлен до ${Math.round(newBalance)} RUB`,
         );
 
-        // Send second message with balance and play button
-        await ctx.telegram.sendMessage(
-          targetUser.telegramId,
-          '💰 Новый баланс: ' + Math.round(newBalance) + ' RUB',
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: '🎰 Играть!',
-                    callback_data: 'games',
-                  },
+        // Send notification to the user (with error handling)
+        try {
+          // Send first message
+          await ctx.telegram.sendMessage(
+            targetUser.telegramId,
+            '🔄 Ваш баланс был изменен администратором',
+          );
+
+          // Send second message with balance and play button
+          await ctx.telegram.sendMessage(
+            targetUser.telegramId,
+            '💰 Новый баланс: ' + Math.round(newBalance) + ' RUB',
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '🎰 Играть!',
+                      callback_data: 'games',
+                    },
+                  ],
                 ],
-              ],
+              },
             },
-          },
-        );
-      } catch (userNotificationError) {
-        // User might not have started a conversation with the bot
-        // User might not have started a conversation with the bot - this is normal
-        // console.log(`Could not notify user ${targetUser.telegramId}:`, userNotificationError.message);
-        // Continue execution - balance was still updated successfully
-      }
+          );
+        } catch (userNotificationError) {
+          // User might not have started a conversation with the bot
+          // User might not have started a conversation with the bot - this is normal
+          // console.log(`Could not notify user ${targetUser.telegramId}:`, userNotificationError.message);
+          // Continue execution - balance was still updated successfully
+        }
+      });
 
       // Clear state
       this.clearUserState(adminUserId);

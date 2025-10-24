@@ -93,7 +93,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly em: EntityManager,
-  ) { }
+  ) {}
 
   // Game data for different operators (referenced directly to save memory)
   private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
@@ -468,7 +468,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async start(ctx: any, link: string) {
-    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    const user = await this.userRepository.findOne(
+      { telegramId: ctx.from.id.toString() },
+      { populate: ['site'] },
+    );
     if (!user) {
       await ctx.reply('❌ Пользователь не найден');
       return;
@@ -2305,7 +2308,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         const currentBonusBalance = bonusBalance?.balance || 0;
 
         // Only allow activation if bonus balance is 0
-        if (currentBonusBalance > 0) {
+        if (currentBonusBalance > 1) {
           await ctx.answerCbQuery(
             '❌ Вы должны использовать свой текущий бонус перед активацией нового бонуса!',
             {
@@ -2317,7 +2320,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
         const bonusAmount = parseFloat(bonus.amount);
         const startedAmount = currentBonusBalance;
-        const finishedAmount = startedAmount + bonusAmount;
+        const finishedAmount = bonusAmount;
 
         // Update bonus status to ISACTIVE
         bonus.status = BonusStatus.ACTIVE;
@@ -2538,13 +2541,18 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async leaderboardWins(ctx: any) {
-    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    const user = await this.userRepository.findOne(
+      { telegramId: ctx.from.id.toString() },
+      { populate: ['site'] },
+    );
     if (!user) {
       await ctx.answerCbQuery('Пользователь не найден');
       return;
     }
 
-    const leaderboardData = await this.statsService.getLeaderboardByWins(user.site.id!);
+    const leaderboardData = await this.statsService.getLeaderboardByWins(
+      user.site.id!,
+    );
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2584,13 +2592,18 @@ ${entriesText}
   }
 
   async leaderboardWinstreak(ctx: any) {
-    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    const user = await this.userRepository.findOne(
+      { telegramId: ctx.from.id.toString() },
+      { populate: ['site'] },
+    );
     if (!user) {
       await ctx.answerCbQuery('Пользователь не найден');
       return;
     }
 
-    const leaderboardData = await this.statsService.getLeaderboardByWinstreak(user.site.id!);
+    const leaderboardData = await this.statsService.getLeaderboardByWinstreak(
+      user.site.id!,
+    );
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2630,7 +2643,10 @@ ${entriesText}
   }
 
   async leaderboardLoosestrick(ctx: any) {
-    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    const user = await this.userRepository.findOne(
+      { telegramId: ctx.from.id.toString() },
+      { populate: ['site'] },
+    );
     if (!user) {
       await ctx.answerCbQuery('Пользователь не найден');
       return;
@@ -2677,13 +2693,18 @@ ${entriesText}
   }
 
   async leaderboardGames(ctx: any) {
-    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    const user = await this.userRepository.findOne(
+      { telegramId: ctx.from.id.toString() },
+      { populate: ['site'] },
+    );
     if (!user) {
       await ctx.answerCbQuery('Пользователь не найден');
       return;
     }
 
-    const leaderboardData = await this.statsService.getLeaderboardByGames(user.site.id!);
+    const leaderboardData = await this.statsService.getLeaderboardByGames(
+      user.site.id!,
+    );
 
     const entriesText = leaderboardData.entries
       .map(
@@ -2723,13 +2744,18 @@ ${entriesText}
   }
 
   async leaderboardBets(ctx: any) {
-    const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+    const user = await this.userRepository.findOne(
+      { telegramId: ctx.from.id.toString() },
+      { populate: ['site'] },
+    );
     if (!user) {
       await ctx.answerCbQuery('Пользователь не найден');
       return;
     }
 
-    const leaderboardData = await this.statsService.getLeaderboardByBets(user.site.id!);
+    const leaderboardData = await this.statsService.getLeaderboardByBets(
+      user.site.id!,
+    );
 
     const entriesText = leaderboardData.entries
       .map(

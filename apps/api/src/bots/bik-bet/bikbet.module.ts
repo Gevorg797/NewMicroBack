@@ -19,6 +19,7 @@ import {
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
 import { StatsModule } from '../../stats/stats.module';
+import { PromocodesModule } from '../../promocodes/promocodes.module';
 
 @Module({
   imports: [
@@ -41,9 +42,10 @@ import { StatsModule } from '../../stats/stats.module';
     ]),
     PaymentModule,
     StatsModule,
+    PromocodesModule,
   ],
   controllers: [BikBetController],
   providers: [BikBetService],
   exports: [BikBetService],
 })
-export class BikBetModule {}
+export class BikBetModule { }

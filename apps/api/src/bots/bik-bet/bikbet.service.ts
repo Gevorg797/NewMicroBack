@@ -4009,7 +4009,10 @@ ${entriesText}
    */
   async handleAdminStats(ctx: any) {
     try {
-      const user = await this.userRepository.findOne({ telegramId: ctx.from.id.toString() }, { populate: ['site'] });
+      const user = await this.userRepository.findOne(
+        { telegramId: ctx.from.id.toString() },
+        { populate: ['site'] },
+      );
       if (!user) {
         await ctx.reply('❌ Пользователь не найден');
         return;

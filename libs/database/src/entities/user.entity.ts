@@ -15,6 +15,8 @@ import { FinanceTransactions } from './finance-provider-transactions.entity';
 import { GameSession } from './game-sassion.entity';
 import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 import { Bonuses } from './bonuses.entity';
+import { Promocode } from './promocode.entity';
+import { PromocodeUsage } from './promocode-usage.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -53,4 +55,10 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Bonuses, (b) => b.user)
   bonuses = new Collection<Bonuses>(this);
+
+  @OneToMany(() => Promocode, (p) => p.createdBy)
+  createdPromocodes = new Collection<Promocode>(this);
+
+  @OneToMany(() => PromocodeUsage, (pu) => pu.user)
+  promocodeUsages = new Collection<PromocodeUsage>(this);
 }

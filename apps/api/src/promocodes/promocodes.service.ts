@@ -70,7 +70,7 @@ export class PromocodesService {
      */
     async applyPromocode(
         userId: number,
-        applyDto: ApplyPromocodeDto,
+        code: string,
     ): Promise<{ success: boolean; bonusAmount: number; message: string }> {
         // Find the user
         const user = await this.userRepository.findOne({ id: userId });
@@ -80,7 +80,7 @@ export class PromocodesService {
 
         // Find the promocode
         const promocode = await this.promocodeRepository.findOne({
-            code: applyDto.code,
+            code: code,
         });
 
         if (!promocode) {
@@ -125,7 +125,7 @@ export class PromocodesService {
         // Find user's main balance
         const balance = await this.balancesRepository.findOne({
             user: userId,
-            type: BalanceType.MAIN,
+            type: BalanceType.BONUS,
         });
 
         if (!balance) {

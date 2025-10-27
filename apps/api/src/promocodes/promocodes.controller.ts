@@ -27,13 +27,13 @@ export class PromocodesController {
         return this.promocodesService.findByCode(code);
     }
 
-    @Post('apply/:userId')
-    applyPromocode(
-        @Param('userId', ParseIntPipe) userId: number,
-        @Body() applyDto: ApplyPromocodeDto,
-    ) {
-        return this.promocodesService.applyPromocode(userId, applyDto);
-    }
+    // @Post('apply/:userId')
+    // applyPromocode(
+    //     @Param('userId', ParseIntPipe) userId: number,
+    //     @Body() applyDto: ApplyPromocodeDto,
+    // ) {
+    //     return this.promocodesService.applyPromocode(userId, applyDto);
+    // }
 
     @Get('history/:userId')
     getUserHistory(@Param('userId', ParseIntPipe) userId: number) {

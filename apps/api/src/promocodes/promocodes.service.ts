@@ -12,8 +12,7 @@ import {
     BalanceType,
 } from '@lib/database';
 import { CreatePromocodeDto } from './dto/create-promocode.dto';
-import { UpdatePromocodeDto } from './dto/update-promocode.dto';
-import { ApplyPromocodeDto } from './dto/apply-promocode.dto';
+
 
 @Injectable()
 export class PromocodesService {
@@ -72,96 +71,97 @@ export class PromocodesService {
         userId: number,
         code: string,
     ): Promise<{ success: boolean; bonusAmount: number; message: string }> {
-        // Find the user
-        const user = await this.userRepository.findOne({ id: userId });
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
+        return await this.em.transactional(async (em) => {
+            // Find the user
+            const user = await em.findOne(User, { id: userId });
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
 
-        // Find the promocode
-        const promocode = await this.promocodeRepository.findOne({
-            code: code,
+            // Find the promocode
+            const promocode = await em.findOne(Promocode, {
+                code: code,
+            });
+
+            if (!promocode) {
+                throw new NotFoundException('Promocode not found');
+            }
+
+            // Validate promocode is active
+            if (promocode.status !== PromocodeStatus.ACTIVE) {
+                throw new BadRequestException('Promocode is not active');
+            }
+
+            // Check date validity
+            const now = new Date();
+            if (promocode.validFrom && new Date(promocode.validFrom) > now) {
+                throw new BadRequestException('Promocode is not yet valid');
+            }
+
+            if (promocode.validUntil && new Date(promocode.validUntil) < now) {
+                throw new BadRequestException('Promocode has expired');
+            }
+
+            // Check if user has already used this promocode
+            const existingUsage = await em.findOne(PromocodeUsage, {
+                user: userId,
+                promocode: promocode.id,
+            });
+
+            if (existingUsage) {
+                throw new BadRequestException('You have already used this promocode');
+            }
+
+            // Count current usages
+            const usageCount = await em.count(PromocodeUsage, {
+                promocode: promocode.id,
+            });
+
+            // Check usage limits
+            if (promocode.maxUses > 0 && usageCount >= promocode.maxUses) {
+                throw new BadRequestException('Promocode has reached maximum uses');
+            }
+
+            // Find user's bonus balance
+            const balance = await em.findOne(Balances, {
+                user: userId,
+                type: BalanceType.BONUS,
+            });
+
+            if (!balance) {
+                throw new NotFoundException('User balance not found');
+            }
+
+            // Calculate bonus amount
+            let bonusAmount = 0;
+            if (promocode.type === PromocodeType.PERCENTAGE) {
+                // For percentage, use the amount as percentage (e.g., amount: 50 means 50%)
+                bonusAmount = promocode.amount;
+            } else if (promocode.type === PromocodeType.FIXED_AMOUNT) {
+                bonusAmount = promocode.amount;
+            }
+
+            // Apply the bonus to balance
+            balance.balance += bonusAmount;
+
+            // Record the usage
+            const usage = em.create(PromocodeUsage, {
+                user,
+                promocode,
+                usedAt: new Date(),
+                status: PromocodeUsageStatus.APPLIED,
+                bonusAmount,
+                targetBalance: balance,
+            });
+
+            em.persist(usage);
+
+            return {
+                success: true,
+                bonusAmount,
+                message: `Promocode applied! You received ${bonusAmount} bonus.`,
+            };
         });
-
-        if (!promocode) {
-            throw new NotFoundException('Promocode not found');
-        }
-
-        // Validate promocode is active
-        if (promocode.status !== PromocodeStatus.ACTIVE) {
-            throw new BadRequestException('Promocode is not active');
-        }
-
-        // Check date validity
-        const now = new Date();
-        if (promocode.validFrom && new Date(promocode.validFrom) > now) {
-            throw new BadRequestException('Promocode is not yet valid');
-        }
-
-        if (promocode.validUntil && new Date(promocode.validUntil) < now) {
-            throw new BadRequestException('Promocode has expired');
-        }
-
-        // Check if user has already used this promocode
-        const existingUsage = await this.promocodeUsageRepository.findOne({
-            user: userId,
-            promocode: promocode.id,
-        });
-
-        if (existingUsage) {
-            throw new BadRequestException('You have already used this promocode');
-        }
-
-        // Count current usages
-        const usageCount = await this.promocodeUsageRepository.count({
-            promocode: promocode.id,
-        });
-
-        // Check usage limits
-        if (promocode.maxUses > 0 && usageCount >= promocode.maxUses) {
-            throw new BadRequestException('Promocode has reached maximum uses');
-        }
-
-        // Find user's main balance
-        const balance = await this.balancesRepository.findOne({
-            user: userId,
-            type: BalanceType.BONUS,
-        });
-
-        if (!balance) {
-            throw new NotFoundException('User balance not found');
-        }
-
-        // Calculate bonus amount
-        let bonusAmount = 0;
-        if (promocode.type === PromocodeType.PERCENTAGE) {
-            // For percentage, use the amount as percentage (e.g., amount: 50 means 50%)
-            bonusAmount = promocode.amount;
-        } else if (promocode.type === PromocodeType.FIXED_AMOUNT) {
-            bonusAmount = promocode.amount;
-        }
-
-        // Apply the bonus to balance
-        balance.balance += bonusAmount;
-        await this.em.flush();
-
-        // Record the usage
-        const usage = this.promocodeUsageRepository.create({
-            user,
-            promocode,
-            usedAt: new Date(),
-            status: PromocodeUsageStatus.APPLIED,
-            bonusAmount,
-            targetBalance: balance,
-        });
-
-        await this.em.persistAndFlush(usage);
-
-        return {
-            success: true,
-            bonusAmount,
-            message: `Promocode applied! You received ${bonusAmount} bonus.`,
-        };
     }
 
     /**

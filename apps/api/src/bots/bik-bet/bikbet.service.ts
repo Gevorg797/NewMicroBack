@@ -2482,9 +2482,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async getActiveBonus(ctx: any, bonusId: number) {
     try {
       // Find the bonus
-      const bonus = await this.bonusesRepository.findOne({
-        id: bonusId,
-      });
+      const bonus = await this.bonusesRepository.findOne(
+        { id: bonusId },
+        { populate: ['user.balances'] },
+      );
 
       if (!bonus) {
         await ctx.answerCbQuery('❌ Бонус не найден');
@@ -2495,6 +2496,23 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const bunusTypeIcon = this.getBonusStatusTypeEmoji(bonus.type);
       const raiseTo = Math.round(parseFloat(bonus.amount) * 2);
       const activatedAt = bonus.activatedAt;
+
+      const keyboardButtons: any[] = [];
+
+      // Get bonus balance only
+      const bonusBalance = bonus.user.balances
+        .getItems()
+        .find((b) => b.type === BalanceType.BONUS);
+
+      if (
+        bonusBalance?.balance &&
+        bonusBalance.balance >= parseFloat(bonus?.wageringRequired || '0')
+      ) {
+        keyboardButtons.push([
+          Markup.button.callback('🎁 Трансфер бонусов', `transfer_${bonus.id}`),
+        ]);
+      }
+
       // Format the date in Russian format
       const formattedDate = activatedAt
         ? this.formatDateToRussian(new Date(activatedAt))
@@ -2503,11 +2521,20 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       let text = `
 <blockquote>🏆 Тип бонуса ${bunusTypeIcon} ${bonusType}</blockquote>
 <blockquote>💰 Сумма бонуса: ${bonus.amount} руб.</blockquote>
-<blockquote>📍 Нужно поднять до:  ${raiseTo} руб.</blockquote>\n\n
+<blockquote>📍 Нужно поднять до:  ${raiseTo} руб.</blockquote>
 `;
 
-      text += `<blockquote>🟢 Статус бонуса: Активирован \n
+      // Display status based on bonus status
+      if (bonus.status === BonusStatus.USED) {
+        const usedDate = bonus.usedAt
+          ? this.formatDateToRussian(new Date(bonus.usedAt))
+          : 'не указано';
+        text += `<blockquote>✅ Статус бонуса: Использован \n
+📅 Бонус использован: ${usedDate}</blockquote>`;
+      } else {
+        text += `<blockquote>🟢 Статус бонуса: Активирован \n
 ⏳Бонус истекает: ${formattedDate}</blockquote>`;
+      }
       const filePath = this.getImagePath('bik_bet_6.jpg');
       const media: any = {
         type: 'photo',
@@ -2515,11 +2542,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         caption: text,
         parse_mode: 'HTML',
       };
+      keyboardButtons.push([Markup.button.callback('⬅️ Назад', 'myBonuses')]);
 
       await ctx.editMessageMedia(media, {
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback('⬅️ Назад', 'myBonuses')],
-        ]).reply_markup,
+        reply_markup: Markup.inlineKeyboard(keyboardButtons).reply_markup,
       });
 
       await ctx.answerCbQuery();
@@ -2529,6 +2555,209 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       if (!error?.response?.description?.includes('message is not modified')) {
         throw error;
       }
+    }
+  }
+
+  /**
+   * Show transfer bonus page
+   */
+  async showTransferBonusPage(ctx: any, bonusId: number) {
+    try {
+      await ctx.answerCbQuery();
+
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.reply('❌ Пользователь не найден');
+        return;
+      }
+
+      // Find the bonus
+      const bonus = await this.bonusesRepository.findOne(
+        {
+          id: bonusId,
+          user: user,
+        },
+        { populate: ['user', 'user.balances'] },
+      );
+
+      if (!bonus) {
+        await ctx.editMessageCaption('❌ Бонус не найден');
+        return;
+      }
+
+      // Get bonus balance
+      const bonusBalance = bonus.user.balances
+        .getItems()
+        .find((b) => b.type === BalanceType.BONUS);
+
+      if (!bonusBalance) {
+        await ctx.editMessageCaption('❌ Бонусный баланс не найден');
+        return;
+      }
+
+      const currentBonus = Math.round(bonusBalance.balance);
+      const exchangeLimit = 15000;
+
+      // Build the message text
+      let text = `
+<blockquote>🔄 Здесь вы можете обменять все Ваши бонусы на баланс!</blockquote>`;
+
+      text += `<blockquote>⚠️ Обменять можно только ${exchangeLimit.toLocaleString('ru-RU')} бонусов, остальные бонусы сгорят!</blockquote>`;
+
+      text += `<blockquote>🎁 На данный момент у вас <b>${currentBonus.toLocaleString('ru-RU')}</b> бонусов</blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_6.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      const keyboardButtons: any[] = [];
+
+      // Only show exchange button if user has bonuses
+      if (currentBonus > 0) {
+        keyboardButtons.push([
+          Markup.button.callback(
+            '💰 Обменять бонусы',
+            `confirmTransfer_${bonus.id}`,
+          ),
+        ]);
+      }
+
+      keyboardButtons.push([
+        Markup.button.callback(
+          '⬅️ Вернуться назад',
+          `getActiveBonus_${bonus.id}`,
+        ),
+      ]);
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard(keyboardButtons).reply_markup,
+      });
+    } catch (error: any) {
+      console.error('Error showing transfer bonus page:', error);
+      // Ignore "message is not modified" error
+      if (!error?.response?.description?.includes('message is not modified')) {
+        if (!error?.message?.includes('message is not modified')) {
+          await ctx.answerCbQuery(
+            '❌ Ошибка при отображении страницы перевода',
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Transfer bonus balance to main balance
+   */
+  async transferBonusBalance(ctx: any, bonusId: number) {
+    try {
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      // Find the bonus
+      const bonus = await this.bonusesRepository.findOne(
+        {
+          id: bonusId,
+          user: user,
+        },
+        { populate: ['user', 'user.balances'] },
+      );
+
+      if (!bonus) {
+        await ctx.answerCbQuery('❌ Бонус не найден');
+        return;
+      }
+
+      // Get balances
+      const bonusBalance = bonus.user.balances
+        .getItems()
+        .find((b) => b.type === BalanceType.BONUS);
+      const mainBalance = bonus.user.balances
+        .getItems()
+        .find((b) => b.type === BalanceType.MAIN);
+
+      if (!bonusBalance || !mainBalance) {
+        await ctx.answerCbQuery('❌ Баланс не найден');
+        return;
+      }
+
+      // Check if wagering requirement is met
+      const wageringRequired = parseFloat(bonus.wageringRequired || '0');
+      if (bonusBalance.balance < wageringRequired) {
+        await ctx.answerCbQuery('❌ Отыгрыш не завершен');
+        return;
+      }
+
+      // Record balance history for bonus balance
+      const bonusBalanceBefore = bonusBalance.balance;
+
+      // Apply the 15,000 bonus exchange limit
+      const exchangeLimit = 15000;
+      const transferAmount =
+        bonusBalance.balance > exchangeLimit
+          ? exchangeLimit
+          : bonusBalance.balance;
+      const burnedAmount = bonusBalance.balance - transferAmount;
+
+      // Transfer from bonus to main
+      const mainBalanceBefore = mainBalance.balance;
+      mainBalance.balance += transferAmount;
+      bonusBalance.balance = 0;
+
+      // Update bonus status to USED
+      bonus.status = BonusStatus.USED;
+      bonus.usedAt = new Date();
+
+      await this.em.persistAndFlush([mainBalance, bonusBalance, bonus]);
+
+      // Build description with burned amount info
+      let transferDescription = `Bonus transfer: ${Math.round(transferAmount)} RUB`;
+      if (burnedAmount > 0) {
+        transferDescription += ` (burned: ${Math.round(burnedAmount)} RUB)`;
+      }
+
+      // Create balance history for main balance (increase)
+      const mainBalanceHistory = this.balancesHistoryRepository.create({
+        balance: mainBalance,
+        balanceBefore: mainBalanceBefore.toString(),
+        amount: transferAmount.toString(),
+        balanceAfter: mainBalance.balance.toString(),
+        description: transferDescription,
+      });
+
+      // Create balance history for bonus balance (decrease)
+      const bonusBalanceHistory = this.balancesHistoryRepository.create({
+        balance: bonusBalance,
+        balanceBefore: bonusBalanceBefore.toString(),
+        amount: (-transferAmount).toString(),
+        balanceAfter: '0',
+        description: `Bonus exchange to main: ${Math.round(transferAmount)} RUB${burnedAmount > 0 ? ` + burned ${Math.round(burnedAmount)} RUB` : ''}`,
+      });
+
+      await this.em.persistAndFlush([mainBalanceHistory, bonusBalanceHistory]);
+
+      // Build success message
+      let successMessage = `✅ Переведено ${Math.round(transferAmount)} бонусов на основной баланс`;
+      if (burnedAmount > 0) {
+        successMessage += `\n⚠️ Сгорело бонусов: ${Math.round(burnedAmount)}`;
+      }
+      await ctx.answerCbQuery(successMessage);
+
+      // Update and show the bonus screen
+      await this.getActiveBonus(ctx, bonusId);
+    } catch (error) {
+      console.error('Error transferring bonus:', error);
+      await ctx.answerCbQuery('❌ Ошибка перевода бонуса');
     }
   }
 
@@ -2625,6 +2854,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     // Update bonus status to ACTIVE
     bonus.status = BonusStatus.ACTIVE;
     bonus.activatedAt = new Date();
+
+    // Initialize wagering if not already set
+    if (!bonus.wageringRequired) {
+      const wageringMultiplier = 2;
+      bonus.wageringRequired = (bonusAmount * wageringMultiplier).toFixed(2);
+    }
+
     await this.em.persistAndFlush(bonus);
 
     // Update bonus balance
@@ -4831,12 +5067,17 @@ ${entriesText}
         return true;
       }
 
+      // Calculate wagering required (default 2x bonus amount)
+      const wageringMultiplier = 2;
+      const wageringRequired = (bonusAmount * wageringMultiplier).toFixed(2);
+
       // Create bonus record
       const bonus = this.bonusesRepository.create({
         user: targetUser,
         amount: bonusAmount.toString(),
         status: BonusStatus.CREATED,
         type: BonusType.PERSONAL as any, // Default type
+        wageringRequired: wageringRequired,
       });
 
       await this.em.persistAndFlush(bonus);

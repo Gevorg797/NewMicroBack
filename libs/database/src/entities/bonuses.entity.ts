@@ -41,4 +41,8 @@ export class Bonuses extends BaseEntity {
 
   @Property({ nullable: true })
   description?: string;
+
+  // Wagering requirement: Total amount that must be wagered (usually 2x bonus amount)
+  @Property({ columnType: 'numeric(10,2)', nullable: true, default: '0' })
+  wageringRequired?: string;
 }

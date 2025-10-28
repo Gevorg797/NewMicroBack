@@ -140,6 +140,18 @@ export class BikBetController {
       await this.bikbetService.getActiveBonus(ctx, bonusId);
     });
 
+    // Transfer bonus handler - shows the transfer page
+    this.bot.action(/transfer_(\d+)/, async (ctx) => {
+      const bonusId = parseInt(ctx.match[1]);
+      await this.bikbetService.showTransferBonusPage(ctx, bonusId);
+    });
+
+    // Confirm transfer handler - actually performs the transfer
+    this.bot.action(/confirmTransfer_(\d+)/, async (ctx) => {
+      const bonusId = parseInt(ctx.match[1]);
+      await this.bikbetService.transferBonusBalance(ctx, bonusId);
+    });
+
     // Disabled bonus handler
     this.bot.action('disabled_button', async (ctx) => {
       await ctx.answerCbQuery();

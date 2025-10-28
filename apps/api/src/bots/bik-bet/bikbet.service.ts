@@ -2388,10 +2388,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Find the bonus
-      const bonus = await this.bonusesRepository.findOne({
-        id: bonusId,
-        user: user,
-      });
+      const bonus = await this.bonusesRepository.findOne(
+        {
+          id: bonusId,
+          user: user,
+        },
+        { populate: ['user'] },
+      );
 
       if (!bonus) {
         await ctx.answerCbQuery('❌ Бонус не найден');
@@ -2543,15 +2546,32 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Find the bonus
-      const bonus = await this.bonusesRepository.findOne({
-        id: bonusId,
-        user: user,
-      });
+      const bonus = await this.bonusesRepository.findOne(
+        {
+          id: bonusId,
+          user: user,
+        },
+        { populate: ['user'] },
+      );
 
       if (!bonus) {
         await ctx.answerCbQuery('❌ Бонус не найден');
         return;
       }
+
+      const oldActiveBonus = await this.bonusesRepository.findOne({
+        user: user,
+        status: BonusStatus.ACTIVE,
+      });
+
+      if (!oldActiveBonus) {
+        await ctx.answerCbQuery('❌ Не найден активный бонус');
+        return;
+      }
+
+      // Change old active bonus status to USED
+      oldActiveBonus.status = BonusStatus.USED;
+      await this.em.persistAndFlush(oldActiveBonus);
 
       // Get bonus balance
       const bonusBalance = await this.balancesRepository.findOne({
@@ -2583,7 +2603,6 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       user: bonus.user,
       type: BalanceType.MAIN,
     });
-    console.log(mainBalance);
 
     if (!mainBalance) {
       await ctx.answerCbQuery('❌ Не найден основной баланс');
@@ -2621,6 +2640,9 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       description: `Bonus activation: ${Math.round(bonusAmount)} RUB`,
     });
     await this.em.persistAndFlush(balanceHistory);
+
+    // Send notification to channel
+    await this.sendBonusActivationNotification(ctx, bonus, bonus.user);
 
     const text = `
 <blockquote>✅ Бонус успешно активирован!</blockquote>`;
@@ -3613,6 +3635,41 @@ ${entriesText}
         },
       },
     );
+  }
+
+  async sendBonusActivationNotification(ctx: any, bonus: any, user: any) {
+    try {
+      const bonusType = this.getBonusStatusType(bonus.type);
+      const amount = parseFloat(bonus.amount).toFixed(2);
+      const telegramId = user.telegramId;
+
+      const message =
+        `🎁 Активирован бонус!\n` +
+        `💰 Сумма бонуса: ${amount} RUB\n` +
+        `👤 Юзер: ${telegramId}\n` +
+        `🎁 Бонус: ${bonusType}`;
+
+      // Send message to Telegram
+      await ctx.telegram.sendMessage(
+        this.chatIdForDepositsAndWithdrawals,
+        message,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🔍 К юзеру',
+                  url: `tg://user?id=${telegramId}`,
+                },
+              ],
+            ],
+          },
+        },
+      );
+    } catch (error) {
+      console.error('Error sending bonus activation notification:', error);
+    }
   }
 
   async withdrawFKwallet(ctx: any, amount: number) {

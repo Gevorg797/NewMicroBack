@@ -16,6 +16,7 @@ import {
   PaymentPayoutRequisite,
   Bonuses,
   BonusStatus,
+  BonusType,
   BalancesHistory,
 } from '@lib/database';
 import { Markup } from 'telegraf';
@@ -2240,15 +2241,19 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         // Add bonus buttons
         bonuses.forEach((bonus) => {
           const statusEmoji = this.getBonusStatusEmoji(bonus.status);
+          const statusType = this.getBonusStatusType(bonus.type);
           const amount = Math.round(parseFloat(bonus.amount));
-          const date =
-            bonus.createdAt?.toLocaleDateString('ru-RU') || 'Неизвестно';
 
-          const buttonText = `${statusEmoji} ${amount} RUB (${date})`;
+          const buttonText = `${statusEmoji} ${statusType} ${amount} руб`;
 
           // Only make button clickable if status is CREATED
           if (bonus.status === BonusStatus.CREATED) {
             const callbackData = `bonus_${bonus.id}`;
+            keyboardButtons.push([
+              Markup.button.callback(buttonText, callbackData),
+            ]);
+          } else if (bonus.status === BonusStatus.ACTIVE) {
+            const callbackData = `getActiveBonus_${bonus.id}`;
             keyboardButtons.push([
               Markup.button.callback(buttonText, callbackData),
             ]);
@@ -2297,66 +2302,352 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // Check if bonus status is CREATED and change it to ISACTIVE
+      const raiseTo = Math.round(parseFloat(bonus.amount) * 2);
+
+      const keyboardButtons: any[] = [];
+
+      // Determine status text and emoji
+      let statusText = '';
+      let statusEmoji = '';
+      switch (bonus.status) {
+        case BonusStatus.CREATED:
+          statusText = 'Не активирован';
+          statusEmoji = '🔴';
+          break;
+        case BonusStatus.ACTIVE:
+          statusText = 'Активирован';
+          statusEmoji = '🟢';
+          break;
+        case BonusStatus.USED:
+          statusText = 'Использован';
+          statusEmoji = '🔴';
+          break;
+        case BonusStatus.EXPIRED:
+          statusText = 'Истёк';
+          statusEmoji = '🔴';
+          break;
+        default:
+          statusText = 'Не активирован';
+          statusEmoji = '🔴';
+      }
+
+      let text = `
+<blockquote>🏆 Тип бонуса 💎 ${bonus.type}</blockquote>
+<blockquote>💰 Сумма бонуса: ${bonus.amount} руб.</blockquote>
+<blockquote>📍 Нужно поднять до: ${raiseTo} руб.</blockquote>
+<blockquote>${statusEmoji} Статус бонуса: ${statusText}</blockquote>`;
+
+      // Only show activate button if status is CREATED
       if (bonus.status === BonusStatus.CREATED) {
-        // Check user's current bonus balance
-        const bonusBalance = await this.balancesRepository.findOne({
-          user: user,
-          type: BalanceType.BONUS,
+        keyboardButtons.push([
+          Markup.button.callback(
+            '🎖 Активировать',
+            `activateBonus_${bonus.id}`,
+          ),
+        ]);
+      }
+
+      const filePath = this.getImagePath('bik_bet_6.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      keyboardButtons.push([Markup.button.callback('⬅️ Назад', 'myBonuses')]);
+
+      try {
+        await ctx.editMessageMedia(media, {
+          reply_markup: Markup.inlineKeyboard(keyboardButtons).reply_markup,
         });
-
-        const currentBonusBalance = bonusBalance?.balance || 0;
-
-        // Only allow activation if bonus balance is 0
-        if (currentBonusBalance > 1) {
-          await ctx.answerCbQuery(
-            '❌ Вы должны использовать свой текущий бонус перед активацией нового бонуса!',
-            {
-              show_alert: true,
-            },
-          );
+      } catch (error: any) {
+        // Ignore "message is not modified" error
+        if (error?.response?.description?.includes('message is not modified')) {
           return;
         }
-
-        const bonusAmount = parseFloat(bonus.amount);
-        const startedAmount = currentBonusBalance;
-        const finishedAmount = bonusAmount;
-
-        // Update bonus status to ISACTIVE
-        bonus.status = BonusStatus.ACTIVE;
-        bonus.activatedAt = new Date();
-        await this.em.persistAndFlush(bonus);
-        // Update bonus balance
-        if (bonusBalance) {
-          bonusBalance.balance = bonusAmount;
-          await this.em.persistAndFlush(bonusBalance);
-        }
-
-        // Create balance history record
-        if (bonusBalance) {
-          const balanceHistory = this.balancesHistoryRepository.create({
-            balance: bonusBalance,
-            balanceBefore: startedAmount.toString(),
-            amount: bonusAmount.toString(),
-            balanceAfter: finishedAmount.toString(),
-            description: `Bonus activation: ${Math.round(bonusAmount)} RUB`,
-          });
-          await this.em.persistAndFlush(balanceHistory);
-        }
-
-        await ctx.answerCbQuery(
-          `✅ Бонус ${Math.round(bonusAmount)} RUB успешно активирован и добавлен на ваш бонусный баланс!`,
-          { show_alert: true },
-        );
-      } else {
-        await ctx.reply('❌ Ошибка: бонусный баланс не найден');
+        throw error;
       }
-      // Refresh the bonuses list
-      await this.myBonuses(ctx);
     } catch (error) {
       console.error('Error handling bonus click:', error);
       await ctx.reply('❌ Ошибка при обработке бонуса');
     }
+  }
+
+  /**
+   * Activate bonus
+   */
+  async activateBonus(ctx: any, bonusId: number) {
+    try {
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      // Find the bonus
+      const bonus = await this.bonusesRepository.findOne({
+        id: bonusId,
+        user: user,
+      });
+
+      if (!bonus) {
+        await ctx.answerCbQuery('❌ Бонус не найден');
+        return;
+      }
+
+      // Check bonus status
+      if (bonus.status !== BonusStatus.CREATED) {
+        await ctx.answerCbQuery(
+          '❌ Этот бонус уже был активирован или использован',
+        );
+        return;
+      }
+
+      // Get bonus balance
+      const bonusBalance = await this.balancesRepository.findOne({
+        user: user,
+        type: BalanceType.BONUS,
+      });
+      const bonusBalanceValue = bonusBalance?.balance || 0;
+
+      // If user has active bonus balance, show warning
+      if (bonusBalanceValue > 0) {
+        const activeBonus = await this.bonusesRepository.findOne({
+          user: user,
+          status: BonusStatus.ACTIVE,
+        });
+
+        if (!activeBonus) {
+          await ctx.answerCbQuery(
+            '❌ Обнаружен бонусный баланс, но активный бонус не найден',
+          );
+          return;
+        }
+
+        const text = `
+<blockquote>❗️ У вас уже есть один активированный бонус, вы уверены, что хотите активировать новый?</blockquote>
+<blockquote>🗑 Активированный бонус пропадет вместе с бонусным балансом (<code>${Math.round(bonusBalanceValue)} RUB</code>)!</blockquote>`;
+
+        const filePath = this.getImagePath('bik_bet_6.jpg');
+        const media: any = {
+          type: 'photo',
+          media: { source: fs.readFileSync(filePath) },
+          caption: text,
+          parse_mode: 'HTML',
+        };
+
+        try {
+          await ctx.editMessageMedia(media, {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('Да', `agreeBonus_${bonus.id}`)],
+              [
+                Markup.button.callback(
+                  '🎁 К активном бонусу',
+                  `getActiveBonus_${activeBonus.id}`,
+                ),
+              ],
+              [Markup.button.callback('⬅️ Назад', `bonus_${bonus.id}`)],
+            ]).reply_markup,
+          });
+        } catch (error: any) {
+          // Ignore "message is not modified" error
+          if (
+            !error?.response?.description?.includes('message is not modified')
+          ) {
+            throw error;
+          }
+        }
+
+        await ctx.answerCbQuery();
+        return;
+      }
+
+      // No active bonus, activate directly
+      await this.performBonusActivation(ctx, bonus, bonusBalance);
+    } catch (error) {
+      console.error('Error activating bonus:', error);
+      await ctx.answerCbQuery('❌ Ошибка при активации бонуса');
+    }
+  }
+
+  /**
+   *Get Activate bonus
+   */
+  async getActiveBonus(ctx: any, bonusId: number) {
+    try {
+      // Find the bonus
+      const bonus = await this.bonusesRepository.findOne({
+        id: bonusId,
+      });
+
+      if (!bonus) {
+        await ctx.answerCbQuery('❌ Бонус не найден');
+        return;
+      }
+
+      const bonusType = this.getBonusStatusType(bonus.type);
+      const bunusTypeIcon = this.getBonusStatusTypeEmoji(bonus.type);
+      const raiseTo = Math.round(parseFloat(bonus.amount) * 2);
+      const activatedAt = bonus.activatedAt;
+      // Format the date in Russian format
+      const formattedDate = activatedAt
+        ? this.formatDateToRussian(new Date(activatedAt))
+        : 'не указано';
+
+      let text = `
+<blockquote>🏆 Тип бонуса ${bunusTypeIcon} ${bonusType}</blockquote>
+<blockquote>💰 Сумма бонуса: ${bonus.amount} руб.</blockquote>
+<blockquote>📍 Нужно поднять до:  ${raiseTo} руб.</blockquote>\n\n
+`;
+
+      text += `<blockquote>🟢 Статус бонуса: Активирован \n
+⏳Бонус истекает: ${formattedDate}</blockquote>`;
+      const filePath = this.getImagePath('bik_bet_6.jpg');
+      const media: any = {
+        type: 'photo',
+        media: { source: fs.readFileSync(filePath) },
+        caption: text,
+        parse_mode: 'HTML',
+      };
+
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Назад', 'myBonuses')],
+        ]).reply_markup,
+      });
+
+      await ctx.answerCbQuery();
+      return;
+    } catch (error: any) {
+      // Ignore "message is not modified" error
+      if (!error?.response?.description?.includes('message is not modified')) {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Agree to activate bonus (when replacing existing active bonus)
+   */
+  async agreeBonusActivation(ctx: any, bonusId: number) {
+    try {
+      const telegramId = String(ctx.from.id);
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      // Find the bonus
+      const bonus = await this.bonusesRepository.findOne({
+        id: bonusId,
+        user: user,
+      });
+
+      if (!bonus) {
+        await ctx.answerCbQuery('❌ Бонус не найден');
+        return;
+      }
+
+      // Get bonus balance
+      const bonusBalance = await this.balancesRepository.findOne({
+        user: user,
+        type: BalanceType.BONUS,
+      });
+
+      await this.performBonusActivation(ctx, bonus, bonusBalance);
+    } catch (error) {
+      console.error('Error agreeing to bonus activation:', error);
+      await ctx.answerCbQuery('❌ Ошибка при активации бонуса');
+    }
+  }
+
+  /**
+   * Perform bonus activation
+   */
+  private async performBonusActivation(
+    ctx: any,
+    bonus: any,
+    bonusBalance: any,
+  ) {
+    const bonusAmount = parseFloat(bonus.amount);
+    const startedAmount = bonusBalance?.balance || 0;
+    const finishedAmount = bonusAmount;
+
+    // Get user's currency
+    const mainBalance = await this.balancesRepository.findOne({
+      user: bonus.user,
+      type: BalanceType.MAIN,
+    });
+    console.log(mainBalance);
+
+    if (!mainBalance) {
+      await ctx.answerCbQuery('❌ Не найден основной баланс');
+      return;
+    }
+
+    const currency = mainBalance.currency;
+
+    // Create bonus balance if it doesn't exist
+    if (!bonusBalance) {
+      bonusBalance = this.balancesRepository.create({
+        user: bonus.user,
+        type: BalanceType.BONUS,
+        balance: 0,
+        currency: currency,
+      });
+      await this.em.persistAndFlush(bonusBalance);
+    }
+
+    // Update bonus status to ACTIVE
+    bonus.status = BonusStatus.ACTIVE;
+    bonus.activatedAt = new Date();
+    await this.em.persistAndFlush(bonus);
+
+    // Update bonus balance
+    bonusBalance.balance = bonusAmount;
+    await this.em.persistAndFlush(bonusBalance);
+
+    // Create balance history record
+    const balanceHistory = this.balancesHistoryRepository.create({
+      balance: bonusBalance,
+      balanceBefore: startedAmount.toString(),
+      amount: bonusAmount.toString(),
+      balanceAfter: finishedAmount.toString(),
+      description: `Bonus activation: ${Math.round(bonusAmount)} RUB`,
+    });
+    await this.em.persistAndFlush(balanceHistory);
+
+    const text = `
+<blockquote>✅ Бонус успешно активирован!</blockquote>`;
+
+    const filePath = this.getImagePath('bik_bet_6.jpg');
+    const media: any = {
+      type: 'photo',
+      media: { source: fs.readFileSync(filePath) },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+
+    try {
+      await ctx.editMessageMedia(media, {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Назад', 'myBonuses')],
+        ]).reply_markup,
+      });
+    } catch (error: any) {
+      // Ignore "message is not modified" error
+      if (!error?.response?.description?.includes('message is not modified')) {
+        throw error;
+      }
+    }
+
+    await ctx.answerCbQuery();
+    return;
   }
 
   /**
@@ -2377,6 +2668,46 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Get type for bonus status
+   */
+  private getBonusStatusType(type: BonusType | undefined): string {
+    if (!type) return 'Персональный бонус';
+
+    switch (type) {
+      case BonusType.FREESPIN:
+        return 'Фриспин'; // Не использован
+      case BonusType.WHEEL:
+        return 'Колесо Фортуны'; // Активный
+      case BonusType.PROMOCODE:
+        return 'Промокод'; // Использован
+      case BonusType.PERSONAL:
+        return 'Персональный бонус'; // Использован
+      default:
+        return 'Персональный бонус'; // Использован
+    }
+  }
+
+  /**
+   * Get icon for bonus status
+   */
+  private getBonusStatusTypeEmoji(type: BonusType | undefined): string {
+    if (!type) return 'Персональный бонус';
+
+    switch (type) {
+      case BonusType.FREESPIN:
+        return '🎰'; // Не использован
+      case BonusType.WHEEL:
+        return '🎡'; // Активный
+      case BonusType.PROMOCODE:
+        return '🎟'; // Использован
+      case BonusType.PERSONAL:
+        return '💎'; // Использован
+      default:
+        return '💎'; // Использован
+    }
+  }
+
+  /**
    * Get text for bonus status
    */
   private getBonusStatusText(status: string): string {
@@ -2390,6 +2721,34 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       default:
         return 'Неизвестно';
     }
+  }
+
+  /**
+   * Format date to Russian format
+   */
+  private formatDateToRussian(date: Date): string {
+    const months = [
+      'января',
+      'февраля',
+      'марта',
+      'апреля',
+      'мая',
+      'июня',
+      'июля',
+      'августа',
+      'сентября',
+      'октября',
+      'ноября',
+      'декабря',
+    ];
+
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    return `${day} ${month} ${year} в ${hours}:${minutes}`;
   }
 
   async info(ctx: any, channelLink: string) {
@@ -4420,7 +4779,7 @@ ${entriesText}
         user: targetUser,
         amount: bonusAmount.toString(),
         status: BonusStatus.CREATED,
-        type: 'Freespin' as any, // Default type
+        type: BonusType.PERSONAL as any, // Default type
       });
 
       await this.em.persistAndFlush(bonus);

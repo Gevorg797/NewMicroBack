@@ -13,6 +13,7 @@ export enum BonusType {
   FREESPIN = 'Freespin',
   WHEEL = 'Wheel',
   PROMOCODE = 'Promocode',
+  PERSONAL = 'Personal',
 }
 
 @Entity({ tableName: 'bonuses' })

@@ -121,6 +121,25 @@ export class BikBetController {
       await this.bikbetService.handleBonusClick(ctx, bonusId);
     });
 
+    // Activate bonus handler
+    this.bot.action(/activateBonus_(\d+)/, async (ctx) => {
+      const bonusId = parseInt(ctx.match[1]);
+      await this.bikbetService.activateBonus(ctx, bonusId);
+    });
+
+    // Agree to bonus activation handler
+    this.bot.action(/agreeBonus_(\d+)/, async (ctx) => {
+      const bonusId = parseInt(ctx.match[1]);
+      await this.bikbetService.agreeBonusActivation(ctx, bonusId);
+    });
+
+    // Get active bonus handler
+    this.bot.action(/getActiveBonus_(\d+)/, async (ctx) => {
+      await ctx.answerCbQuery();
+      const bonusId = parseInt(ctx.match[1]);
+      await this.bikbetService.getActiveBonus(ctx, bonusId);
+    });
+
     // Disabled bonus handler
     this.bot.action('disabled_button', async (ctx) => {
       await ctx.answerCbQuery();

@@ -7,4 +7,4 @@ import { HealthModule } from './health/health.module';
 @Module({
   imports: [DatabaseModule, GamesModule, FinancesModule, HealthModule],
 })
-export class AdminModule {}
+export class AdminModule { }

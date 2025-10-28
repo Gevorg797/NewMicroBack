@@ -31,6 +31,11 @@ import { Balances, BalanceType } from './balances.entity';
 import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 import { Bonuses, BonusStatus, BonusType } from './bonuses.entity';
 import { BalancesHistory } from './balances-history.entity';
+import { Promocode, PromocodeType, PromocodeStatus } from './promocode.entity';
+import {
+  PromocodeUsage,
+  PromocodeUsageStatus,
+} from './promocode-usage.entity';
 
 // Export everything for convenient imports
 // export * from './balances.entity';
@@ -58,6 +63,8 @@ export const ENTITIES = [
   PaymentPayoutRequisite,
   Bonuses,
   BalancesHistory,
+  Promocode,
+  PromocodeUsage,
 ];
 
 export {
@@ -93,4 +100,9 @@ export {
   BonusStatus,
   BonusType,
   BalancesHistory,
+  Promocode,
+  PromocodeType,
+  PromocodeStatus,
+  PromocodeUsage,
+  PromocodeUsageStatus,
 };

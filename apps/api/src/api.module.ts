@@ -4,11 +4,12 @@ import { BikBetModule } from './bots/bik-bet/bikbet.module';
 import { ClientModule } from './client/client.module';
 import { HealthModule } from './health/health.module';
 import { PromocodesModule } from './promocodes/promocodes.module';
+import { WheelModule } from './wheel/wheel.module';
 
 @Module({
   providers: [],
   controllers: [],
   exports: [],
-  imports: [DatabaseModule, HealthModule, BikBetModule, ClientModule, PromocodesModule],
+  imports: [DatabaseModule, HealthModule, BikBetModule, ClientModule, PromocodesModule, WheelModule],
 })
 export class ApiModule { }

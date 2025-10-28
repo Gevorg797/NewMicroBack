@@ -10,7 +10,6 @@ export const checkIsTelegramAdmin = async (ctx: any): Promise<boolean> => {
   const userId = ctx?.from?.id;
 
   if (!adminIds.includes(userId)) {
-    await ctx.reply('⛔ У вас нет доступа к админ-панели');
     return false;
   }
 

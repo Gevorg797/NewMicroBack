@@ -349,6 +349,8 @@ export class CryptobotService implements IPaymentProvider {
   }
 
   async handleCallback(callbackPayload: CallbackPayload): Promise<void> {
+    console.log('Cryptobot callback received:', callbackPayload);
+
     const { body, headers } = callbackPayload;
     const { payload } = body;
 

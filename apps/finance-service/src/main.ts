@@ -7,7 +7,7 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
 import * as qs from 'qs';
 import cors from '@fastify/cors';
-import fastifyFormbody from '@fastify/formbody'
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { FinanceModule } from './finance.module';
 import { LocalTimeLogger } from 'libs/utils/logger/locale-time-logger';
 import { AppRpcExceptionFilter } from 'libs/utils/interceptors/AppRpcExceptionFilter';
@@ -39,6 +39,20 @@ async function bootstrap() {
 
   app.setGlobalPrefix('finance');
   app.useGlobalFilters(new AppRpcExceptionFilter());
+
+  // Setup Swagger documentation
+  const config = new DocumentBuilder()
+    .setTitle('Finance Service API')
+    .setDescription('The Finance Service API documentation')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const docs = SwaggerModule.createDocument(app, config, {
+    deepScanRoutes: true,
+  });
+
+  SwaggerModule.setup('/finance/swagger', app, docs);
 
   // Attach TCP microservice to the SAME app
   app.connectMicroservice<MicroserviceOptions>(

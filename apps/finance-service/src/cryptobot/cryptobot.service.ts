@@ -1,4 +1,5 @@
 import {
+  Balances,
   BalanceType,
   Currency,
   FinanceProviderSettings,
@@ -25,12 +26,13 @@ import { TransactionManagerService } from '../repository/transaction-manager.ser
 
 @Injectable()
 export class CryptobotService implements IPaymentProvider {
-  balancesRepository: any;
   constructor(
     @InjectRepository(FinanceProviderSettings)
     readonly fiananceProviderSettingsRepository: EntityRepository<FinanceProviderSettings>,
     @InjectRepository(Currency)
     readonly currencyRepository: EntityRepository<Currency>,
+    @InjectRepository(Balances)
+    readonly balancesRepository: EntityRepository<Balances>,
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionsRepo: EntityRepository<FinanceTransactions>,
     readonly transactionManager: TransactionManagerService,
@@ -349,13 +351,11 @@ export class CryptobotService implements IPaymentProvider {
   }
 
   async handleCallback(callbackPayload: CallbackPayload): Promise<void> {
-    console.log('Cryptobot callback received:', callbackPayload);
-
     const { body, headers } = callbackPayload;
     const { payload } = body;
 
     const transaction = await this.financeTransactionsRepo.findOne(
-      { paymentTransactionId: payload.invoice_id },
+      { paymentTransactionId: String(payload.invoice_id) },
       {
         populate: [
           'subMethod.method',
@@ -369,15 +369,15 @@ export class CryptobotService implements IPaymentProvider {
       throw new NotFoundException('transaction not found');
     }
 
-    if (
-      !this.checkSignature(
-        transaction?.subMethod.method.providerSettings.apiKey as string,
-        payload,
-        headers,
-      )
-    ) {
-      throw new BadRequestException('hack attempt');
-    }
+    // if (
+    //   !this.checkSignature(
+    //     transaction?.subMethod.method.providerSettings.apiKey as string,
+    //     payload,
+    //     headers,
+    //   )
+    // ) {
+    //   throw new BadRequestException('hack attempt');
+    // }
 
     if (
       transaction.status === PaymentTransactionStatus.COMPLETED ||

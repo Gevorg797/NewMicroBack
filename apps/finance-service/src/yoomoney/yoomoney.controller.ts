@@ -1,9 +1,11 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { YoomoneyServcie } from './yoomoney.service';
 import { YooMoneyCallbackDto } from './dto/handle-callback.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FINANCE_PATTERNS } from 'libs/config';
 
+@ApiTags('yoomoney')
 @Controller('yoomoney')
 export class YoomoneyController {
   constructor(private readonly yoomoneyService: YoomoneyServcie) {}
@@ -19,6 +21,8 @@ export class YoomoneyController {
   }
 
   @Post('callback')
+  @ApiOperation({ summary: 'Handle YooMoney payment callback' })
+  @ApiBody({ type: YooMoneyCallbackDto })
   async handleCallback(@Body() body: YooMoneyCallbackDto) {
     await this.yoomoneyService.handleCallback({ body });
     return { ok: true };

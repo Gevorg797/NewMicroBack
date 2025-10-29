@@ -4,6 +4,7 @@ import { CryptobotService } from './cryptobot.service';
 import { ConfigModule } from '@nestjs/config';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import {
+  Balances,
   Currency,
   FinanceProviderSettings,
   FinanceTransactions,
@@ -17,6 +18,7 @@ import { RepositoryModule } from '../repository/repository.module';
       FinanceProviderSettings,
       Currency,
       FinanceTransactions,
+      Balances,
     ]),
     RepositoryModule,
   ],

@@ -94,7 +94,7 @@ export class FreekassaService implements IPaymentProvider {
     const ipAddress = payload.params?.ipAddress;
     const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN, intid } = body;
 
-    const allowedIps = ['104.23.239.57', '172.69.150.187'];
+    const allowedIps = ['104.23.239.57', '172.69.150.187', '172.71.164.74'];
 
     if (ipAddress && !allowedIps.includes(ipAddress)) {
       console.log('hacking attempt from ip:', ipAddress);

@@ -88,6 +88,8 @@ export class FreekassaService implements IPaymentProvider {
   }
 
   async handleCallback(payload: CallbackPayload): Promise<void> {
+    console.log('frekasaa callback', payload);
+
     const body = payload.body;
     const ipAddress = payload.params?.ipAddress;
     const { MERCHANT_ID, AMOUNT, MERCHANT_ORDER_ID, SIGN, intid } = body;
@@ -100,6 +102,8 @@ export class FreekassaService implements IPaymentProvider {
     ];
 
     if (ipAddress && !allowedIps.includes(ipAddress)) {
+      console.log('hacking attempt from ip:', ipAddress);
+
       throw new Error('hacking attempt!');
     }
 

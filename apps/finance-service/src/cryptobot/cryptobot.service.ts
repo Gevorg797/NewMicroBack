@@ -186,6 +186,8 @@ export class CryptobotService implements IPaymentProvider {
    * Creates a CryptoBot check that user can claim
    */
   async createPayoutProcess(payload: PayoutPayload): Promise<any> {
+    console.log('crptobot', payload);
+
     const { transactionId, amount } = payload;
 
     // Get transaction with all required relations

@@ -10,6 +10,9 @@ import {
     PromocodeStatus,
     PromocodeUsageStatus,
     BalanceType,
+    FinanceTransactions,
+    PaymentTransactionType,
+    PaymentTransactionStatus,
 } from '@lib/database';
 import { CreatePromocodeDto } from './dto/create-promocode.dto';
 
@@ -58,6 +61,8 @@ export class PromocodesService {
             createdBy: admin,
             status: createPromocodeDto.status || PromocodeStatus.ACTIVE,
             maxUses: createPromocodeDto.maxUses || 1,
+            validFrom: createPromocodeDto.validFrom ? new Date(createPromocodeDto.validFrom) : null,
+            validUntil: createPromocodeDto.validUntil ? new Date(createPromocodeDto.validUntil) : null,
         });
 
         await this.em.persistAndFlush(promocode);
@@ -101,6 +106,23 @@ export class PromocodesService {
 
             if (promocode.validUntil && new Date(promocode.validUntil) < now) {
                 throw new BadRequestException('Promocode has expired');
+            }
+
+            // Check minimum deposit amount requirement if set
+            if (promocode.minDepositAmount && promocode.minDepositAmount > 0) {
+                const completedDeposits = await em.find(FinanceTransactions, {
+                    user: userId,
+                    type: PaymentTransactionType.PAYIN,
+                    status: PaymentTransactionStatus.COMPLETED,
+                });
+
+                const totalDeposited = completedDeposits.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+                if (totalDeposited < promocode.minDepositAmount) {
+                    throw new BadRequestException(
+                        `Minimum deposit requirement not met. Required: ${promocode.minDepositAmount}, your total completed deposits: ${totalDeposited}`,
+                    );
+                }
             }
 
             // Check if user has already used this promocode

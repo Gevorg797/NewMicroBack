@@ -25,6 +25,11 @@ export class CreatePromocodeDto {
     @IsOptional()
     status?: PromocodeStatus;
 
+    @IsNumber()
+    @Min(0)
+    @IsOptional()
+    minDepositAmount?: number;
+
     @IsDateString()
     @IsOptional()
     validFrom?: string;

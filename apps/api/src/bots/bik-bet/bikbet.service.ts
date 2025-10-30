@@ -23,6 +23,7 @@ import {
   PaymentTransactionType,
   Promocode,
 } from '@lib/database';
+import { PromocodeType } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -38,6 +39,7 @@ import {
 } from './games-data';
 import { PaymentService } from '../../client/payment/payment.service';
 import { StatsService } from '../../stats/stats.service';
+import { PromocodesService } from '../../promocodes/promocodes.service';
 import { SelfCleaningMap } from 'libs/utils/data-structures/self-cleaning-map';
 import { log } from 'console';
 import {
@@ -95,12 +97,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly bonusesRepository: EntityRepository<Bonuses>,
     @InjectRepository(BalancesHistory)
     private readonly balancesHistoryRepository: EntityRepository<BalancesHistory>,
-    @InjectRepository(Promocode)
-    private readonly promoCodeRepository: EntityRepository<Promocode>,
     @InjectRepository(FinanceTransactions)
     private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
+    private readonly promocodesService: PromocodesService,
     private readonly em: EntityManager,
   ) {}
 
@@ -3231,6 +3232,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       return true;
     }
 
+    const user = await this.userRepository.findOne({
+      telegramId: ctx.from.id.toString(),
+    });
+    const createdById = user?.id || null;
+
     // Keep data in state for confirmation
     this.userStates.set(adminId, {
       ...userState,
@@ -3242,7 +3248,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           code: parsed.promo_code,
           amount: parsed.amount,
           maxUses: parsed.max_activations,
-          min_to_activate: parsed.min_to_activate,
+          minDepositAmount: parsed.min_to_activate,
+          createdById,
         }),
         adminId,
         messageId: 0,
@@ -3285,9 +3292,17 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
     try {
       const payload = JSON.parse(state.rejectionData!.method);
-      console.log(payload, 999);
 
-      // TODO: integrate backend call here
+      const dto: any = {
+        code: payload.code,
+        amount: payload.amount,
+        maxUses: payload.maxUses,
+        type: PromocodeType.FIXED_AMOUNT,
+        createdById: payload.createdById,
+      };
+
+      await this.promocodesService.create(dto);
+
       await ctx.editMessageText('✅ Промокод успешно создан!', {
         parse_mode: 'HTML',
         reply_markup: Markup.inlineKeyboard([
@@ -3362,7 +3377,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const code = state.rejectionData!.method;
+      const user = await this.userRepository.findOne({
+        telegramId: ctx.from.id.toString(),
+      });
+
+      const payload = state.rejectionData!.method;
+
       // TODO: integrate backend deletion here
       await ctx.editMessageText('✅ Промокод успешно удален!', {
         parse_mode: 'HTML',

@@ -58,8 +58,8 @@ export class Promocode extends BaseEntity {
   // @Property({ default: 0 })
   // currentUses: number = 0;
 
-  @Property({ default: 1 })
-  maxUsesPerUser: number = 1; // How many times a single user can use this code
+  // @Property({ default: 1 })
+  // maxUsesPerUser: number = 1; // How many times a single user can use this code
 
   @Property({ columnType: 'double precision', nullable: true })
   minDepositAmount?: number; // Minimum deposit required to use this code

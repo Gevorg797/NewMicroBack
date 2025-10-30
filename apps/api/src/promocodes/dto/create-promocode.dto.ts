@@ -23,7 +23,7 @@ export class CreatePromocodeDto {
   description?: string;
 
   @IsEnum(PromocodeType)
-  type: PromocodeType.FIXED_AMOUNT;
+  type: PromocodeType;
 
   @IsNumber()
   @Min(0)
@@ -32,6 +32,11 @@ export class CreatePromocodeDto {
   @IsEnum(PromocodeStatus)
   @IsOptional()
   status?: PromocodeStatus;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  minDepositAmount?: number;
 
   @IsDateString()
   @IsOptional()

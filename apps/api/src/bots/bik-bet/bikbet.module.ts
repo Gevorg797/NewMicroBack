@@ -16,6 +16,7 @@ import {
   PaymentPayoutRequisite,
   Bonuses,
   BalancesHistory,
+  FinanceTransactions,
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
 import { StatsModule } from '../../stats/stats.module';
@@ -39,6 +40,7 @@ import { PromocodesModule } from '../../promocodes/promocodes.module';
       PaymentPayoutRequisite,
       Bonuses,
       BalancesHistory,
+      FinanceTransactions,
     ]),
     PaymentModule,
     StatsModule,
@@ -48,4 +50,4 @@ import { PromocodesModule } from '../../promocodes/promocodes.module';
   providers: [BikBetService],
   exports: [BikBetService],
 })
-export class BikBetModule { }
+export class BikBetModule {}

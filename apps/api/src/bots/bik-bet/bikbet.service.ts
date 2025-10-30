@@ -18,6 +18,9 @@ import {
   BonusStatus,
   BonusType,
   BalancesHistory,
+  FinanceTransactions,
+  PaymentTransactionStatus,
+  PaymentTransactionType,
 } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
@@ -91,6 +94,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly bonusesRepository: EntityRepository<Bonuses>,
     @InjectRepository(BalancesHistory)
     private readonly balancesHistoryRepository: EntityRepository<BalancesHistory>,
+    @InjectRepository(FinanceTransactions)
+    private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly em: EntityManager,
@@ -1012,7 +1017,6 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         await ctx.reply(message);
         return;
       }
-
       const userState = this.getUserState(userId);
       const chosenBalance = userState.chosenBalance || 'main';
 
@@ -3135,11 +3139,39 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async vipClub(ctx: any) {
+    // Resolve current user
+    const user = await this.userRepository.findOne({
+      telegramId: ctx.from.id.toString(),
+    });
+
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
+    // Sum of completed PAYIN transactions
+    const transactions = await this.financeTransactionsRepository.find({
+      user: user,
+      type: PaymentTransactionType.PAYIN,
+      status: PaymentTransactionStatus.COMPLETED,
+    });
+
+    const totalDeposited = transactions.reduce(
+      (sum, tx) => sum + (tx.amount || 0),
+      0,
+    );
+    const threshold = 10000;
+    const progressPercent = Math.min(
+      100,
+      Math.floor((totalDeposited / threshold) * 100),
+    );
+    const formattedTotal = `${Math.floor(totalDeposited).toLocaleString('ru-RU')}₽`;
+
     const text = `<blockquote><b>👑 VIP-Клуб</b></blockquote>
 <blockquote>Ощутите VIP-опыт: быстрые выводы, персональные бонусы, закрытые акции и индивидуальная поддержка ждут вас 🫡</blockquote>
 <blockquote><b>🏆 Чтобы попасть в приватный канал и получить все привилегии, необходимо сделать суммарный депозит 10 000₽ с момента запуска VIP-Клуба.</b></blockquote>
 <blockquote><b>💎 Ваш текущий прогресс:</b></blockquote>
-<blockquote>┗ 0.0₽ / 10 000₽ | 0%</blockquote>
+<blockquote>┗ ${formattedTotal} / 10 000₽ | ${progressPercent}%</blockquote>
 <blockquote><b>🎁 Продолжайте пополнять счёт, чтобы открыть доступ к эксклюзивным бонусам, личному VIP менеджеру и закрытым ивентам!</b></blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_11.jpg');
@@ -3150,10 +3182,15 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       parse_mode: 'HTML',
     };
 
+    const channelLink = 'https://t.me/+Q1wQJIeOz7YyYzAy';
+    const buttons: any[] = [];
+    if (totalDeposited >= threshold) {
+      buttons.push([Markup.button.url('👑 Перейти в VIP канал', channelLink)]);
+    }
+    buttons.push([Markup.button.callback('⬅️ Назад', 'bonuses')]);
+
     await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('⬅️ Назад', 'bonuses')],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
   }
 

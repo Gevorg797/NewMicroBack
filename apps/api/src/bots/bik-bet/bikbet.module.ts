@@ -17,6 +17,7 @@ import {
   Bonuses,
   BalancesHistory,
   FinanceTransactions,
+  Promocode,
 } from '@lib/database';
 import { PaymentModule } from '../../client/payment/payment.module';
 import { StatsModule } from '../../stats/stats.module';
@@ -41,6 +42,7 @@ import { PromocodesModule } from '../../promocodes/promocodes.module';
       Bonuses,
       BalancesHistory,
       FinanceTransactions,
+      Promocode,
     ]),
     PaymentModule,
     StatsModule,

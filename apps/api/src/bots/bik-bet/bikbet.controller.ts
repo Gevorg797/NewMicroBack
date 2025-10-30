@@ -81,9 +81,60 @@ export class BikBetController {
       if (!isAdmin) return;
 
       await ctx.answerCbQuery();
-      await ctx.reply('🎟 <b>Промокоды</b>\n\nФункция в разработке...', {
-        parse_mode: 'HTML',
-      });
+      await this.bikbetService.showAdminPromos(ctx);
+    });
+
+    // Admin promos: create
+    this.bot.action('createPromo', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.promptCreatePromo(ctx);
+    });
+
+    // Admin promos: delete
+    this.bot.action('deletePromo', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.promptDeletePromo(ctx);
+    });
+
+    // Admin promos: confirmations
+    this.bot.action('promoCreateYes', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+      await ctx.answerCbQuery();
+      await this.bikbetService.confirmCreatePromo(ctx, true);
+    });
+    this.bot.action('promoCreateNo', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+      await ctx.answerCbQuery('❌ Отменено');
+      await this.bikbetService.confirmCreatePromo(ctx, false);
+    });
+
+    this.bot.action('promoDelete_yes', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+      await ctx.answerCbQuery();
+      await this.bikbetService.confirmDeletePromo(ctx, true);
+    });
+    this.bot.action('promoDelete_no', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+      await ctx.answerCbQuery('❌ Отменено');
+      await this.bikbetService.confirmDeletePromo(ctx, false);
+    });
+
+    // Back to admin menu
+    this.bot.action('adm_menu', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+      await ctx.answerCbQuery();
+      await this.bikbetService.handleAdminCommand(ctx);
     });
 
     this.bot.action('adminBonuses', async (ctx) => {
@@ -953,6 +1004,19 @@ export class BikBetController {
     // Handle text messages for custom deposit/withdraw amounts and admin commands
     this.bot.on('text', async (ctx) => {
       try {
+        // Admin: promo flows
+        const handledPromoCreate =
+          await this.bikbetService.handlePromoCreateInput(ctx);
+        if (handledPromoCreate) {
+          return;
+        }
+
+        const handledPromoDelete =
+          await this.bikbetService.handlePromoDeleteInput(ctx);
+        if (handledPromoDelete) {
+          return;
+        }
+
         // Check if admin is waiting for telegram ID input
         const handledAdmin =
           await this.bikbetService.handleAdminTelegramIdInput(ctx);

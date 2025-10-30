@@ -21,6 +21,7 @@ import {
   FinanceTransactions,
   PaymentTransactionStatus,
   PaymentTransactionType,
+  Promocode,
 } from '@lib/database';
 import { Markup } from 'telegraf';
 import * as fs from 'fs';
@@ -94,6 +95,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly bonusesRepository: EntityRepository<Bonuses>,
     @InjectRepository(BalancesHistory)
     private readonly balancesHistoryRepository: EntityRepository<BalancesHistory>,
+    @InjectRepository(Promocode)
+    private readonly promoCodeRepository: EntityRepository<Promocode>,
     @InjectRepository(FinanceTransactions)
     private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
     private readonly paymentService: PaymentService,
@@ -3132,6 +3135,247 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         [Markup.button.callback('⬅️ Назад', 'bonuses')],
       ]).reply_markup,
     });
+  }
+
+  /**
+   * Admin: Promocodes main menu
+   */
+  async showAdminPromos(ctx: any) {
+    const header =
+      '<b>Список активных промокодов</b>\n\n' + 'Управляйте промокодами:';
+
+    const keyboard = Markup.inlineKeyboard([
+      [Markup.button.callback('🎟 Создать промокод', 'createPromo')],
+      [Markup.button.callback('❌ Удалить промокод', 'deletePromo')],
+      [Markup.button.callback('⬅️ Назад', 'adm_menu')],
+    ]);
+
+    await ctx.editMessageText(header, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard.reply_markup,
+    });
+  }
+
+  /**
+   * Admin: Start create promo flow
+   */
+  async promptCreatePromo(ctx: any) {
+    const adminId = ctx.from.id;
+    this.userStates.set(adminId, { state: 'waiting_for_promo_create_input' });
+
+    const text =
+      '<b>🧾 Создание промокода</b>\n' +
+      '<i>Введите данные одним сообщением в формате:</i>\n\n' +
+      '<code>КОД СУММА АКТИВАЦИИ МИНИМУМ_ДЛЯ_АКТИВАЦИИ</code>\n\n' +
+      '<b>Примеры:</b>\n' +
+      '▪️ 666 500 100 200\n' +
+      '▪️ 777 1000 50 100\n';
+
+    await ctx.editMessageText(text, { parse_mode: 'HTML' });
+  }
+
+  private parsePromoInput(input: string):
+    | {
+        error?: string;
+        promo_code: string;
+        amount: number;
+        max_activations: number;
+        min_to_activate: number;
+      }
+    | { error: string } {
+    const parts = input.trim().split(/\s+/);
+    if (parts.length !== 4) {
+      return { error: '❌ Неверное количество аргументов. Ожидалось 4.' };
+    }
+
+    const promo_code = parts[0];
+    if (!/^[a-zA-Z0-9]+$/.test(promo_code)) {
+      return {
+        error: '❌ Код промокода должен состоять из букв и/или цифр.',
+      };
+    }
+
+    const amount = Number(parts[1]);
+    const max_activations = Number(parts[2]);
+    const min_to_activate = Number(parts[3]);
+    if (
+      !Number.isFinite(amount) ||
+      !Number.isFinite(max_activations) ||
+      !Number.isFinite(min_to_activate)
+    ) {
+      return {
+        error: '❌ Сумма, активации и минимум должны быть целыми числами.',
+      };
+    }
+
+    return {
+      promo_code,
+      amount,
+      max_activations,
+      min_to_activate,
+    } as any;
+  }
+
+  async handlePromoCreateInput(ctx: any): Promise<boolean> {
+    const adminId = ctx.from.id;
+    const userState = this.userStates.get(adminId);
+    if (!userState || userState.state !== 'waiting_for_promo_create_input') {
+      return false;
+    }
+    const text = ctx.message?.text?.trim();
+    if (!text) return false;
+
+    const parsed: any = this.parsePromoInput(text);
+    if (parsed.error) {
+      await ctx.reply(parsed.error);
+      return true;
+    }
+
+    // Keep data in state for confirmation
+    this.userStates.set(adminId, {
+      ...userState,
+      state: 'confirm_promo_create',
+      // store payload in a nested bag to avoid type issues
+      rejectionData: {
+        withdrawalId: 0,
+        method: JSON.stringify({
+          code: parsed.promo_code,
+          amount: parsed.amount,
+          maxUses: parsed.max_activations,
+          min_to_activate: parsed.min_to_activate,
+        }),
+        adminId,
+        messageId: 0,
+        userTgId: 0,
+        amount: 0,
+      },
+    });
+
+    const preview =
+      `Введенные данные корректны. Вот создаваемый промокод:\n\n` +
+      `<blockquote>Код: ${parsed.promo_code}\n` +
+      `Сумма: ${parsed.amount} руб\n` +
+      `Активаций: ${parsed.max_activations} шт\n` +
+      `Минимум для активации (ставок за 10д): ${parsed.min_to_activate}\n` +
+      `</blockquote>`;
+
+    const kb = Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Да', 'promoCreateYes')],
+      [Markup.button.callback('❌ Нет', 'promoCreateNo')],
+    ]);
+
+    await ctx.reply(preview, {
+      parse_mode: 'HTML',
+      reply_markup: kb.reply_markup,
+    });
+    return true;
+  }
+
+  async confirmCreatePromo(ctx: any, ok: boolean) {
+    const adminId = ctx.from.id;
+    const state = this.userStates.get(adminId);
+
+    if (!state || state.state !== 'confirm_promo_create') return;
+
+    if (!ok) {
+      this.clearUserState(adminId);
+      await this.showAdminPromos(ctx);
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(state.rejectionData!.method);
+      console.log(payload, 999);
+
+      // TODO: integrate backend call here
+      await ctx.editMessageText('✅ Промокод успешно создан!', {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🎟 Промокоды', 'promos')],
+          [Markup.button.callback('⬅️ Меню', 'adm_menu')],
+        ]).reply_markup,
+      });
+    } catch (e) {
+      await ctx.reply('❌ Ошибка при создании промокода.');
+    } finally {
+      this.clearUserState(adminId);
+    }
+  }
+
+  /**
+   * Admin: Start delete promo flow
+   */
+  async promptDeletePromo(ctx: any) {
+    const adminId = ctx.from.id;
+    this.userStates.set(adminId, { state: 'waiting_for_promo_delete_code' });
+    await ctx.editMessageText(
+      '<b>🗑 Введите код промокода, который хотите удалить:</b>',
+      { parse_mode: 'HTML' },
+    );
+  }
+
+  async handlePromoDeleteInput(ctx: any): Promise<boolean> {
+    const adminId = ctx.from.id;
+    const userState = this.userStates.get(adminId);
+    if (!userState || userState.state !== 'waiting_for_promo_delete_code') {
+      return false;
+    }
+    const code = ctx.message?.text?.trim();
+    if (!code) return false;
+    if (!/^[a-zA-Z0-9]+$/.test(code)) {
+      await ctx.reply('❌ Код должен состоять из букв/цифр.');
+      return true;
+    }
+
+    this.userStates.set(adminId, {
+      state: 'confirm_promo_delete',
+      rejectionData: {
+        withdrawalId: 0,
+        method: code,
+        adminId,
+        messageId: 0,
+        userTgId: 0,
+        amount: 0,
+      },
+    });
+
+    const kb = Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Да', 'promoDelete_yes')],
+      [Markup.button.callback('❌ Нет', 'promoDelete_no')],
+    ]);
+    await ctx.reply(`Вы уверены, что хотите удалить промокод <b>${code}</b>?`, {
+      parse_mode: 'HTML',
+      reply_markup: kb.reply_markup,
+    });
+    return true;
+  }
+
+  async confirmDeletePromo(ctx: any, ok: boolean) {
+    const adminId = ctx.from.id;
+    const state = this.userStates.get(adminId);
+    if (!state || state.state !== 'confirm_promo_delete') return;
+
+    if (!ok) {
+      this.clearUserState(adminId);
+      await this.showAdminPromos(ctx);
+      return;
+    }
+
+    try {
+      const code = state.rejectionData!.method;
+      // TODO: integrate backend deletion here
+      await ctx.editMessageText('✅ Промокод успешно удален!', {
+        parse_mode: 'HTML',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('🎟 Промокоды', 'promos')],
+          [Markup.button.callback('⬅️ Меню', 'adm_menu')],
+        ]).reply_markup,
+      });
+    } catch (e) {
+      await ctx.reply('❌ Ошибка при удалении промокода.');
+    } finally {
+      this.clearUserState(adminId);
+    }
   }
 
   async cashbackInfo(ctx: any) {

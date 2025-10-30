@@ -3182,7 +3182,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       parse_mode: 'HTML',
     };
 
-    const channelLink = 'https://t.me/+Q1wQJIeOz7YyYzAy';
+    const channelLink = 'https://t.me/bikbetsupportVIP';
     const buttons: any[] = [];
     if (totalDeposited >= threshold) {
       buttons.push([Markup.button.url('👑 Перейти в VIP канал', channelLink)]);

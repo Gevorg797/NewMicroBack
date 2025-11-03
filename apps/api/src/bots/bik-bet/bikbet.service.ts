@@ -3479,8 +3479,52 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
    * Admin: Promocodes main menu
    */
   async showAdminPromos(ctx: any) {
-    const header =
-      '<b>Список активных промокодов</b>\n\n' + 'Управляйте промокодами:';
+    // Get all active promocodes
+    const activePromocodes = await this.promocodesService.getActivePromocodes();
+
+    let promolist: string;
+
+    if (activePromocodes.length === 0) {
+      promolist = 'Сейчас нет активных промокодов';
+    } else {
+      const blocks: string[] = [];
+
+      for (const promo of activePromocodes) {
+        const usageCount = await this.em.count(PromocodeUsage, {
+          promocode: promo.id,
+        });
+
+        const createdAt = promo.createdAt
+          ? new Date(promo.createdAt).toLocaleString('ru-RU', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })
+          : '-';
+
+        // Get metadata
+
+        const block = `<b>Промокод:</b> <code>${promo.code}</code>
+<blockquote>Сумма: ${promo.amount}
+Всего активаций: ${promo.maxUses > 0 ? promo.maxUses : '∞'}
+Использовано: ${usageCount}
+Мин. для активации: ${promo.minDepositAmount || 0}
+Создан: ${createdAt}</blockquote>`;
+
+        blocks.push(block);
+      }
+
+      promolist = blocks.join('\n');
+    }
+
+    const header = `<b>Список активных промокодов:</b>
+
+${promolist}
+
+Управляйте промокодами:`;
 
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback('🎟 Создать промокод', 'createPromo')],

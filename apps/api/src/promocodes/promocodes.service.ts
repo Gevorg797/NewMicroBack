@@ -265,6 +265,18 @@ export class PromocodesService {
   }
 
   /**
+   * Get all active promocodes
+   */
+  async getActivePromocodes(): Promise<Promocode[]> {
+    return await this.promocodeRepository.find(
+      { status: PromocodeStatus.ACTIVE },
+      {
+        orderBy: { createdAt: 'DESC' },
+      },
+    );
+  }
+
+  /**
    * Delete promocode by code
    */
   async deleteByCode(code: string): Promise<boolean> {

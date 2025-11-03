@@ -22,6 +22,7 @@ import {
   PaymentTransactionStatus,
   PaymentTransactionType,
   Promocode,
+  PromocodeUsage,
 } from '@lib/database';
 import { PromocodeType } from '@lib/database';
 import { Markup } from 'telegraf';
@@ -64,6 +65,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       withdrawMethod?: string;
       withdrawMethodId?: number;
       targetUserId?: number;
+      msg_to_del?: number;
       rejectionData?: {
         withdrawalId: number;
         method: string;
@@ -3133,9 +3135,344 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('⬅️ Назад', 'bonuses')],
+        [Markup.button.callback('🎟 Ввести промокод', 'promoEnter')],
+        [Markup.button.callback('◀️ Назад', 'bonuses')],
       ]).reply_markup,
     });
+  }
+
+  /**
+   * User: Enter promo code flow
+   */
+  async promoEnter(ctx: any) {
+    try {
+      await ctx.answerCbQuery();
+      await ctx.deleteMessage();
+
+      const userId = ctx.from.id;
+      this.userStates.set(userId, { state: 'waiting_for_promo_enter' });
+
+      const cancelKeyboard = Markup.keyboard([
+        [Markup.button.text('❌ Отмена')],
+      ]).resize().reply_markup;
+
+      const msg = await ctx.reply(
+        '<blockquote>Введите промокод:</blockquote>',
+        {
+          parse_mode: 'HTML',
+          reply_markup: cancelKeyboard,
+        },
+      );
+
+      // Store the message ID for potential cleanup
+      const userState = this.userStates.get(userId);
+      this.userStates.set(userId, {
+        ...userState,
+        msg_to_del: msg.message_id,
+      });
+    } catch (error) {
+      console.error('Promo enter error:', error);
+      await ctx.answerCbQuery('Ошибка при обработке');
+    }
+  }
+
+  /**
+   * Log promo activation to admin group
+   */
+  private async logPromo(
+    userId: number,
+    promocodeCode: string,
+    amount: number,
+    totalActivations: number,
+    remainingActivations: number,
+    ctx: any,
+  ) {
+    try {
+      const bonusChatId =
+        process.env.BONUS_CHAT_ID || this.chatIdForDepositsAndWithdrawals;
+
+      if (!bonusChatId) {
+        return; // Skip logging if no chat ID configured
+      }
+
+      // Try to get chat info to check if we can link to user
+      let userLinkButton;
+      try {
+        const chatInfo = await ctx.telegram.getChat(userId);
+        // Check if user allows linking (simplified check)
+        if (chatInfo.type === 'private') {
+          userLinkButton = Markup.inlineKeyboard([
+            Markup.button.url('🔍 К юзеру', `tg://user?id=${userId}`),
+          ]).reply_markup;
+        }
+      } catch (error) {
+        // User privacy settings don't allow linking
+        userLinkButton = Markup.inlineKeyboard([
+          Markup.button.callback('❌ К юзеру нельзя перейти', 'pass'),
+        ]).reply_markup;
+      }
+
+      const message = `🚀<b> Получен промокод!</>
+
+<blockquote>🎟 Промокод: ${promocodeCode}
+💰 Сумма: <code>${amount}RUB</>
+👤 Юзер: ${userId}
+📈 Всего активаций: ${totalActivations}
+📉 Осталось активаций: ${remainingActivations}
+</blockquote>`;
+
+      await ctx.telegram.sendMessage(bonusChatId, message, {
+        parse_mode: 'HTML',
+        reply_markup: userLinkButton || undefined,
+      });
+    } catch (error) {
+      console.error('Error logging promo:', error);
+      // Don't throw, just log the error
+    }
+  }
+
+  /**
+   * Handle promo code input from user
+   */
+  async handlePromoEnterInput(ctx: any): Promise<boolean> {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // Check if user is in promo enter state
+    if (!userState || userState.state !== 'waiting_for_promo_enter') {
+      return false;
+    }
+
+    const text = ctx.message?.text?.trim();
+
+    // Delete user's input message immediately
+    try {
+      await ctx.deleteMessage();
+    } catch (error) {
+      // Ignore if message already deleted
+    }
+
+    // Handle cancel button
+    if (text === '❌ Отмена') {
+      try {
+        // Delete the prompt message
+        if (userState.msg_to_del) {
+          await ctx.telegram.deleteMessage(ctx.chat.id, userState.msg_to_del);
+        }
+      } catch (error) {
+        // Ignore deletion errors
+      }
+
+      // Show loading and then remove keyboard
+      try {
+        const loadingMsg = await ctx.reply('Загрузка...', {
+          reply_markup: { remove_keyboard: true },
+        });
+        await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id);
+      } catch (error) {
+        // Ignore errors
+      }
+
+      this.userStates.delete(userId);
+
+      // Return to promo keyboard with image (matching promokb structure)
+      const text = `<blockquote><b>🎁 Добро пожаловать в промокоды! 🎁</b></blockquote>
+<blockquote>Здесь вы можете вводить актуальные промокоды с нашего канала и получать приятные бонусы на бонусный баланс.</blockquote>
+<blockquote>Успейте активировать — лимит может закончиться в любой момент!</blockquote>
+<blockquote><b>🚀 Следите за новостями и будьте первыми в очереди за бонусами!</b></blockquote>`;
+
+      const filePath = this.getImagePath('bik_bet_6.jpg');
+      const promoKeyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎟 Ввести промокод', 'promoEnter')],
+        [Markup.button.callback('◀️ Назад', 'bonuses')],
+      ]).reply_markup;
+
+      await ctx.replyWithPhoto(
+        { source: fs.createReadStream(filePath) },
+        {
+          caption: text,
+          parse_mode: 'HTML',
+          reply_markup: promoKeyboard,
+        },
+      );
+      return true;
+    }
+
+    if (!text) {
+      return true; // Ignore empty messages
+    }
+
+    try {
+      // Get user from database
+      const user = await this.userRepository.findOne({
+        telegramId: userId.toString(),
+      });
+
+      if (!user) {
+        try {
+          if (userState.msg_to_del) {
+            await ctx.telegram.deleteMessage(ctx.chat.id, userState.msg_to_del);
+          }
+        } catch (error) {
+          // Ignore
+        }
+
+        const promoKeyboard = Markup.inlineKeyboard([
+          [Markup.button.callback('🎟 Ввести промокод', 'promoEnter')],
+          [Markup.button.callback('◀️ Назад', 'bonuses')],
+        ]).reply_markup;
+
+        const errorText = '❌ Ошибка при активации промокода';
+
+        await ctx.reply(errorText, {
+          parse_mode: 'HTML',
+          reply_markup: promoKeyboard,
+        });
+
+        this.userStates.delete(userId);
+        return true;
+      }
+
+      // Apply promocode
+      const result = await this.promocodesService.applyPromocode(
+        user.id as number,
+        text,
+      );
+
+      // Check if error returned
+      if ('error' in result) {
+        try {
+          if (userState.msg_to_del) {
+            await ctx.telegram.deleteMessage(ctx.chat.id, userState.msg_to_del);
+          }
+        } catch (deleteError) {
+          // Ignore
+        }
+
+        // Show loading message briefly
+        try {
+          const loadingMsg = await ctx.reply('Загрузка...', {
+            reply_markup: { remove_keyboard: true },
+          });
+          await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id);
+        } catch (loadingError) {
+          // Ignore
+        }
+
+        // Return to promo keyboard with error (no image)
+        const promoKeyboard = Markup.inlineKeyboard([
+          [Markup.button.callback('🎟 Ввести промокод', 'promoEnter')],
+          [Markup.button.callback('◀️ Назад', 'bonuses')],
+        ]).reply_markup;
+
+        await ctx.reply(result.error, {
+          parse_mode: 'HTML',
+          reply_markup: promoKeyboard,
+        });
+        return true;
+      }
+
+      // Success case
+      if (result.successful) {
+        // Delete the prompt message
+        try {
+          if (userState.msg_to_del) {
+            await ctx.telegram.deleteMessage(ctx.chat.id, userState.msg_to_del);
+          }
+        } catch (error) {
+          // Ignore deletion errors
+        }
+
+        // Get promocode details for logging
+        const promocode = await this.promocodesService.findByCode(text);
+        const totalActivations = promocode.maxUses;
+        const usageCount = await this.em.count(PromocodeUsage, {
+          promocode: promocode.id,
+        });
+        const remainingActivations =
+          totalActivations > 0 ? totalActivations - usageCount : 0;
+
+        // Use bonus_id from result
+        const bonusId = result.bonus_id;
+        console.log(bonusId);
+
+        // Log to admin group
+        await this.logPromo(
+          userId,
+          text,
+          result.bonusAmount,
+          totalActivations,
+          remainingActivations,
+          ctx,
+        );
+
+        // Create success message with image
+        const successText = `<blockquote>🎁 Поздравляем, промокод активирован!</>
+<blockquote>💰 Сумма: <code>${result.bonusAmount}RUB</></>
+<blockquote>❗️ Вы можете забрать его в разделе "Мои бонусы", в профиле</>
+`;
+
+        const filePath = this.getImagePath('bik_bet_6.jpg');
+
+        // Create keyboard matching promo_used structure
+        const successKeyboard = Markup.inlineKeyboard([
+          [Markup.button.callback('🎰 Играть!', 'games')],
+          [
+            Markup.button.callback(
+              '🎖 Активировать',
+              `activateBonus_${bonusId}`,
+            ),
+          ],
+          [Markup.button.callback('🎁 Мои бонусы', 'myBonuses')],
+        ]).reply_markup;
+
+        await ctx.replyWithPhoto(
+          { source: fs.createReadStream(filePath) },
+          {
+            caption: successText,
+            parse_mode: 'HTML',
+            reply_markup: successKeyboard,
+          },
+        );
+      }
+    } catch (error) {
+      // Handle errors from promocode service
+      try {
+        if (userState.msg_to_del) {
+          await ctx.telegram.deleteMessage(ctx.chat.id, userState.msg_to_del);
+        }
+      } catch (deleteError) {
+        // Ignore
+      }
+
+      // Show loading message briefly
+      try {
+        const loadingMsg = await ctx.reply('Загрузка...', {
+          reply_markup: { remove_keyboard: true },
+        });
+        await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id);
+      } catch (loadingError) {
+        // Ignore
+      }
+
+      const errorMessage = error.message || '❌ Ошибка при активации промокода';
+
+      // Return to promo keyboard (no image for errors)
+      const promoKeyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎟 Ввести промокод', 'promoEnter')],
+        [Markup.button.callback('◀️ Назад', 'bonuses')],
+      ]).reply_markup;
+
+      await ctx.reply(errorMessage, {
+        parse_mode: 'HTML',
+        reply_markup: promoKeyboard,
+      });
+    } finally {
+      // Clear user state
+      this.userStates.delete(userId);
+    }
+
+    return true;
   }
 
   /**
@@ -3299,6 +3636,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         maxUses: payload.maxUses,
         type: PromocodeType.FIXED_AMOUNT,
         createdById: payload.createdById,
+        minDepositAmount: payload.minDepositAmount,
       };
 
       await this.promocodesService.create(dto);
@@ -3377,22 +3715,43 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const user = await this.userRepository.findOne({
-        telegramId: ctx.from.id.toString(),
-      });
+      const promoCode = state.rejectionData!.method as string;
 
-      const payload = state.rejectionData!.method;
+      // Delete promocode
+      const deleted = await this.promocodesService.deleteByCode(promoCode);
 
-      // TODO: integrate backend deletion here
-      await ctx.editMessageText('✅ Промокод успешно удален!', {
+      if (deleted) {
+        await ctx.editMessageText(
+          `✅ Промокод <b>${promoCode}</b> успешно удален!`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('🎟 Промокоды', 'promos')],
+              [Markup.button.callback('⬅️ Меню', 'adm_menu')],
+            ]).reply_markup,
+          },
+        );
+      } else {
+        await ctx.editMessageText(
+          `❌ Промокод <b>${promoCode}</b> не найден или не удалось удалить.`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('🎟 Промокоды', 'promos')],
+              [Markup.button.callback('⬅️ Меню', 'adm_menu')],
+            ]).reply_markup,
+          },
+        );
+      }
+    } catch (e) {
+      console.error('Error deleting promocode:', e);
+      await ctx.editMessageText('❌ Ошибка при удалении промокода.', {
         parse_mode: 'HTML',
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('🎟 Промокоды', 'promos')],
           [Markup.button.callback('⬅️ Меню', 'adm_menu')],
         ]).reply_markup,
       });
-    } catch (e) {
-      await ctx.reply('❌ Ошибка при удалении промокода.');
     } finally {
       this.clearUserState(adminId);
     }

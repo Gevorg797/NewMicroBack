@@ -17,6 +17,12 @@ import {
   FinanceTransactions,
   PaymentTransactionType,
   PaymentTransactionStatus,
+  GameSession,
+  GameTransaction,
+  GameTransactionType,
+  Bonuses,
+  BonusStatus,
+  BonusType,
 } from '@lib/database';
 import { CreatePromocodeDto } from './dto/create-promocode.dto';
 
@@ -77,122 +83,153 @@ export class PromocodesService {
   }
 
   /**
-   * Apply a promocode for a user
+   * Calculate total deposits for user in last 10 days
+   */
+  private async calculateTotalDepositsLast10Days(
+    em: EntityManager,
+    userId: number,
+  ): Promise<number> {
+    const now = new Date();
+    const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+
+    // Get all completed PAYIN transactions (deposits) for user in last 10 days
+    const deposits = await em.find(FinanceTransactions, {
+      user: userId,
+      type: PaymentTransactionType.PAYIN,
+      status: PaymentTransactionStatus.COMPLETED,
+    });
+
+    // Filter by date manually since createdAt might not be filterable directly
+    const filteredDeposits = deposits.filter((deposit) => {
+      const depositDate = deposit.createdAt || new Date(0);
+      return depositDate >= tenDaysAgo;
+    });
+
+    let totalDeposits = 0;
+
+    for (const deposit of filteredDeposits) {
+      if (deposit.amount && deposit.amount > 0) {
+        totalDeposits += Number(deposit.amount);
+      }
+    }
+
+    return totalDeposits;
+  }
+
+  /**
+   * Apply a promocode for a user (matching Python user_get_promo logic)
    */
   async applyPromocode(
     userId: number,
     code: string,
-  ): Promise<{ success: boolean; bonusAmount: number; message: string }> {
+  ): Promise<
+    | { error: string }
+    | {
+        successful: string;
+        promocode: string;
+        amount: number;
+        bonus_id: number;
+        bonusAmount: number;
+        success: boolean;
+      }
+  > {
     return await this.em.transactional(async (em) => {
-      // Find the user
-      const user = await em.findOne(User, { id: userId });
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-
-      // Find the promocode
-      const promocode = await em.findOne(Promocode, {
-        code: code,
-      });
-
-      if (!promocode) {
-        throw new NotFoundException('Promocode not found');
-      }
-
-      // Validate promocode is active
-      if (promocode.status !== PromocodeStatus.ACTIVE) {
-        throw new BadRequestException('Promocode is not active');
-      }
-
-      // Check date validity
-      const now = new Date();
-      if (promocode.validFrom && new Date(promocode.validFrom) > now) {
-        throw new BadRequestException('Promocode is not yet valid');
-      }
-
-      if (promocode.validUntil && new Date(promocode.validUntil) < now) {
-        throw new BadRequestException('Promocode has expired');
-      }
-
-      // Check minimum deposit amount requirement if set
-      if (promocode.minDepositAmount && promocode.minDepositAmount > 0) {
-        const completedDeposits = await em.find(FinanceTransactions, {
-          user: userId,
-          type: PaymentTransactionType.PAYIN,
-          status: PaymentTransactionStatus.COMPLETED,
-        });
-
-        const totalDeposited = completedDeposits.reduce(
-          (sum, t) => sum + (t.amount || 0),
-          0,
+      try {
+        // Calculate total deposits from last 10 days
+        const totalDeposits = await this.calculateTotalDepositsLast10Days(
+          em,
+          userId,
         );
 
-        if (totalDeposited < promocode.minDepositAmount) {
-          throw new BadRequestException(
-            `Minimum deposit requirement not met. Required: ${promocode.minDepositAmount}, your total completed deposits: ${totalDeposited}`,
-          );
+        // Find the promocode
+        const promocode = await em.findOne(Promocode, {
+          code: code,
+        });
+
+        if (!promocode) {
+          return { error: '❌ Промокод не найден.' };
         }
+
+        // Check if user already used this promocode
+        const existingUsage = await em.findOne(PromocodeUsage, {
+          user: userId,
+          promocode: promocode.id,
+        });
+
+        if (existingUsage) {
+          return { error: '❌ Вы уже активировали этот промокод.' };
+        }
+
+        // Count current usages
+        const usageCount = await em.count(PromocodeUsage, {
+          promocode: promocode.id,
+        });
+
+        // Check if max activations reached
+        if (promocode.maxUses > 0 && usageCount >= promocode.maxUses) {
+          return {
+            error: '❌ К сожалению, количество активаций закончилось.',
+          };
+        }
+
+        // Check expiration date
+        const now = new Date();
+        if (promocode.validUntil && new Date(promocode.validUntil) < now) {
+          return { error: '❌ Срок действия промокода истёк.' };
+        }
+
+        // Validate deposit requirements using minDepositAmount
+        const actualTotalDeposits = totalDeposits || 0;
+
+        if (
+          promocode.minDepositAmount !== undefined &&
+          promocode.minDepositAmount > 0 &&
+          actualTotalDeposits < promocode.minDepositAmount
+        ) {
+          const needed = promocode.minDepositAmount - actualTotalDeposits;
+          return {
+            error: `❌ Вам не хватает суммы депозитов для использования промокода.\n<blockquote>📍 Для активации требуется общая сумма депозитов не меньше <code>${promocode.minDepositAmount}RUB</> за последние 10 дней.\nСовершите пополнение еще на сумму ${needed}</>`,
+          };
+        }
+
+        // Track usage via PromocodeUsage count (no need to update promocode directly)
+
+        // Create PromocodeUsage record
+        const usage = em.create(PromocodeUsage, {
+          user: { id: userId } as User,
+          promocode: promocode.id as any,
+          usedAt: new Date(),
+          status: PromocodeUsageStatus.APPLIED,
+          bonusAmount: promocode.amount,
+        });
+
+        em.persist(usage);
+
+        // Create Bonuses entity (not directly add to balance)
+        const bonus = em.create(Bonuses, {
+          user: { id: userId } as User,
+          amount: promocode.amount.toString(),
+          status: BonusStatus.CREATED,
+          type: BonusType.PROMOCODE,
+          wageringRequired: (promocode.amount * 2).toString(),
+        });
+
+        em.persist(bonus);
+        await em.flush();
+
+        return {
+          successful: '✅ Промокод добавлен в ваши бонусы!',
+          promocode: promocode.code,
+          amount: promocode.amount,
+          bonus_id: bonus.id as number,
+          bonusAmount: promocode.amount,
+          success: true,
+        };
+      } catch (error) {
+        return {
+          error: `❌ Ошибка при проверке промокода: ${error.message || error}`,
+        };
       }
-
-      // Check if user has already used this promocode
-      const existingUsage = await em.findOne(PromocodeUsage, {
-        user: userId,
-        promocode: promocode.id,
-      });
-
-      if (existingUsage) {
-        throw new BadRequestException('You have already used this promocode');
-      }
-
-      // Count current usages
-      const usageCount = await em.count(PromocodeUsage, {
-        promocode: promocode.id,
-      });
-
-      // Check usage limits
-      if (promocode.maxUses > 0 && usageCount >= promocode.maxUses) {
-        throw new BadRequestException('Promocode has reached maximum uses');
-      }
-
-      // Find user's bonus balance
-      const balance = await em.findOne(Balances, {
-        user: userId,
-        type: BalanceType.BONUS,
-      });
-
-      if (!balance) {
-        throw new NotFoundException('User balance not found');
-      }
-
-      // Calculate bonus amount
-      let bonusAmount = 0;
-      if (promocode.type === PromocodeType.PERCENTAGE) {
-        // For percentage, use the amount as percentage (e.g., amount: 50 means 50%)
-        bonusAmount = promocode.amount;
-      } else if (promocode.type === PromocodeType.FIXED_AMOUNT) {
-        bonusAmount = promocode.amount;
-      }
-
-      // Apply the bonus to balance
-      balance.balance += bonusAmount;
-
-      // Record the usage
-      const usage = em.create(PromocodeUsage, {
-        user,
-        promocode,
-        usedAt: new Date(),
-        status: PromocodeUsageStatus.APPLIED,
-        bonusAmount,
-        targetBalance: balance,
-      });
-
-      em.persist(usage);
-
-      return {
-        success: true,
-        bonusAmount,
-        message: `Promocode applied! You received ${bonusAmount} bonus.`,
-      };
     });
   }
 
@@ -225,5 +262,34 @@ export class PromocodesService {
         orderBy: { usedAt: 'DESC' },
       },
     );
+  }
+
+  /**
+   * Delete promocode by code
+   */
+  async deleteByCode(code: string): Promise<boolean> {
+    try {
+      const promocode = await this.promocodeRepository.findOne({ code });
+
+      if (!promocode) {
+        return false;
+      }
+
+      // First, delete all related PromocodeUsage records
+      const usages = await this.promocodeUsageRepository.find({
+        promocode: promocode.id,
+      });
+
+      if (usages.length > 0) {
+        await this.em.removeAndFlush(usages);
+      }
+
+      // Now delete the promocode itself
+      await this.em.removeAndFlush(promocode);
+      return true;
+    } catch (error) {
+      console.error('Error deleting promocode:', error);
+      return false;
+    }
   }
 }

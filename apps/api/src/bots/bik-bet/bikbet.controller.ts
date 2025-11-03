@@ -492,6 +492,11 @@ export class BikBetController {
       }
     });
 
+    // Pass handler (no-op for disabled buttons)
+    this.bot.action('pass', async (ctx) => {
+      await ctx.answerCbQuery();
+    });
+
     // FKwallet payment handler: paymentSystem_fkwallet_<amount>
     this.bot.action(/paymentSystem_fkwallet_(.+)/, async (ctx) => {
       try {
@@ -619,6 +624,11 @@ export class BikBetController {
     // Promos Info button click handler
     this.bot.action('promosInfo', async (ctx) => {
       await this.bikbetService.promosInfo(ctx);
+    });
+
+    // Promo Enter button click handler
+    this.bot.action('promoEnter', async (ctx) => {
+      await this.bikbetService.promoEnter(ctx);
     });
 
     // Cashback Info button click handler
@@ -1004,6 +1014,13 @@ export class BikBetController {
     // Handle text messages for custom deposit/withdraw amounts and admin commands
     this.bot.on('text', async (ctx) => {
       try {
+        // User: promo enter flow
+        const handledPromoEnter =
+          await this.bikbetService.handlePromoEnterInput(ctx);
+        if (handledPromoEnter) {
+          return;
+        }
+
         // Admin: promo flows
         const handledPromoCreate =
           await this.bikbetService.handlePromoCreateInput(ctx);

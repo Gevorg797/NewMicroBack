@@ -3138,9 +3138,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         WheelTransaction,
         {
           user: { id: user.id },
-          status: WheelTransactionStatus.COMPLETED,
         },
-        { orderBy: { completedAt: 'DESC' } },
+        { orderBy: { createdAt: 'DESC' } },
       );
 
       if (!lastSpin) {
@@ -3149,19 +3148,53 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (lastSpin && lastSpin.completedAt) {
+        // Get dates in Russian timezone (Europe/Moscow)
         const now = new Date();
-        const timeSinceLastSpin =
-          now.getTime() - lastSpin.completedAt.getTime();
-        const hours24 = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const russianTimezone = 'Europe/Moscow';
 
-        if (timeSinceLastSpin < hours24) {
-          const timeLeft = hours24 - timeSinceLastSpin;
-          const hours = Math.floor(timeLeft / (60 * 60 * 1000));
-          const minutes = Math.floor(
-            (timeLeft % (60 * 60 * 1000)) / (60 * 1000),
+        // Get date strings (YYYY-MM-DD) in Russian timezone
+        const lastSpinDateStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: russianTimezone,
+        }).format(lastSpin.completedAt);
+
+        const todayDateStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: russianTimezone,
+        }).format(now);
+
+        // Check if last spin was today (same date)
+        if (lastSpinDateStr === todayDateStr) {
+          // Calculate time until next midnight (00:00 tomorrow) in Russian timezone
+          // Get current time components in Russian timezone
+          const nowParts = new Intl.DateTimeFormat('en', {
+            timeZone: russianTimezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+          }).formatToParts(now);
+
+          const currentHour = parseInt(
+            nowParts.find((p) => p.type === 'hour')!.value,
           );
+          const currentMinute = parseInt(
+            nowParts.find((p) => p.type === 'minute')!.value,
+          );
+          const currentSecond = parseInt(
+            nowParts.find((p) => p.type === 'second')!.value,
+          );
+
+          // Calculate milliseconds until midnight
+          const hoursLeft = 23 - currentHour;
+          const minutesLeft = 59 - currentMinute;
+          const secondsLeft = 60 - currentSecond;
+
+          const totalMinutes = hoursLeft * 60 + minutesLeft + secondsLeft / 60;
+          const hours = Math.floor(totalMinutes / 60);
+          const minutes = Math.floor(totalMinutes % 60);
+
           text += `<blockquote><i>⏳ Колесо можно крутить через ${hours}ч ${minutes}м</i></blockquote>`;
         } else {
+          // Last spin was before today, allow spinning
           text += `<blockquote><i>✅ Колесо разблокировано</i></blockquote>`;
           buttons.push([
             Markup.button.callback(

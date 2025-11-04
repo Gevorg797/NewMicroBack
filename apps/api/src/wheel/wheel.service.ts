@@ -10,6 +10,8 @@ import {
   GameTransaction,
   GameTransactionType,
   GameTransactionStatus,
+  WheelTransaction,
+  WheelTransactionStatus,
 } from '@lib/database';
 
 @Injectable()
@@ -34,6 +36,8 @@ export class WheelService {
     private readonly gameSessionRepository: EntityRepository<GameSession>,
     @InjectRepository(GameTransaction)
     private readonly gameTransactionRepository: EntityRepository<GameTransaction>,
+    @InjectRepository(WheelTransaction)
+    private readonly wheelTransactionRepository: EntityRepository<WheelTransaction>,
     private readonly em: EntityManager,
   ) {}
 
@@ -149,22 +153,24 @@ export class WheelService {
 
   /**
    * Check if user has special wheel unlock (similar to checkIsWheelUnlocked in Python)
+   * Checks the latest wheel transaction for valid wheelUnlockExpiresAt
    */
   async checkIsWheelUnlocked(userId: number): Promise<boolean> {
     try {
-      const user = await this.userRepository.findOne({ id: userId });
-      if (!user) {
-        return false;
-      }
+      // Find the latest wheel transaction for the user
+      const latestTransaction = await this.wheelTransactionRepository.findOne(
+        { user: { id: userId } },
+        { orderBy: { createdAt: 'DESC' } },
+      );
 
-      if (!user.wheelUnlockExpiresAt) {
+      if (!latestTransaction || !latestTransaction.wheelUnlockExpiresAt) {
         return false;
       }
 
       // Check if the expiry date is still valid
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-      const expiryDate = new Date(user.wheelUnlockExpiresAt);
+      const expiryDate = new Date(latestTransaction.wheelUnlockExpiresAt);
       expiryDate.setHours(0, 0, 0, 0);
 
       return expiryDate >= now;
@@ -176,6 +182,7 @@ export class WheelService {
 
   /**
    * Add special wheel access for user (similar to addWheel in Python)
+   * Creates a wheel transaction, runs spin, and updates transaction with amount
    */
   async addWheel(userId: number, days: number): Promise<boolean> {
     try {
@@ -189,8 +196,24 @@ export class WheelService {
       // Set to start of day
       expiryDate.setHours(0, 0, 0, 0);
 
-      user.wheelUnlockExpiresAt = expiryDate;
-      await this.em.persistAndFlush(user);
+      // Create wheel transaction with pending status
+      const wheelTransaction = this.wheelTransactionRepository.create({
+        user: user,
+        amount: '0', // Will be updated after spin
+        status: WheelTransactionStatus.PENDING,
+        wheelUnlockExpiresAt: expiryDate,
+      });
+      await this.em.persist(wheelTransaction);
+
+      // Run spin to get the amount
+      const spinResult = await this.spinForUser(userId);
+
+      // Update transaction with amount, mark as completed, and set completedAt
+      wheelTransaction.amount = spinResult.amount.toString();
+      // Ensure wheelUnlockExpiresAt is set (it should already be set from creation)
+      wheelTransaction.wheelUnlockExpiresAt = expiryDate;
+
+      await this.em.persistAndFlush(wheelTransaction);
       return true;
     } catch (error) {
       console.error('Error adding wheel:', error);
@@ -200,16 +223,24 @@ export class WheelService {
 
   /**
    * Remove special wheel access for user (similar to removeWheel in Python)
+   * Marks the latest wheel transaction as expired
    */
   async removeWheel(userId: number): Promise<boolean> {
     try {
-      const user = await this.userRepository.findOne({ id: userId });
-      if (!user) {
+      // Find the latest wheel transaction for the user
+      const latestTransaction = await this.wheelTransactionRepository.findOne(
+        { user: { id: userId } },
+        { orderBy: { createdAt: 'DESC' } },
+      );
+
+      if (!latestTransaction) {
         return false;
       }
 
-      user.wheelUnlockExpiresAt = undefined;
-      await this.em.persistAndFlush(user);
+      // Mark transaction as expired and clear expiry date
+      latestTransaction.status = WheelTransactionStatus.EXPIRED;
+      latestTransaction.wheelUnlockExpiresAt = undefined;
+      await this.em.persistAndFlush(latestTransaction);
       return true;
     } catch (error) {
       console.error('Error removing wheel:', error);

@@ -34,6 +34,10 @@ import { BalancesHistory } from './balances-history.entity';
 import { Promocode, PromocodeType, PromocodeStatus } from './promocode.entity';
 import { PromocodeUsage, PromocodeUsageStatus } from './promocode-usage.entity';
 import { WheelConfig, WheelGivingType } from './wheel-config.entity';
+import {
+  WheelTransaction,
+  WheelTransactionStatus,
+} from './wheel-transaction.entity';
 
 // Export everything for convenient imports
 // export * from './balances.entity';
@@ -64,6 +68,7 @@ export const ENTITIES = [
   Promocode,
   PromocodeUsage,
   WheelConfig,
+  WheelTransaction,
 ];
 
 export {
@@ -106,4 +111,6 @@ export {
   PromocodeUsageStatus,
   WheelConfig,
   WheelGivingType,
+  WheelTransaction,
+  WheelTransactionStatus,
 };

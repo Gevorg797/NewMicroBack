@@ -17,6 +17,7 @@ import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 import { Bonuses } from './bonuses.entity';
 import { Promocode } from './promocode.entity';
 import { PromocodeUsage } from './promocode-usage.entity';
+import { WheelTransaction } from './wheel-transaction.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -62,6 +63,6 @@ export class User extends BaseEntity {
   @OneToMany(() => PromocodeUsage, (pu) => pu.user)
   promocodeUsages = new Collection<PromocodeUsage>(this);
 
-  @Property({ columnType: 'date', nullable: true })
-  wheelUnlockExpiresAt?: Date; // Special wheel access expiry date
+  @OneToMany(() => WheelTransaction, (wt) => wt.user)
+  wheelTransactions = new Collection<WheelTransaction>(this);
 }

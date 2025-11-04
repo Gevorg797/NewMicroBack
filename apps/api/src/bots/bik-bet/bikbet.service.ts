@@ -3105,28 +3105,19 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
   async wheelInfo(ctx: any) {
     // Resolve current user
-    const user = await this.userRepository.findOne({
-      telegramId: ctx.from.id.toString(),
-    });
+    const user = await this.userRepository.findOne(
+      {
+        telegramId: ctx.from.id.toString(),
+      },
+      {
+        populate: ['wheelTransactions'],
+      },
+    );
 
     if (!user) {
       await ctx.answerCbQuery('Пользователь не найден');
       return;
     }
-
-    // Sum of completed PAYIN transactions
-    const transactions = await this.financeTransactionsRepository.find({
-      user: user,
-      type: PaymentTransactionType.PAYIN,
-      status: PaymentTransactionStatus.COMPLETED,
-    });
-
-    const totalDeposited = transactions.reduce(
-      (sum, tx) => sum + (tx.amount || 0),
-      0,
-    );
-
-    const formattedTotal = `${Math.floor(totalDeposited).toLocaleString('ru-RU')}₽`;
 
     let text = `<blockquote><b>🎰 Добро пожаловать в колесо Фортуны! 🎰</b></blockquote>
 <blockquote><i>🔥 Испытай удачу и забери свой куш!
@@ -3136,10 +3127,26 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
     const buttons: any[] = [];
 
-    if (user.wheelUnlockExpiresAt && user.wheelUnlockExpiresAt > new Date()) {
+    // Check if wheel is accessible via wheel service
+    const canAccessWheel = await this.wheelService.canUserAccessWheel(user.id!);
+
+    if (canAccessWheel.canAccess) {
       text += `<blockquote><i>✅ Колесо разблокировано</i></blockquote>`;
       buttons.push([Markup.button.callback('🎁 Крутить колесо!', 'wheelSpin')]);
     } else {
+      // Sum of completed PAYIN transactions
+      const transactions = await this.financeTransactionsRepository.find({
+        user: user,
+        type: PaymentTransactionType.PAYIN,
+        status: PaymentTransactionStatus.COMPLETED,
+      });
+
+      const totalDeposited = transactions.reduce(
+        (sum, tx) => sum + (tx.amount || 0),
+        0,
+      );
+
+      const formattedTotal = `${Math.floor(totalDeposited).toLocaleString('ru-RU')}₽`;
       text += `<blockquote><i>💡 Ваша текущая сумма депозитов — ${formattedTotal}. Пора сделать шаг к удаче!</i></blockquote>`;
       buttons.push([
         Markup.button.callback('🎁 Крутить колесо!', 'wheelSpin_pass'),

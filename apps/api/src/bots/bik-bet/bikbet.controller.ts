@@ -585,6 +585,11 @@ export class BikBetController {
     });
 
     // Pass handler (no-op for disabled buttons)
+    this.bot.action('wheelSpin_pass', async (ctx) => {
+      await ctx.answerCbQuery('❌ Не выполнены условия колеса фортуны');
+    });
+
+    // Pass handler (no-op for disabled buttons)
     this.bot.action('pass', async (ctx) => {
       await ctx.answerCbQuery();
     });

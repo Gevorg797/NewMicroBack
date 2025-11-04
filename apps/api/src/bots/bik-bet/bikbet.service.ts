@@ -3104,13 +3104,47 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async wheelInfo(ctx: any) {
-    const text = `<blockquote><b>🎰 Добро пожаловать в колесо Фортуны! 🎰</b></blockquote>
-<blockquote><b>🔥 Испытай удачу и забери свой куш!</b></blockquote>
-<blockquote>Крути колесо и получи приятную сумму или даже крупный выигрыш — всё в твоих руках!</blockquote>
-<blockquote><b>💎 Активируй Колесо Фортуны при сумме депозитов от 5000₽ за 30 дней и лови момент для большой победы!</b></blockquote>
-<blockquote><b>🚀 Чем больше депозитов — тем ближе удача!</b></blockquote>
-<blockquote>Крути, выигрывай, побеждай!</blockquote>
-<blockquote><b>💡 Ваша текущая сумма депозитов — 0₽. Пора сделать шаг к удаче!</b></blockquote>`;
+    // Resolve current user
+    const user = await this.userRepository.findOne({
+      telegramId: ctx.from.id.toString(),
+    });
+
+    if (!user) {
+      await ctx.answerCbQuery('Пользователь не найден');
+      return;
+    }
+
+    // Sum of completed PAYIN transactions
+    const transactions = await this.financeTransactionsRepository.find({
+      user: user,
+      type: PaymentTransactionType.PAYIN,
+      status: PaymentTransactionStatus.COMPLETED,
+    });
+
+    const totalDeposited = transactions.reduce(
+      (sum, tx) => sum + (tx.amount || 0),
+      0,
+    );
+
+    const formattedTotal = `${Math.floor(totalDeposited).toLocaleString('ru-RU')}₽`;
+
+    let text = `<blockquote><b>🎰 Добро пожаловать в колесо Фортуны! 🎰</b></blockquote>
+<blockquote><i>🔥 Испытай удачу и забери свой куш!
+Крути колесо и получи приятную сумму или даже крупный выигрыш — всё в твоих руках!</i></blockquote>
+<blockquote><i>💎 Активируй Колесо Фортуны при сумме депозитов от 5000₽ за 30 дней и лови момент для большой победы!</i></blockquote>
+<blockquote><i>🚀 Чем больше депозитов — тем ближе удача! Крути, выигрывай, побеждай!</i></blockquote>`;
+
+    const buttons: any[] = [];
+
+    if (user.wheelUnlockExpiresAt && user.wheelUnlockExpiresAt > new Date()) {
+      text += `<blockquote><i>✅ Колесо разблокировано</i></blockquote>`;
+      buttons.push([Markup.button.callback('🎁 Крутить колесо!', 'wheelSpin')]);
+    } else {
+      text += `<blockquote><i>💡 Ваша текущая сумма депозитов — ${formattedTotal}. Пора сделать шаг к удаче!</i></blockquote>`;
+      buttons.push([
+        Markup.button.callback('🎁 Крутить колесо!', 'wheelSpin_pass'),
+      ]);
+    }
 
     const filePath = this.getImagePath('bik_bet_6.jpg');
     const media: any = {
@@ -3120,10 +3154,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       parse_mode: 'HTML',
     };
 
+    buttons.push([Markup.button.callback('⬅️ Назад', 'bonuses')]);
+
     await ctx.editMessageMedia(media, {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('⬅️ Назад', 'bonuses')],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
   }
 

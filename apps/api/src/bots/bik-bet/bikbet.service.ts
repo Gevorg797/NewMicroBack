@@ -24,6 +24,8 @@ import {
   Promocode,
   PromocodeUsage,
   WheelGivingType,
+  WheelTransaction,
+  WheelTransactionStatus,
 } from '@lib/database';
 import { PromocodeType } from '@lib/database';
 import { Markup } from 'telegraf';
@@ -3131,8 +3133,52 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     const canAccessWheel = await this.wheelService.canUserAccessWheel(user.id!);
 
     if (canAccessWheel.canAccess) {
-      text += `<blockquote><i>✅ Колесо разблокировано</i></blockquote>`;
-      buttons.push([Markup.button.callback('🎁 Крутить колесо!', 'wheelSpin')]);
+      // Find the latest completed wheel transaction
+      const lastSpin = await this.em.findOne(
+        WheelTransaction,
+        {
+          user: { id: user.id },
+          status: WheelTransactionStatus.COMPLETED,
+        },
+        { orderBy: { completedAt: 'DESC' } },
+      );
+
+      if (!lastSpin) {
+        await ctx.answerCbQuery('❌ Ошибка при получении данных колеса');
+        return;
+      }
+
+      if (lastSpin && lastSpin.completedAt) {
+        const now = new Date();
+        const timeSinceLastSpin =
+          now.getTime() - lastSpin.completedAt.getTime();
+        const hours24 = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+        if (timeSinceLastSpin < hours24) {
+          const timeLeft = hours24 - timeSinceLastSpin;
+          const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+          const minutes = Math.floor(
+            (timeLeft % (60 * 60 * 1000)) / (60 * 1000),
+          );
+          text += `<blockquote><i>⏳ Колесо можно крутить через ${hours}ч ${minutes}м</i></blockquote>`;
+        } else {
+          text += `<blockquote><i>✅ Колесо разблокировано</i></blockquote>`;
+          buttons.push([
+            Markup.button.callback(
+              '🎁 Крутить колесо!',
+              `wheelSpin_${lastSpin.id}`,
+            ),
+          ]);
+        }
+      } else {
+        text += `<blockquote><i>✅ Колесо разблокировано</i></blockquote>`;
+        buttons.push([
+          Markup.button.callback(
+            '🎁 Крутить колесо!',
+            `wheelSpin_${lastSpin.id}`,
+          ),
+        ]);
+      }
     } else {
       // Sum of completed PAYIN transactions
       const transactions = await this.financeTransactionsRepository.find({

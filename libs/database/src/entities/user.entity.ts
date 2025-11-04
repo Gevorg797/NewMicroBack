@@ -63,5 +63,5 @@ export class User extends BaseEntity {
   promocodeUsages = new Collection<PromocodeUsage>(this);
 
   @Property({ columnType: 'date', nullable: true })
-  personalWheel?: Date; // Special wheel access expiry date
+  wheelUnlockExpiresAt?: Date; // Special wheel access expiry date
 }

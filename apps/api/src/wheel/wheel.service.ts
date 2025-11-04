@@ -73,7 +73,7 @@ export class WheelService {
       config = this.wheelConfigRepository.create({
         wheelLimit: '0',
         wheelEnoughSum: '0',
-        wheelGiving: WheelGivingType.NORMAL,
+        wheelRecoil: WheelGivingType.NORMAL,
       });
       await this.em.persistAndFlush(config);
     }
@@ -157,14 +157,14 @@ export class WheelService {
         return false;
       }
 
-      if (!user.personalWheel) {
+      if (!user.wheelUnlockExpiresAt) {
         return false;
       }
 
       // Check if the expiry date is still valid
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-      const expiryDate = new Date(user.personalWheel);
+      const expiryDate = new Date(user.wheelUnlockExpiresAt);
       expiryDate.setHours(0, 0, 0, 0);
 
       return expiryDate >= now;
@@ -189,7 +189,7 @@ export class WheelService {
       // Set to start of day
       expiryDate.setHours(0, 0, 0, 0);
 
-      user.personalWheel = expiryDate;
+      user.wheelUnlockExpiresAt = expiryDate;
       await this.em.persistAndFlush(user);
       return true;
     } catch (error) {
@@ -208,7 +208,7 @@ export class WheelService {
         return false;
       }
 
-      user.personalWheel = undefined;
+      user.wheelUnlockExpiresAt = undefined;
       await this.em.persistAndFlush(user);
       return true;
     } catch (error) {
@@ -247,7 +247,7 @@ export class WheelService {
   async changeWheelGiving(newConfig: WheelGivingType): Promise<boolean> {
     try {
       const config = await this.getWheelConfig();
-      config.wheelGiving = newConfig;
+      config.wheelRecoil = newConfig;
       await this.em.persistAndFlush(config);
       return true;
     } catch (error) {
@@ -299,7 +299,7 @@ export class WheelService {
     distribution: number[];
   }> {
     const config = await this.getWheelConfig();
-    const recoilType = this.getRecoilFromGiving(config.wheelGiving);
+    const recoilType = this.getRecoilFromGiving(config.wheelRecoil);
     return this.spin(recoilType);
   }
 }

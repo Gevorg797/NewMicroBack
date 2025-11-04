@@ -5564,7 +5564,7 @@ ${entriesText}
       const config = await this.wheelService.getWheelConfig();
       const wheelLimit = config.wheelLimit || '0';
       const wheelEnoughSum = config.wheelEnoughSum || '0';
-      const wheelGiving = config.wheelGiving || WheelGivingType.NORMAL;
+      const wheelGiving = config.wheelRecoil || WheelGivingType.NORMAL;
 
       const message = '<blockquote>📋 Выберите нужную опцию:</blockquote>';
 
@@ -5608,7 +5608,7 @@ ${entriesText}
         const config = await this.wheelService.getWheelConfig();
         const wheelLimit = config.wheelLimit || '0';
         const wheelEnoughSum = config.wheelEnoughSum || '0';
-        const wheelGiving = config.wheelGiving || WheelGivingType.NORMAL;
+        const wheelGiving = config.wheelRecoil || WheelGivingType.NORMAL;
 
         const message = '<blockquote>📋 Выберите нужную опцию:</blockquote>';
         const keyboard = Markup.inlineKeyboard([

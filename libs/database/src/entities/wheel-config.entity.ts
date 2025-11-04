@@ -17,5 +17,5 @@ export class WheelConfig extends BaseEntity {
   wheelEnoughSum: string = '0'; // Minimum bet sum needed to unlock wheel
 
   @Enum(() => WheelGivingType)
-  wheelGiving: WheelGivingType = WheelGivingType.NORMAL;
+  wheelRecoil: WheelGivingType = WheelGivingType.NORMAL;
 }

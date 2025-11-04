@@ -6,12 +6,11 @@ import {
   User,
   WheelConfig,
   WheelGivingType,
-  GameSession,
-  GameTransaction,
-  GameTransactionType,
-  GameTransactionStatus,
   WheelTransaction,
   WheelTransactionStatus,
+  FinanceTransactions,
+  PaymentTransactionType,
+  PaymentTransactionStatus,
 } from '@lib/database';
 
 @Injectable()
@@ -32,12 +31,11 @@ export class WheelService {
     private readonly wheelConfigRepository: EntityRepository<WheelConfig>,
     @InjectRepository(User)
     private readonly userRepository: EntityRepository<User>,
-    @InjectRepository(GameSession)
-    private readonly gameSessionRepository: EntityRepository<GameSession>,
-    @InjectRepository(GameTransaction)
-    private readonly gameTransactionRepository: EntityRepository<GameTransaction>,
+
     @InjectRepository(WheelTransaction)
     private readonly wheelTransactionRepository: EntityRepository<WheelTransaction>,
+    @InjectRepository(FinanceTransactions)
+    private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
     private readonly em: EntityManager,
   ) {}
 
@@ -94,57 +92,30 @@ export class WheelService {
   }
 
   /**
-   * Check if user has enough bets in last 30 days (similar to checkIsEnough in Python)
+   * Check if user has enough deposits in last 30 days (similar to checkIsEnough in Python)
+   * Uses finance transactions (PAYIN) instead of game sessions
    */
   async checkIsEnough(userId: number): Promise<boolean> {
     try {
       const time30DaysAgo = new Date();
       time30DaysAgo.setDate(time30DaysAgo.getDate() - 30);
 
-      // Get all game sessions for user within last 30 days
-      const sessions = await this.gameSessionRepository.find(
-        {
-          user: { id: userId },
-          startedAt: { $gte: time30DaysAgo },
-        },
-        {
-          populate: ['transactions'],
-        },
+      // Get all completed PAYIN transactions for user within last 30 days
+      const transactions = await this.financeTransactionsRepository.find({
+        user: { id: userId },
+        type: PaymentTransactionType.PAYIN,
+        status: PaymentTransactionStatus.COMPLETED,
+        createdAt: { $gte: time30DaysAgo },
+      });
+
+      // Calculate total deposits from finance transactions
+      const totalDeposits = transactions.reduce(
+        (sum, tx) => sum + (tx.amount || 0),
+        0,
       );
 
-      let totalBets = 0;
-
-      // Calculate total bets from game transactions (DEPOSIT type means betting)
-      for (const session of sessions) {
-        // Load transactions if not already loaded
-        if (!session.transactions.isInitialized()) {
-          await session.transactions.loadItems();
-        }
-
-        for (const transaction of session.transactions) {
-          if (
-            transaction.type === GameTransactionType.DEPOSIT &&
-            transaction.status === GameTransactionStatus.COMPLETED &&
-            transaction.createdAt &&
-            transaction.createdAt >= time30DaysAgo
-          ) {
-            totalBets += Number(transaction.amount);
-          }
-        }
-
-        // Also check session diff (which might represent bet amount)
-        // In case transactions aren't used for betting tracking
-        if (
-          session.diff &&
-          session.diff > 0 &&
-          session.startedAt >= time30DaysAgo
-        ) {
-          totalBets += session.diff;
-        }
-      }
-
       const enoughThreshold = await this.sumToEnough();
-      return totalBets >= enoughThreshold;
+      return totalDeposits >= enoughThreshold;
     } catch (error) {
       console.error('Error checking if enough:', error);
       return false;

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository, EntityManager } from '@mikro-orm/core';
 import { RecoilType } from './dto/wheel-spin.dto';
@@ -26,21 +26,24 @@ export class WheelService {
     [RecoilType.SUPER]: [17, 24, 20, 12, 10, 5, 3, 3, 3, 3],
   };
 
+  private readonly DEPOSIT_CHECK_DAYS = 30;
+  private readonly DEFAULT_WHEEL_LIMIT = '0';
+  private readonly DEFAULT_WHEEL_ENOUGH_SUM = '0';
+
   constructor(
     @InjectRepository(WheelConfig)
     private readonly wheelConfigRepository: EntityRepository<WheelConfig>,
     @InjectRepository(User)
     private readonly userRepository: EntityRepository<User>,
-
     @InjectRepository(WheelTransaction)
     private readonly wheelTransactionRepository: EntityRepository<WheelTransaction>,
     @InjectRepository(FinanceTransactions)
     private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
     private readonly em: EntityManager,
-  ) {}
+  ) { }
 
   /**
-   * Spin the wheel and return the result
+   * Spin the wheel and return the result based on weighted distribution
    */
   spin(recoil: RecoilType): {
     amount: number;
@@ -48,112 +51,150 @@ export class WheelService {
     distribution: number[];
   } {
     const weights = this.distributions[recoil];
-    const total = weights.reduce((sum, w) => sum + w, 0);
-    const r = Math.random() * total;
-    let acc = 0;
-    let idx = 0;
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    const randomValue = Math.random() * totalWeight;
+
+    let accumulatedWeight = 0;
     for (let i = 0; i < weights.length; i++) {
-      acc += weights[i];
-      if (r < acc) {
-        idx = i;
-        break;
+      accumulatedWeight += weights[i];
+      if (randomValue < accumulatedWeight) {
+        return {
+          amount: this.amounts[i],
+          index: i,
+          distribution: weights,
+        };
       }
     }
-    return { amount: this.amounts[idx], index: idx, distribution: weights };
+
+    // Fallback to first item (should rarely happen)
+    return {
+      amount: this.amounts[0],
+      index: 0,
+      distribution: weights,
+    };
   }
 
   /**
-   * Get wheel configuration (similar to get_wheel_config in Python)
+   * Get wheel configuration, creating default if not exists
    */
   async getWheelConfig(): Promise<WheelConfig> {
-    // Get all configs (should only be one) and take the first
     const configs = await this.wheelConfigRepository.findAll();
-    let config = configs.length > 0 ? configs[0] : null;
 
-    if (!config) {
-      // Create default config if it doesn't exist
-      config = this.wheelConfigRepository.create({
-        wheelLimit: '0',
-        wheelEnoughSum: '0',
-        wheelRecoil: WheelGivingType.NORMAL,
-      });
-      await this.em.persistAndFlush(config);
+    if (configs.length > 0) {
+      return configs[0];
     }
 
-    return config;
+    // Create default config if it doesn't exist
+    const defaultConfig = this.wheelConfigRepository.create({
+      wheelLimit: this.DEFAULT_WHEEL_LIMIT,
+      wheelEnoughSum: this.DEFAULT_WHEEL_ENOUGH_SUM,
+      wheelRecoil: WheelGivingType.NORMAL,
+    });
+
+    await this.em.persistAndFlush(defaultConfig);
+    return defaultConfig;
   }
 
   /**
-   * Get the threshold sum needed to unlock wheel (similar to summ_to_enough in Python)
+   * Get the threshold sum needed to unlock wheel
    */
   async sumToEnough(): Promise<number> {
     const config = await this.getWheelConfig();
-    return parseFloat(config.wheelEnoughSum);
+    return parseFloat(config.wheelEnoughSum) || 0;
   }
 
   /**
-   * Check if user has enough deposits in last 30 days (similar to checkIsEnough in Python)
-   * Uses finance transactions (PAYIN) instead of game sessions
+   * Check if user has enough deposits in the configured period
    */
   async checkIsEnough(userId: number): Promise<boolean> {
     try {
-      const time30DaysAgo = new Date();
-      time30DaysAgo.setDate(time30DaysAgo.getDate() - 30);
+      const cutoffDate = this.getDateDaysAgo(this.DEPOSIT_CHECK_DAYS);
+      const totalDeposits = await this.calculateUserDeposits(userId, cutoffDate);
+      const threshold = await this.sumToEnough();
 
-      // Get all completed PAYIN transactions for user within last 30 days
-      const transactions = await this.financeTransactionsRepository.find({
-        user: { id: userId },
-        type: PaymentTransactionType.PAYIN,
-        status: PaymentTransactionStatus.COMPLETED,
-        createdAt: { $gte: time30DaysAgo },
-      });
-
-      // Calculate total deposits from finance transactions
-      const totalDeposits = transactions.reduce(
-        (sum, tx) => sum + (tx.amount || 0),
-        0,
-      );
-
-      const enoughThreshold = await this.sumToEnough();
-      return totalDeposits >= enoughThreshold;
+      return totalDeposits >= threshold;
     } catch (error) {
-      console.error('Error checking if enough:', error);
+      console.error('Error checking if user has enough deposits:', error);
       return false;
     }
   }
 
   /**
-   * Check if user has special wheel unlock (similar to checkIsWheelUnlocked in Python)
-   * Checks the latest wheel transaction for valid wheelUnlockExpiresAt
+   * Calculate total completed deposits for user since cutoff date
+   */
+  private async calculateUserDeposits(
+    userId: number,
+    cutoffDate: Date,
+  ): Promise<number> {
+    const transactions = await this.financeTransactionsRepository.find({
+      user: { id: userId },
+      type: PaymentTransactionType.PAYIN,
+      status: PaymentTransactionStatus.COMPLETED,
+      createdAt: { $gte: cutoffDate },
+    });
+
+    return transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  }
+
+  /**
+   * Get date N days ago
+   */
+  private getDateDaysAgo(days: number): Date {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date;
+  }
+
+  /**
+   * Check if user has special wheel unlock that hasn't expired
    */
   async checkIsWheelUnlocked(userId: number): Promise<boolean> {
     try {
-      // Find the latest wheel transaction for the user
-      const latestTransaction = await this.wheelTransactionRepository.findOne(
-        { user: { id: userId } },
-        { orderBy: { createdAt: 'DESC' } },
-      );
+      const latestTransaction = await this.getLatestWheelTransaction(userId);
 
-      if (!latestTransaction || !latestTransaction.wheelUnlockExpiresAt) {
+      if (!latestTransaction?.wheelUnlockExpiresAt) {
         return false;
       }
 
-      // Check if the expiry date is still valid
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const expiryDate = new Date(latestTransaction.wheelUnlockExpiresAt);
-      expiryDate.setHours(0, 0, 0, 0);
-
-      return expiryDate >= now;
+      return this.isDateStillValid(latestTransaction.wheelUnlockExpiresAt);
     } catch (error) {
-      console.error('Error checking wheel unlock:', error);
+      console.error('Error checking wheel unlock status:', error);
       return false;
     }
   }
 
   /**
-   * Add special wheel access for user (similar to addWheel in Python)
-   * Creates a wheel transaction, runs spin, and updates transaction with amount
+   * Get the latest wheel transaction for a user
+   */
+  private async getLatestWheelTransaction(
+    userId: number,
+  ): Promise<WheelTransaction | null> {
+    return await this.wheelTransactionRepository.findOne(
+      { user: { id: userId } },
+      { orderBy: { createdAt: 'DESC' } },
+    );
+  }
+
+  /**
+   * Check if expiry date is still valid (not expired)
+   */
+  private isDateStillValid(expiryDate: Date): boolean {
+    const now = this.getStartOfDay(new Date());
+    const expiry = this.getStartOfDay(new Date(expiryDate));
+    return expiry >= now;
+  }
+
+  /**
+   * Get start of day (00:00:00.000)
+   */
+  private getStartOfDay(date: Date): Date {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    return startOfDay;
+  }
+
+  /**
+   * Add special wheel access for user with auto-spin
    */
   async addWheel(userId: number, days: number): Promise<boolean> {
     try {
@@ -162,65 +203,57 @@ export class WheelService {
         return false;
       }
 
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + days);
-      // Set to start of day
-      expiryDate.setHours(0, 0, 0, 0);
+      const expiryDate = this.calculateExpiryDate(days);
+      const spinResult = await this.spinForUser(userId);
 
-      // Create wheel transaction with pending status
       const wheelTransaction = this.wheelTransactionRepository.create({
-        user: user,
-        amount: '0', // Will be updated after spin
+        user,
+        amount: spinResult.amount.toString(),
         status: WheelTransactionStatus.PENDING,
         wheelUnlockExpiresAt: expiryDate,
       });
-      await this.em.persist(wheelTransaction);
-
-      // Run spin to get the amount
-      const spinResult = await this.spinForUser(userId);
-
-      // Update transaction with amount, mark as completed, and set completedAt
-      wheelTransaction.amount = spinResult.amount.toString();
-      // Ensure wheelUnlockExpiresAt is set (it should already be set from creation)
-      wheelTransaction.wheelUnlockExpiresAt = expiryDate;
 
       await this.em.persistAndFlush(wheelTransaction);
       return true;
     } catch (error) {
-      console.error('Error adding wheel:', error);
+      console.error('Error adding wheel access:', error);
       return false;
     }
   }
 
   /**
-   * Remove special wheel access for user (similar to removeWheel in Python)
-   * Marks the latest wheel transaction as expired
+   * Calculate expiry date from current date + days
+   */
+  private calculateExpiryDate(days: number): Date {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + days);
+    return this.getStartOfDay(expiryDate);
+  }
+
+  /**
+   * Remove special wheel access for user by expiring latest transaction
    */
   async removeWheel(userId: number): Promise<boolean> {
     try {
-      // Find the latest wheel transaction for the user
-      const latestTransaction = await this.wheelTransactionRepository.findOne(
-        { user: { id: userId } },
-        { orderBy: { createdAt: 'DESC' } },
-      );
+      const latestTransaction = await this.getLatestWheelTransaction(userId);
 
       if (!latestTransaction) {
         return false;
       }
 
-      // Mark transaction as expired and clear expiry date
       latestTransaction.status = WheelTransactionStatus.EXPIRED;
       latestTransaction.wheelUnlockExpiresAt = undefined;
+
       await this.em.persistAndFlush(latestTransaction);
       return true;
     } catch (error) {
-      console.error('Error removing wheel:', error);
+      console.error('Error removing wheel access:', error);
       return false;
     }
   }
 
   /**
-   * Update wheel configuration (similar to change_WheelConfig in Python)
+   * Update wheel configuration (limit or threshold)
    */
   async changeWheelConfig(
     selectedChange: 'wheel_limit' | 'wheel_enough_sum',
@@ -231,61 +264,45 @@ export class WheelService {
 
       if (selectedChange === 'wheel_limit') {
         config.wheelLimit = amount;
-      } else if (selectedChange === 'wheel_enough_sum') {
+      } else {
         config.wheelEnoughSum = amount;
       }
 
       await this.em.persistAndFlush(config);
       return true;
     } catch (error) {
-      console.error('Error changing wheel config:', error);
+      console.error('Error updating wheel config:', error);
       return false;
     }
   }
 
   /**
-   * Update wheel giving type (similar to change_wheelGiving in Python)
+   * Update wheel giving type (recoil configuration)
    */
-  async changeWheelGiving(newConfig: WheelGivingType): Promise<boolean> {
+  async changeWheelGiving(givingType: WheelGivingType): Promise<boolean> {
     try {
       const config = await this.getWheelConfig();
-      config.wheelRecoil = newConfig;
+      config.wheelRecoil = givingType;
       await this.em.persistAndFlush(config);
       return true;
     } catch (error) {
-      console.error('Error changing wheel giving:', error);
+      console.error('Error updating wheel giving type:', error);
       return false;
     }
   }
 
   /**
-   * Convert WheelGivingType to RecoilType for spin method
-   */
-  getRecoilFromGiving(giving: WheelGivingType): RecoilType {
-    const mapping: Record<WheelGivingType, RecoilType> = {
-      [WheelGivingType.SUPER]: RecoilType.SUPER,
-      [WheelGivingType.GOOD]: RecoilType.GOOD,
-      [WheelGivingType.NORMAL]: RecoilType.NORMAL,
-      [WheelGivingType.BAD]: RecoilType.BAD,
-    };
-    return mapping[giving] || RecoilType.NORMAL;
-  }
-
-  /**
-   * Check if user can access wheel
-   * Returns: { canAccess: boolean, reason: 'enough' | 'unlocked' | 'none' }
+   * Check if user can access wheel and return the reason
    */
   async canUserAccessWheel(userId: number): Promise<{
     canAccess: boolean;
     reason: 'enough' | 'unlocked' | 'none';
   }> {
-    const isEnough = await this.checkIsEnough(userId);
-    if (isEnough) {
+    if (await this.checkIsEnough(userId)) {
       return { canAccess: true, reason: 'enough' };
     }
 
-    const isUnlocked = await this.checkIsWheelUnlocked(userId);
-    if (isUnlocked) {
+    if (await this.checkIsWheelUnlocked(userId)) {
       return { canAccess: true, reason: 'unlocked' };
     }
 
@@ -293,7 +310,7 @@ export class WheelService {
   }
 
   /**
-   * Spin wheel for user with proper recoil type from config
+   * Spin wheel for user using configured recoil type
    */
   async spinForUser(userId: number): Promise<{
     amount: number;
@@ -301,7 +318,20 @@ export class WheelService {
     distribution: number[];
   }> {
     const config = await this.getWheelConfig();
-    const recoilType = this.getRecoilFromGiving(config.wheelRecoil);
+    const recoilType = this.mapGivingToRecoil(config.wheelRecoil);
     return this.spin(recoilType);
+  }
+
+  /**
+   * Map WheelGivingType to RecoilType
+   */
+  private mapGivingToRecoil(giving: WheelGivingType): RecoilType {
+    const mapping: Record<WheelGivingType, RecoilType> = {
+      [WheelGivingType.SUPER]: RecoilType.SUPER,
+      [WheelGivingType.GOOD]: RecoilType.GOOD,
+      [WheelGivingType.NORMAL]: RecoilType.NORMAL,
+      [WheelGivingType.BAD]: RecoilType.BAD,
+    };
+    return mapping[giving] ?? RecoilType.NORMAL;
   }
 }

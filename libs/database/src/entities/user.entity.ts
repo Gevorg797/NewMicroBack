@@ -61,4 +61,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => PromocodeUsage, (pu) => pu.user)
   promocodeUsages = new Collection<PromocodeUsage>(this);
+
+  @Property({ columnType: 'date', nullable: true })
+  personalWheel?: Date; // Special wheel access expiry date
 }

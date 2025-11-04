@@ -22,6 +22,7 @@ import {
 import { PaymentModule } from '../../client/payment/payment.module';
 import { StatsModule } from '../../stats/stats.module';
 import { PromocodesModule } from '../../promocodes/promocodes.module';
+import { WheelModule } from '../../wheel/wheel.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { PromocodesModule } from '../../promocodes/promocodes.module';
     PaymentModule,
     StatsModule,
     PromocodesModule,
+    WheelModule,
   ],
   controllers: [BikBetController],
   providers: [BikBetService],

@@ -32,10 +32,8 @@ import { PaymentPayoutRequisite } from './payment-payout_requisite.entity';
 import { Bonuses, BonusStatus, BonusType } from './bonuses.entity';
 import { BalancesHistory } from './balances-history.entity';
 import { Promocode, PromocodeType, PromocodeStatus } from './promocode.entity';
-import {
-  PromocodeUsage,
-  PromocodeUsageStatus,
-} from './promocode-usage.entity';
+import { PromocodeUsage, PromocodeUsageStatus } from './promocode-usage.entity';
+import { WheelConfig, WheelGivingType } from './wheel-config.entity';
 
 // Export everything for convenient imports
 // export * from './balances.entity';
@@ -65,6 +63,7 @@ export const ENTITIES = [
   BalancesHistory,
   Promocode,
   PromocodeUsage,
+  WheelConfig,
 ];
 
 export {
@@ -105,4 +104,6 @@ export {
   PromocodeStatus,
   PromocodeUsage,
   PromocodeUsageStatus,
+  WheelConfig,
+  WheelGivingType,
 };

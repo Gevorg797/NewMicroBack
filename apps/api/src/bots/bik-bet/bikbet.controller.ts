@@ -145,6 +145,98 @@ export class BikBetController {
       await this.bikbetService.showAdminBonuses(ctx);
     });
 
+    // Wheel configuration handlers
+    this.bot.action('changeFortuneWheel', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.showWheelConfig(ctx);
+    });
+
+    this.bot.action('changeGivingWheel', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.showWheelGivingTypes(ctx);
+    });
+
+    this.bot.action(/changeWheel_(enoughSum|limit)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const changeType = ctx.match[1];
+      await this.bikbetService.handleWheelConfigChange(ctx, changeType);
+    });
+
+    this.bot.action(/newGiving_(super|good|normal|bad)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const givingType = ctx.match[1];
+      await this.bikbetService.handleWheelGivingChange(ctx, givingType);
+    });
+
+    this.bot.action('cancel_wheel_config', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const adminUserId = ctx.from.id;
+      this.bikbetService.clearWheelConfigState(adminUserId);
+      await this.bikbetService.showAdminBonuses(ctx);
+    });
+
+    // Wheel unlock/lock handlers
+    this.bot.action(/wheel_(\d+)_(lock|unlock)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const telegramId = ctx.match[1];
+      const action = ctx.match[2];
+      await this.bikbetService.handleWheelToggleConfirm(
+        ctx,
+        telegramId,
+        action,
+      );
+    });
+
+    this.bot.action(/removeWheel_(\d+)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const telegramId = ctx.match[1];
+      await this.bikbetService.handleRemoveWheel(ctx, telegramId);
+    });
+
+    this.bot.action(/unlockWheel_(\d+)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const telegramId = ctx.match[1];
+      await this.bikbetService.handleUnlockWheelPrompt(ctx, telegramId);
+    });
+
+    this.bot.action(/notificationAboutWheel_(\d+)_(\d+)/, async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      const telegramId = ctx.match[1];
+      const days = ctx.match[2];
+      await this.bikbetService.handleNotificationAboutWheel(
+        ctx,
+        telegramId,
+        days,
+      );
+    });
+
     // Edit balance handler
     this.bot.action(/edit_balance_(\d+)/, async (ctx) => {
       const isAdmin = await checkIsTelegramAdmin(ctx);
@@ -1031,6 +1123,26 @@ export class BikBetController {
         const handledPromoDelete =
           await this.bikbetService.handlePromoDeleteInput(ctx);
         if (handledPromoDelete) {
+          return;
+        }
+
+        // Check if admin is waiting for wheel config input
+        const handledWheelConfig =
+          await this.bikbetService.processWheelConfigValue(
+            ctx,
+            ctx.message.text,
+          );
+        if (handledWheelConfig) {
+          return;
+        }
+
+        // Check if admin is waiting for unlock wheel days input
+        const handledUnlockWheel =
+          await this.bikbetService.processUnlockWheelDays(
+            ctx,
+            ctx.message.text,
+          );
+        if (handledUnlockWheel) {
           return;
         }
 

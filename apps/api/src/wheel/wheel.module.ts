@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { WheelService } from './wheel.service';
 import { WheelController } from './wheel.controller';
+import { DatabaseModule } from '@lib/database';
 
 @Module({
-    controllers: [WheelController],
-    providers: [WheelService],
-    exports: [WheelService],
+  imports: [DatabaseModule],
+  controllers: [WheelController],
+  providers: [WheelService],
+  exports: [WheelService],
 })
-export class WheelModule { }
-
-
+export class WheelModule {}

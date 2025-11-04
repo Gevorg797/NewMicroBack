@@ -23,6 +23,7 @@ import {
   PaymentTransactionType,
   Promocode,
   PromocodeUsage,
+  WheelGivingType,
 } from '@lib/database';
 import { PromocodeType } from '@lib/database';
 import { Markup } from 'telegraf';
@@ -41,6 +42,7 @@ import {
 import { PaymentService } from '../../client/payment/payment.service';
 import { StatsService } from '../../stats/stats.service';
 import { PromocodesService } from '../../promocodes/promocodes.service';
+import { WheelService } from '../../wheel/wheel.service';
 import { SelfCleaningMap } from 'libs/utils/data-structures/self-cleaning-map';
 import { log } from 'console';
 import {
@@ -104,6 +106,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly paymentService: PaymentService,
     private readonly statsService: StatsService,
     private readonly promocodesService: PromocodesService,
+    private readonly wheelService: WheelService,
     private readonly em: EntityManager,
   ) {}
 
@@ -165,6 +168,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       provider: game.provider,
     }),
   );
+
+  // Sanitize HTML to prevent issues with > and < characters
+  private sanitizeHtml(text: string): string {
+    return text.replace(/>/g, ' ').replace(/</g, ' ');
+  }
 
   // Generate user authentication token
   private generateUserAuthToken(userId: number): string {
@@ -5535,7 +5543,7 @@ ${entriesText}
 
       const keyboard = Markup.inlineKeyboard([
         [Markup.button.callback('🎡 Колесо Фортуны', 'changeFortuneWheel')],
-        [Markup.button.callback('🔙 Назад', 'admin')],
+        [Markup.button.callback('🔙 Назад', 'adm_menu')],
       ]);
 
       await ctx.editMessageText(message, {
@@ -5545,6 +5553,511 @@ ${entriesText}
     } catch (error) {
       console.error('Error showing admin bonuses:', error);
       await ctx.reply('❌ Ошибка загрузки меню бонусов');
+    }
+  }
+
+  /**
+   * Show wheel configuration menu (similar to changeFortuneWheel in Python)
+   */
+  async showWheelConfig(ctx: any) {
+    try {
+      const config = await this.wheelService.getWheelConfig();
+      const wheelLimit = config.wheelLimit || '0';
+      const wheelEnoughSum = config.wheelEnoughSum || '0';
+      const wheelGiving = config.wheelGiving || WheelGivingType.NORMAL;
+
+      const message = '<blockquote>📋 Выберите нужную опцию:</blockquote>';
+
+      const keyboard = Markup.inlineKeyboard([
+        [
+          Markup.button.callback(
+            `💰 Сумма для открытия: ${wheelEnoughSum}`,
+            'changeWheel_enoughSum',
+          ),
+        ],
+        [
+          Markup.button.callback(
+            `💸 Отдача: ${wheelGiving}`,
+            'changeGivingWheel',
+          ),
+        ],
+        [Markup.button.callback(`🏦 Банк: ${wheelLimit}`, 'changeWheel_limit')],
+        [Markup.button.callback('⬅️ Назад', 'adminBonuses')],
+      ]);
+
+      // Check if we can edit the message (callback query context) or need to reply (text message context)
+      const isCallbackQuery = ctx.callbackQuery || ctx.update?.callback_query;
+
+      if (isCallbackQuery) {
+        // This is a callback query, we can edit
+        await ctx.editMessageText(message, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard.reply_markup,
+        });
+      } else {
+        // This is a text message, we need to reply
+        await ctx.reply(message, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard.reply_markup,
+        });
+      }
+    } catch (error) {
+      console.error('Error showing wheel config:', error);
+      // If editing failed (e.g., message can't be edited), try replying instead
+      try {
+        const config = await this.wheelService.getWheelConfig();
+        const wheelLimit = config.wheelLimit || '0';
+        const wheelEnoughSum = config.wheelEnoughSum || '0';
+        const wheelGiving = config.wheelGiving || WheelGivingType.NORMAL;
+
+        const message = '<blockquote>📋 Выберите нужную опцию:</blockquote>';
+        const keyboard = Markup.inlineKeyboard([
+          [
+            Markup.button.callback(
+              `💰 Сумма для открытия: ${wheelEnoughSum}`,
+              'changeWheel_enoughSum',
+            ),
+          ],
+          [
+            Markup.button.callback(
+              `💸 Отдача: ${wheelGiving}`,
+              'changeGivingWheel',
+            ),
+          ],
+          [
+            Markup.button.callback(
+              `🏦 Банк: ${wheelLimit}`,
+              'changeWheel_limit',
+            ),
+          ],
+          [Markup.button.callback('⬅️ Назад', 'adminBonuses')],
+        ]);
+
+        await ctx.reply(message, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard.reply_markup,
+        });
+      } catch (replyError) {
+        console.error('Error replying wheel config:', replyError);
+        await ctx.reply('❌ Ошибка загрузки настроек колеса');
+      }
+    }
+  }
+
+  /**
+   * Show wheel giving type selection (similar to changeGivingWheel in Python)
+   */
+  async showWheelGivingTypes(ctx: any) {
+    try {
+      const message = '<blockquote>🔄 Выберите желаемую отдачу:</blockquote>';
+
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('👑 Супер', 'newGiving_super')],
+        [Markup.button.callback('💰 Хорошо', 'newGiving_good')],
+        [Markup.button.callback('💸 Нормально', 'newGiving_normal')],
+        [Markup.button.callback('💵 Плохо', 'newGiving_bad')],
+        [Markup.button.callback('⬅️ Назад', 'changeFortuneWheel')],
+      ]);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    } catch (error) {
+      console.error('Error showing wheel giving types:', error);
+      await ctx.reply('❌ Ошибка загрузки типов отдачи');
+    }
+  }
+
+  /**
+   * Handle wheel config change request
+   */
+  async handleWheelConfigChange(ctx: any, changeType: string) {
+    try {
+      const adminUserId = ctx.from.id;
+      const state = this.userStates.get(adminUserId) || {};
+      state.state = `wheel_config_${changeType}`;
+      this.userStates.set(adminUserId, state);
+
+      const textMap: Record<string, string> = {
+        limit: 'банка',
+        enoughSum: 'достаточной для разблокировки колеса',
+      };
+
+      const text = textMap[changeType] || 'значение';
+
+      await ctx.editMessageText(
+        `<blockquote>💰 Введите новую сумму ${text}</blockquote>`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('❌ Отмена', 'cancel_wheel_config')],
+          ]).reply_markup,
+        },
+      );
+    } catch (error) {
+      console.error('Error handling wheel config change:', error);
+      await ctx.reply('❌ Ошибка при изменении настроек');
+    }
+  }
+
+  /**
+   * Handle wheel giving type change
+   */
+  async handleWheelGivingChange(ctx: any, givingType: string) {
+    try {
+      const typeMap: Record<string, WheelGivingType> = {
+        super: WheelGivingType.SUPER,
+        good: WheelGivingType.GOOD,
+        normal: WheelGivingType.NORMAL,
+        bad: WheelGivingType.BAD,
+      };
+
+      const wheelGivingType = typeMap[givingType] || WheelGivingType.NORMAL;
+
+      const success =
+        await this.wheelService.changeWheelGiving(wheelGivingType);
+
+      if (success) {
+        await ctx.editMessageText(
+          '<blockquote>✅ Отдача успешно заменена.</blockquote>',
+          {
+            parse_mode: 'HTML',
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('⬅️ Назад', 'changeFortuneWheel')],
+            ]).reply_markup,
+          },
+        );
+      } else {
+        await ctx.answerCbQuery('❌ Ошибка при изменении отдачи');
+      }
+    } catch (error) {
+      console.error('Error changing wheel giving:', error);
+      await ctx.answerCbQuery('❌ Ошибка при изменении отдачи');
+    }
+  }
+
+  /**
+   * Clear wheel config state for user
+   */
+  clearWheelConfigState(userId: number) {
+    const state = this.userStates.get(userId);
+    if (state) {
+      state.state = undefined;
+      this.userStates.set(userId, state);
+    }
+  }
+
+  /**
+   * Handle wheel unlock/lock confirmation (similar to wheel_vkl in Python)
+   */
+  async handleWheelToggleConfirm(ctx: any, telegramId: string, action: string) {
+    try {
+      const user = await this.userRepository.findOne({ telegramId });
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      if (action === 'lock') {
+        const keyboard = Markup.inlineKeyboard([
+          [Markup.button.callback('🚫 Выключить', `removeWheel_${telegramId}`)],
+          [Markup.button.callback('⬅️ Назад', 'adm_menu')],
+        ]);
+        try {
+          await ctx.editMessageText('Выключить колесо этому юзеру?', {
+            reply_markup: keyboard.reply_markup,
+          });
+        } catch (editError: any) {
+          // Ignore "message is not modified" error
+          if (
+            !editError?.response?.description?.includes(
+              'message is not modified',
+            )
+          ) {
+            throw editError;
+          }
+        }
+      } else {
+        const keyboard = Markup.inlineKeyboard([
+          [Markup.button.callback('✅ Включить', `unlockWheel_${telegramId}`)],
+          [Markup.button.callback('⬅️ Назад', 'adm_menu')],
+        ]);
+        try {
+          await ctx.editMessageText('Включить колесо этому юзеру?', {
+            reply_markup: keyboard.reply_markup,
+          });
+        } catch (editError: any) {
+          // Ignore "message is not modified" error
+          if (
+            !editError?.response?.description?.includes(
+              'message is not modified',
+            )
+          ) {
+            throw editError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error handling wheel toggle confirm:', error);
+      await ctx.answerCbQuery('❌ Ошибка');
+    }
+  }
+
+  /**
+   * Handle remove wheel (similar to removeWheel_ff in Python)
+   */
+  async handleRemoveWheel(ctx: any, telegramId: string) {
+    try {
+      const user = await this.userRepository.findOne({ telegramId });
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      const success = await this.wheelService.removeWheel(user.id!);
+      if (success) {
+        const loadingMsg = await ctx.reply('Загрузка...', {
+          reply_markup: { remove_keyboard: true },
+        });
+        await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id);
+        await ctx.editMessageText(
+          'Отключили этому юзеру СПЕЦИАЛЬНЫЙ доступ к колесу',
+          {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('⬅️ Назад', 'adm_menu')],
+            ]).reply_markup,
+          },
+        );
+      } else {
+        await ctx.editMessageText('Что-то пошло не так...', {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('⬅️ Назад', 'adm_menu')],
+          ]).reply_markup,
+        });
+      }
+    } catch (error) {
+      console.error('Error removing wheel:', error);
+      await ctx.answerCbQuery('❌ Ошибка');
+    }
+  }
+
+  /**
+   * Handle unlock wheel prompt (similar to unlockWheel_fff in Python)
+   */
+  async handleUnlockWheelPrompt(ctx: any, telegramId: string) {
+    try {
+      const user = await this.userRepository.findOne({ telegramId });
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      const adminUserId = ctx.from.id;
+      const state = this.userStates.get(adminUserId) || {};
+      state.state = 'unlock_wheel_days';
+      state.targetUserId = user.id;
+      this.userStates.set(adminUserId, state);
+
+      // Send a new message instead of editing (can't use ReplyKeyboardMarkup with editMessageText)
+      await ctx.reply(
+        'На какой срок (в днях) включаем этому юзеру СПЕЦИАЛЬНЫЙ доступ к колесу?\nВведите кол-во дней числом:',
+        {
+          reply_markup: Markup.keyboard([['❌ Отмена']])
+            .resize()
+            .oneTime().reply_markup,
+        },
+      );
+    } catch (error) {
+      console.error('Error handling unlock wheel prompt:', error);
+      await ctx.answerCbQuery('❌ Ошибка');
+    }
+  }
+
+  /**
+   * Process unlock wheel days input (similar to UnlockWheel_user in Python)
+   */
+  async processUnlockWheelDays(ctx: any, days: string): Promise<boolean> {
+    try {
+      const adminUserId = ctx.from.id;
+      const state = this.userStates.get(adminUserId);
+
+      if (
+        !state ||
+        state.state !== 'unlock_wheel_days' ||
+        !state.targetUserId
+      ) {
+        return false;
+      }
+
+      if (days === '❌ Отмена') {
+        await ctx.reply(
+          '<blockquote>❌ Действие успешно отменено!</blockquote>',
+          {
+            parse_mode: 'HTML',
+            reply_markup: { remove_keyboard: true },
+          },
+        );
+        state.state = undefined;
+        state.targetUserId = undefined;
+        this.userStates.set(adminUserId, state);
+        await this.handleAdminCommand(ctx);
+        return true;
+      }
+
+      if (!/^\d+$/.test(days)) {
+        await ctx.reply('❌ Кол-во дней только в цифрах!');
+        return false;
+      }
+
+      const daysNum = parseInt(days, 10);
+      const success = await this.wheelService.addWheel(
+        state.targetUserId,
+        daysNum,
+      );
+
+      if (success) {
+        const loadingMsg = await ctx.reply('Загрузка...', {
+          reply_markup: { remove_keyboard: true },
+        });
+        await ctx.telegram.deleteMessage(ctx.chat.id, loadingMsg.message_id);
+
+        const user = await this.userRepository.findOne({
+          id: state.targetUserId,
+        });
+
+        if (user) {
+          const keyboard = Markup.inlineKeyboard([
+            [
+              Markup.button.callback(
+                '💬 Уведомить',
+                `notificationAboutWheel_${user.telegramId}_${daysNum}`,
+              ),
+            ],
+            [Markup.button.callback('⬅️ Меню', 'adm_menu')],
+          ]);
+
+          await ctx.reply(
+            `Дали этому юзеру СПЕЦИАЛЬНЫЙ доступ к колесу на ${daysNum} дней`,
+            { reply_markup: keyboard.reply_markup },
+          );
+        }
+      } else {
+        await ctx.reply('Что-то пошло не так...', {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('⬅️ Назад', 'adm_menu')],
+          ]).reply_markup,
+        });
+      }
+
+      state.state = undefined;
+      state.targetUserId = undefined;
+      this.userStates.set(adminUserId, state);
+      return true;
+    } catch (error) {
+      console.error('Error processing unlock wheel days:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Handle notification about wheel unlock (similar to notificationAboutWheel in Python)
+   */
+  async handleNotificationAboutWheel(
+    ctx: any,
+    telegramId: string,
+    days: string,
+  ) {
+    try {
+      const keyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('🎁 Перейти', 'wheelInfo')],
+      ]);
+
+      await ctx.telegram.sendMessage(
+        telegramId,
+        `<blockquote>🎁 Вам разблокировано колесо на <b>${days}</b> дней!</blockquote>`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: keyboard.reply_markup,
+        },
+      );
+
+      try {
+        await ctx.editMessageText('Сообщение успешно отправлено', {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback('⬅️ Назад', 'start')],
+          ]).reply_markup,
+        });
+      } catch (editError: any) {
+        // Ignore "message is not modified" error or if message can't be edited
+        if (
+          editError?.response?.description?.includes(
+            'message is not modified',
+          ) ||
+          editError?.response?.description?.includes("message can't be edited")
+        ) {
+          // Try to reply instead
+          await ctx.reply('Сообщение успешно отправлено', {
+            reply_markup: Markup.inlineKeyboard([
+              [Markup.button.callback('⬅️ Назад', 'start')],
+            ]).reply_markup,
+          });
+        } else {
+          throw editError;
+        }
+      }
+    } catch (error) {
+      console.error('Error sending wheel notification:', error);
+      await ctx.answerCbQuery('❌ Ошибка отправки сообщения');
+    }
+  }
+
+  /**
+   * Process wheel config value input
+   */
+  async processWheelConfigValue(ctx: any, value: string) {
+    try {
+      const adminUserId = ctx.from.id;
+      const state = this.userStates.get(adminUserId);
+
+      if (!state || !state.state?.startsWith('wheel_config_')) {
+        return false;
+      }
+
+      const changeType = state.state.replace('wheel_config_', '');
+      const configChangeType =
+        changeType === 'limit' ? 'wheel_limit' : 'wheel_enough_sum';
+
+      if (!value || isNaN(Number(value)) || Number(value) < 0) {
+        await ctx.reply(
+          '<blockquote>❌ Введите только число (больше или равно 0)!</blockquote>',
+          { parse_mode: 'HTML' },
+        );
+        return false;
+      }
+
+      const success = await this.wheelService.changeWheelConfig(
+        configChangeType as 'wheel_limit' | 'wheel_enough_sum',
+        value,
+      );
+
+      if (success) {
+        state.state = undefined;
+        this.userStates.set(adminUserId, state);
+        await ctx.reply(
+          '<blockquote>✅ Изменения внесены успешно!</blockquote>',
+          { parse_mode: 'HTML' },
+        );
+        // Show wheel config menu again (as a new message since ctx is from text input)
+        await this.showWheelConfig(ctx);
+        return true;
+      } else {
+        await ctx.reply('❌ Ошибка при сохранении изменений');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error processing wheel config value:', error);
+      return false;
     }
   }
 
@@ -5888,6 +6401,17 @@ ${entriesText}
       // Get user PnL (profit/loss) - for now using actualBet as placeholder
       const userPnL = userStats.actualBet || 0;
 
+      // Check wheel status
+      const isEnough = await this.wheelService.checkIsEnough(user.id!);
+      let isUnlocked = false;
+      if (!isEnough) {
+        isUnlocked = await this.wheelService.checkIsWheelUnlocked(user.id!);
+      }
+
+      // Store user data in state for later use
+      userState.targetUserId = user.id;
+      this.userStates.set(adminUserId, userState);
+
       // Format user info according to the specified format
       const text =
         '<blockquote><b>Информация о пользователе:</b></blockquote>\n' +
@@ -5899,17 +6423,42 @@ ${entriesText}
         `<blockquote>Доход от юзера: ${Math.round(userPnL)} RUB</blockquote>\n` +
         `<blockquote>(☝️ Учтите, что в доход не входят\n активные заявки на вывод или пополнение)</blockquote>\n`;
 
-      const keyboard = Markup.inlineKeyboard([
-        [
-          Markup.button.callback(
-            '✏️ Изменить баланс',
-            `edit_balance_${user.id}`,
-          ),
-        ],
-        [Markup.button.callback('🎁 Дать бонус', `give_bonus_${user.id}`)],
-        [Markup.button.callback('🎡 Колесо ВЫКЛ', `toggle_wheel_${user.id}`)],
-        [Markup.button.callback('⬅️ Назад', 'admin')],
+      // Create keyboard with wheel status buttons based on Python logic
+      const keyboardButtons: any[] = [];
+
+      keyboardButtons.push([
+        Markup.button.callback('✏️ Изменить баланс', `edit_balance_${user.id}`),
       ]);
+
+      keyboardButtons.push([
+        Markup.button.callback('🎁 Дать бонус', `give_bonus_${user.id}`),
+      ]);
+      // Add wheel button based on status (matching Python logic)
+      if (isEnough) {
+        keyboardButtons.push([
+          Markup.button.callback('🎡 Колесо доступно', 'pass'),
+        ]);
+      } else {
+        if (isUnlocked) {
+          keyboardButtons.push([
+            Markup.button.callback(
+              '🟢 Колесо ВКЛ',
+              `wheel_${user.telegramId}_lock`,
+            ),
+          ]);
+        } else {
+          keyboardButtons.push([
+            Markup.button.callback(
+              '🔴 Колесо ВЫКЛ',
+              `wheel_${user.telegramId}_unlock`,
+            ),
+          ]);
+        }
+      }
+
+      keyboardButtons.push([Markup.button.callback('⬅️ Назад', 'adm_menu')]);
+
+      const keyboard = Markup.inlineKeyboard(keyboardButtons);
 
       await ctx.reply(text, {
         parse_mode: 'HTML',

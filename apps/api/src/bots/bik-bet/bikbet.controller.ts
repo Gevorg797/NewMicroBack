@@ -589,6 +589,22 @@ export class BikBetController {
       await ctx.answerCbQuery('❌ Не выполнены условия колеса фортуны');
     });
 
+    // Wheel spin handler: wheelSpin_<transactionId>
+    this.bot.action(/wheelSpin_(\d+)/, async (ctx) => {
+      try {
+        const amount = parseInt((ctx as any).match?.[1], 10);
+        await ctx.answerCbQuery();
+        await this.bikbetService.handleWheelSpin(ctx, amount);
+      } catch (error) {
+        console.error('Wheel spin handler error:', error);
+        try {
+          await ctx.answerCbQuery('❌ Ошибка при обработке запроса');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // Pass handler (no-op for disabled buttons)
     this.bot.action('pass', async (ctx) => {
       await ctx.answerCbQuery();

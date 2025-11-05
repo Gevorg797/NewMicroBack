@@ -407,6 +407,19 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private getMp4Path(videoName: string): string {
+    return path.join(
+      process.cwd(),
+      'apps',
+      'api',
+      'src',
+      'bots',
+      'bik-bet',
+      'wheel_gifs',
+      videoName,
+    );
+  }
+
   private getImagePath(imageName): string {
     return path.join(
       process.cwd(),
@@ -3147,7 +3160,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      if (lastSpin && lastSpin.completedAt) {
+      if (
+        lastSpin.status === WheelTransactionStatus.COMPLETED &&
+        lastSpin.completedAt
+      ) {
         // Get dates in Russian timezone (Europe/Moscow)
         const now = new Date();
         const russianTimezone = 'Europe/Moscow';
@@ -3199,7 +3215,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           buttons.push([
             Markup.button.callback(
               '🎁 Крутить колесо!',
-              `wheelSpin_${lastSpin.id}`,
+              `wheelSpin_${lastSpin.amount}`,
             ),
           ]);
         }
@@ -3208,7 +3224,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         buttons.push([
           Markup.button.callback(
             '🎁 Крутить колесо!',
-            `wheelSpin_${lastSpin.id}`,
+            `wheelSpin_${lastSpin.amount}`,
           ),
         ]);
       }
@@ -3245,6 +3261,115 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard(buttons).reply_markup,
     });
+  }
+
+  /**
+   * Handle wheel spin action
+   */
+  async handleWheelSpin(ctx: any, amount: number) {
+    try {
+      const telegramId = ctx.from.id.toString();
+      const user = await this.userRepository.findOne({ telegramId });
+
+      if (!user) {
+        await ctx.answerCbQuery('❌ Пользователь не найден');
+        return;
+      }
+
+      // Check if user can access wheel
+      const canAccessWheel = await this.wheelService.canUserAccessWheel(
+        user.id!,
+      );
+      if (!canAccessWheel.canAccess) {
+        await ctx.answerCbQuery('❌ Не выполнены условия колеса фортуны');
+        return;
+      }
+
+      // Check if already spun today
+      const russianTimezone = 'Europe/Moscow';
+      const now = new Date();
+      const todayDateStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: russianTimezone,
+      }).format(now);
+
+      const lastSpin = await this.em.findOne(
+        WheelTransaction,
+        {
+          user: { id: user.id },
+          status: WheelTransactionStatus.COMPLETED,
+        },
+        { orderBy: { completedAt: 'DESC' } },
+      );
+
+      if (lastSpin && lastSpin.completedAt) {
+        const lastSpinDateStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: russianTimezone,
+        }).format(lastSpin.completedAt);
+
+        if (lastSpinDateStr === todayDateStr) {
+          await ctx.answerCbQuery('⏳ Вы уже крутили колесо сегодня');
+          return;
+        }
+      }
+
+      // Run the spin to get actual win amount
+      const spinResult = await this.wheelService.spinForUser(user.id!);
+      const winAmount = spinResult.amount;
+
+      // Find or create wheel transaction
+      let wheelTransaction = await this.em.findOne(
+        WheelTransaction,
+        {
+          user: { id: user.id },
+          status: WheelTransactionStatus.PENDING,
+        },
+        { orderBy: { createdAt: 'DESC' } },
+      );
+
+      if (!wheelTransaction) {
+        wheelTransaction = this.em.create(WheelTransaction, {
+          user: user,
+          amount: winAmount.toString(),
+          status: WheelTransactionStatus.PENDING,
+        });
+      }
+
+      // Update transaction with result and mark as completed
+      wheelTransaction.amount = winAmount.toString();
+      wheelTransaction.status = WheelTransactionStatus.COMPLETED;
+      wheelTransaction.completedAt = new Date();
+
+      // Create Wheel type bonus
+      const wageringMultiplier = 2;
+      const wageringRequired = (winAmount * wageringMultiplier).toFixed(2);
+      const wheelBonus = this.bonusesRepository.create({
+        user: user,
+        amount: winAmount.toString(),
+        status: BonusStatus.CREATED,
+        type: BonusType.WHEEL,
+        wageringRequired: wageringRequired,
+        description: `Wheel spin win: ${Math.round(winAmount)} RUB`,
+      });
+
+      await this.em.persistAndFlush([wheelTransaction, wheelBonus]);
+
+      // Get video file path for the actual win amount
+      const filePath = this.getMp4Path(`${winAmount}.mp4`);
+
+      // Check if file exists, use default if not
+      if (!fs.existsSync(filePath)) {
+        await ctx.answerCbQuery('❌ Ошибка при получении данных колеса');
+        return;
+      }
+
+      // Send as animation (autoplay, no controls, loops)
+      await ctx.replyWithAnimation({ source: fs.createReadStream(filePath) });
+
+      await ctx.answerCbQuery();
+    } catch (error) {
+      console.error('Error handling wheel spin:', error);
+      await ctx.answerCbQuery('❌ Ошибка при обработке запроса');
+    }
   }
 
   async promosInfo(ctx: any) {

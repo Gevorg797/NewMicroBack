@@ -3578,16 +3578,15 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           const keyboardButtons: any[] = [];
 
           let text = `
-<blockquote>🏆 Тип бонуса 🎡 Колесо Фортуны</blockquote>
-<blockquote>💰 Сумма бонуса: ${updatedBonus.amount} руб.</blockquote>
-<blockquote>✅ Бонус отыгран!</blockquote>\n\n\n`;
-
-          text += `<blockquote>🔴 Статус бонуса: Не активирован</blockquote>`;
-          console.log(updatedBonus.status);
+<blockquote>🎁 Поздравляем!</blockquote>
+<blockquote>💰 Ваш выигрыш: ${updatedBonus.amount} руб.</blockquote>
+<blockquote>❗️ Вы можете забрать его в разделе "Мои бонусы", в профиле</blockquote>
+<blockquote>⏳ Колесо будет доступно через 24ч</blockquote>`;
 
           // Only show activate button if status is CREATED
           if (updatedBonus.status === BonusStatus.CREATED) {
             keyboardButtons.push([
+              Markup.button.callback('🎰 Играть!', 'games'),
               Markup.button.callback(
                 '🎖 Активировать',
                 `activateBonus_${updatedBonus.id}`,

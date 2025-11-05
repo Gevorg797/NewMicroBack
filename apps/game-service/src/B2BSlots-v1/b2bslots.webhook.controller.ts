@@ -54,6 +54,17 @@ export class B2BSlotsWebhookController {
     constructor(private readonly webhookService: B2BSlotsWebhookService) { }
 
     /**
+     * Handle B2BSlots webhook for authentication operations
+     */
+    @Post('auth')
+    @HttpCode(HttpStatus.OK)
+    async handleAuthWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+        this.logger.debug(`Received B2BSlots auth webhook for user: ${payload.data.user_id}`);
+        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+        return this.webhookService.processAuthWebhook(payload, clientIP);
+    }
+
+    /**
      * Handle B2BSlots webhook for debit operations
      */
     @Post('debit')

@@ -1,4 +1,7 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { EntityManager } from '@mikro-orm/postgresql';
+import { GameSession, GameTransaction, GameTransactionType, GameFreeSpin, Balances, BalanceType } from '@lib/database';
+import { wrap } from '@mikro-orm/core';
 import * as crypto from 'crypto';
 
 interface B2BSlotsWebhookPayload {
@@ -7,6 +10,7 @@ interface B2BSlotsWebhookPayload {
         user_id: string;
         user_ip?: string;
         user_game_token?: string;
+        user_auth_token?: string;
         currency: string;
         game_code?: number;
         game_name?: string;
@@ -56,6 +60,29 @@ export class B2BSlotsWebhookService {
     private readonly webhookSecret = process.env.B2BSLOTS_WEBHOOK_SECRET || 'your-webhook-secret';
     private readonly allowedIPs = process.env.B2BSLOTS_ALLOWED_IPS?.split(',') || ['127.0.0.1'];
     private readonly timestampTolerance = 300; // 5 minutes in seconds
+    private readonly operatorId = parseInt(process.env.B2BSLOTS_OPERATOR_ID || '0');
+
+    constructor(private readonly em: EntityManager) { }
+
+    /**
+     * Get the other balance type (if session uses MAIN, get BONUS and vice versa)
+     */
+    private async getOtherBalance(userId: number, currencyName: string, currentBalanceType: BalanceType): Promise<string> {
+        // Get the opposite balance type
+        const otherType = currentBalanceType === BalanceType.MAIN ? BalanceType.BONUS : BalanceType.MAIN;
+
+        const otherBalance = await this.em.findOne(Balances, {
+            user: { id: userId },
+            type: otherType
+        }, { populate: ['currency'] });
+
+        // Filter by currency
+        if (otherBalance && otherBalance.currency.name === currencyName) {
+            return otherBalance.balance.toFixed(2);
+        }
+
+        return '0.00';
+    }
 
     /**
      * Validate webhook authenticity
@@ -132,7 +159,87 @@ export class B2BSlotsWebhookService {
     }
 
     /**
-     * Process debit webhook
+     * Process auth webhook - called when game is initialized
+     */
+    async processAuthWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+        this.logger.debug(`Processing auth webhook for user: ${payload.data.user_id}`);
+
+        // Validate webhook authenticity
+        this.validateWebhookAuth(payload, clientIP);
+
+        try {
+            // Extract session token from user_game_token or user_auth_token
+            const sessionToken = payload.data.user_game_token || payload.data.user_auth_token;
+
+            if (!sessionToken) {
+                throw new BadRequestException('Missing session token');
+            }
+
+            // Find session by UUID (session token)
+            const gameSession = await this.em.findOne(
+                GameSession,
+                { uuid: sessionToken },
+                { populate: ['balance', 'balance.currency', 'user'] }
+            );
+
+            if (!gameSession) {
+                throw new BadRequestException(`Session not found: ${sessionToken}`);
+            }
+
+            if (!gameSession.isAlive) {
+                throw new BadRequestException(`Session is not active: ${sessionToken}`);
+            }
+
+            // Verify currency matches
+            if (gameSession.balance.currency.name !== payload.data.currency) {
+                throw new BadRequestException(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${payload.data.currency}`);
+            }
+
+            // Get session balance and the other balance type (for bonus_balance)
+            const sessionBalance = gameSession.balance.balance.toFixed(2);
+            const otherBalance = await this.getOtherBalance(
+                gameSession.user.id!,
+                gameSession.balance.currency.name,
+                gameSession.balance.type
+            );
+
+            // Determine which is main and which is bonus based on session balance type
+            const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+            const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
+            this.logger.debug('Successfully processed B2BSlots auth webhook');
+            return {
+                success: true,
+                api: 'do-auth-user-ingame',
+                answer: {
+                    operator_id: this.operatorId,
+                    user_id: payload.data.user_id,
+                    user_nickname: gameSession.user.name || 'Player',
+                    balance: mainBalance,
+                    bonus_balance: bonusBalance,
+                    game_token: sessionToken,
+                    error_code: 0,
+                    error_description: 'ok',
+                    currency: payload.data.currency,
+                    timestamp: Date.now().toString()
+                }
+            };
+        } catch (error) {
+            this.logger.error('Failed to process B2BSlots auth webhook', error.stack);
+            return {
+                success: false,
+                api: 'do-auth-user-ingame',
+                answer: {
+                    error_code: 1,
+                    error_description: error.message || 'Internal server error',
+                    timestamp: Date.now().toString()
+                }
+            };
+        }
+    }
+
+    /**
+     * Process debit webhook (bet/withdrawal)
      */
     async processDebitWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
         this.logger.debug(`Processing debit webhook for user: ${payload.data.user_id}`);
@@ -148,12 +255,12 @@ export class B2BSlotsWebhookService {
                 success: true,
                 api: 'do-debit-user-ingame',
                 answer: {
-                    operator_id: 0,
+                    operator_id: this.operatorId,
                     transaction_id: payload.data.transaction_id,
                     user_id: payload.data.user_id,
-                    user_nickname: 'Anonymous',
-                    balance: result.balance || '0.00',
-                    bonus_balance: '0.00',
+                    user_nickname: result.name || 'Player',
+                    balance: result.balance,
+                    bonus_balance: result.bonusBalance,
                     bonus_amount: '0.00',
                     game_token: payload.data.user_game_token,
                     error_code: 0,
@@ -169,7 +276,7 @@ export class B2BSlotsWebhookService {
                 api: 'do-debit-user-ingame',
                 answer: {
                     error_code: 1,
-                    error_description: 'Internal server error',
+                    error_description: error.message || 'Internal server error',
                     timestamp: Date.now().toString()
                 }
             };
@@ -177,7 +284,7 @@ export class B2BSlotsWebhookService {
     }
 
     /**
-     * Process credit webhook
+     * Process credit webhook (win/deposit)
      */
     async processCreditWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
         this.logger.debug(`Processing credit webhook for user: ${payload.data.user_id}`);
@@ -193,12 +300,12 @@ export class B2BSlotsWebhookService {
                 success: true,
                 api: 'do-credit-user-ingame',
                 answer: {
-                    operator_id: 0,
+                    operator_id: this.operatorId,
                     transaction_id: payload.data.transaction_id,
                     user_id: payload.data.user_id,
-                    user_nickname: 'Anonymous',
-                    balance: result.balance || '0.00',
-                    bonus_balance: '0.00',
+                    user_nickname: result.name || 'Player',
+                    balance: result.balance,
+                    bonus_balance: result.bonusBalance,
                     bonus_amount: '0.00',
                     game_token: payload.data.user_game_token,
                     error_code: 0,
@@ -214,7 +321,7 @@ export class B2BSlotsWebhookService {
                 api: 'do-credit-user-ingame',
                 answer: {
                     error_code: 1,
-                    error_description: 'Internal server error',
+                    error_description: error.message || 'Internal server error',
                     timestamp: Date.now().toString()
                 }
             };
@@ -238,11 +345,11 @@ export class B2BSlotsWebhookService {
                 success: true,
                 api: 'do-get-features-user-ingame',
                 answer: {
-                    operator_id: 0,
+                    operator_id: this.operatorId,
                     user_id: payload.data.user_id,
-                    user_nickname: 'Anonymous',
+                    user_nickname: result.name || 'Player',
                     balance: result.balance || '0.00',
-                    bonus_balance: '0.00',
+                    bonus_balance: result.bonusBalance || '0.00',
                     game_token: payload.data.user_game_token,
                     error_code: 0,
                     error_description: 'ok',
@@ -266,7 +373,7 @@ export class B2BSlotsWebhookService {
                 api: 'do-get-features-user-ingame',
                 answer: {
                     error_code: 1,
-                    error_description: 'Internal server error',
+                    error_description: error.message || 'Internal server error',
                     timestamp: Date.now().toString()
                 }
             };
@@ -290,11 +397,11 @@ export class B2BSlotsWebhookService {
                 success: true,
                 api: 'do-activate-features-user-ingame',
                 answer: {
-                    operator_id: 0,
+                    operator_id: this.operatorId,
                     user_id: payload.data.user_id,
-                    user_nickname: 'Anonymous',
+                    user_nickname: result.name || 'Player',
                     balance: result.balance || '0.00',
-                    bonus_balance: '0.00',
+                    bonus_balance: result.bonusBalance || '0.00',
                     error_code: 0,
                     error_description: 'ok',
                     currency: payload.data.currency,
@@ -309,7 +416,7 @@ export class B2BSlotsWebhookService {
                 api: 'do-activate-features-user-ingame',
                 answer: {
                     error_code: 1,
-                    error_description: 'Internal server error',
+                    error_description: error.message || 'Internal server error',
                     timestamp: Date.now().toString()
                 }
             };
@@ -333,11 +440,11 @@ export class B2BSlotsWebhookService {
                 success: true,
                 api: 'do-update-features-user-ingame',
                 answer: {
-                    operator_id: 0,
+                    operator_id: this.operatorId,
                     user_id: payload.data.user_id,
-                    user_nickname: 'Anonymous',
+                    user_nickname: result.name || 'Player',
                     balance: result.balance || '0.00',
-                    bonus_balance: '0.00',
+                    bonus_balance: result.bonusBalance || '0.00',
                     error_code: 0,
                     error_description: 'ok',
                     currency: payload.data.currency,
@@ -352,7 +459,7 @@ export class B2BSlotsWebhookService {
                 api: 'do-update-features-user-ingame',
                 answer: {
                     error_code: 1,
-                    error_description: 'Internal server error',
+                    error_description: error.message || 'Internal server error',
                     timestamp: Date.now().toString()
                 }
             };
@@ -376,11 +483,11 @@ export class B2BSlotsWebhookService {
                 success: true,
                 api: 'do-end-features-user-ingame',
                 answer: {
-                    operator_id: 0,
+                    operator_id: this.operatorId,
                     user_id: payload.data.user_id,
-                    user_nickname: 'Anonymous',
+                    user_nickname: result.name || 'Player',
                     balance: result.balance || '0.00',
-                    bonus_balance: '0.00',
+                    bonus_balance: result.bonusBalance || '0.00',
                     error_code: 0,
                     error_description: 'ok',
                     currency: payload.data.currency,
@@ -395,7 +502,7 @@ export class B2BSlotsWebhookService {
                 api: 'do-end-features-user-ingame',
                 answer: {
                     error_code: 1,
-                    error_description: 'Internal server error',
+                    error_description: error.message || 'Internal server error',
                     timestamp: Date.now().toString()
                 }
             };
@@ -403,114 +510,454 @@ export class B2BSlotsWebhookService {
     }
 
     /**
-     * Handle debit operation - implement your business logic here
+     * Handle debit operation - withdraw bet amount from balance
      */
-    private async handleDebitOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string }> {
-        // TODO: Implement debit processing logic
-        // - Validate transaction
-        // - Update user balance
-        // - Log transaction
-        // - Handle errors
+    private async handleDebitOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; bonusBalance: string; name: string }> {
+        const sessionToken = payload.data.user_game_token;
+        const debitAmount = parseFloat(payload.data.debit_amount || '0');
+        const transactionId = payload.data.transaction_id;
 
-        this.logger.debug(`Processing debit: ${payload.data.debit_amount} ${payload.data.currency}`);
+        if (!sessionToken) {
+            throw new BadRequestException('Missing user_game_token');
+        }
 
-        // Placeholder implementation
+        if (!transactionId) {
+            throw new BadRequestException('Missing transaction_id');
+        }
+
+        if (debitAmount <= 0) {
+            throw new BadRequestException('Invalid debit amount');
+        }
+
+        // Find session
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { uuid: sessionToken },
+            { populate: ['balance', 'balance.currency', 'user'] }
+        );
+
+        if (!gameSession) {
+            throw new BadRequestException(`Session not found: ${sessionToken}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new BadRequestException(`Session is not active: ${sessionToken}`);
+        }
+
+        // Verify currency
+        if (gameSession.balance.currency.name !== payload.data.currency) {
+            throw new BadRequestException(`Currency mismatch`);
+        }
+
+        // Check sufficient balance
+        if (gameSession.balance.balance < debitAmount) {
+            throw new BadRequestException(`Insufficient balance`);
+        }
+
+        // Process transaction atomically
+        await this.em.transactional(async (em) => {
+            // Create transaction record
+            const transaction = new GameTransaction();
+            wrap(transaction).assign({
+                session: gameSession,
+                type: GameTransactionType.WITHDRAW,
+                amount: debitAmount,
+                trxId: transactionId,
+                metadata: { ...payload.data, webhook: 'debit' }
+            });
+            await em.persistAndFlush(transaction);
+
+            // Update balance
+            wrap(gameSession.balance).assign({
+                balance: gameSession.balance.balance - debitAmount
+            });
+            await em.flush();
+
+            this.logger.log(`Debit processed: ${debitAmount} ${payload.data.currency} from session ${sessionToken}`);
+        });
+
+        // Get updated session balance and the other balance type
+        const sessionBalance = gameSession.balance.balance.toFixed(2);
+        const otherBalance = await this.getOtherBalance(
+            gameSession.user.id!,
+            gameSession.balance.currency.name,
+            gameSession.balance.type
+        );
+
+        // Determine which is main and which is bonus
+        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
         return {
-            balance: '1000.00' // Return updated balance
+            balance: mainBalance,
+            bonusBalance: bonusBalance,
+            name: gameSession.user.name || 'Player'
         };
     }
 
     /**
-     * Handle credit operation - implement your business logic here
+     * Handle credit operation - add win amount to balance
      */
-    private async handleCreditOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string }> {
-        // TODO: Implement credit processing logic
-        // - Validate transaction
-        // - Update user balance
-        // - Log transaction
-        // - Handle errors
+    private async handleCreditOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; bonusBalance: string; name: string }> {
+        const sessionToken = payload.data.user_game_token;
+        const creditAmount = parseFloat(payload.data.credit_amount || '0');
+        const transactionId = payload.data.transaction_id;
 
-        this.logger.debug(`Processing credit: ${payload.data.credit_amount} ${payload.data.currency}`);
+        if (!sessionToken) {
+            throw new BadRequestException('Missing user_game_token');
+        }
 
-        // Placeholder implementation
+        if (!transactionId) {
+            throw new BadRequestException('Missing transaction_id');
+        }
+
+        if (creditAmount < 0) {
+            throw new BadRequestException('Invalid credit amount');
+        }
+
+        // Find session
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { uuid: sessionToken },
+            { populate: ['balance', 'balance.currency', 'user'] }
+        );
+
+        if (!gameSession) {
+            throw new BadRequestException(`Session not found: ${sessionToken}`);
+        }
+
+        if (!gameSession.isAlive) {
+            throw new BadRequestException(`Session is not active: ${sessionToken}`);
+        }
+
+        // Verify currency
+        if (gameSession.balance.currency.name !== payload.data.currency) {
+            throw new BadRequestException(`Currency mismatch`);
+        }
+
+        // If credit amount is 0, just return current balance (no win)
+        if (creditAmount === 0) {
+            this.logger.log(`No win for session ${sessionToken}`);
+            const sessionBalance = gameSession.balance.balance.toFixed(2);
+            const otherBalance = await this.getOtherBalance(
+                gameSession.user.id!,
+                gameSession.balance.currency.name,
+                gameSession.balance.type
+            );
+            const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+            const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+            return {
+                balance: mainBalance,
+                bonusBalance: bonusBalance,
+                name: gameSession.user.name || 'Player'
+            };
+        }
+
+        // Process transaction atomically
+        await this.em.transactional(async (em) => {
+            // Create transaction record
+            const transaction = new GameTransaction();
+            wrap(transaction).assign({
+                session: gameSession,
+                type: GameTransactionType.DEPOSIT,
+                amount: creditAmount,
+                trxId: transactionId,
+                metadata: { ...payload.data, webhook: 'credit' }
+            });
+            await em.persistAndFlush(transaction);
+
+            // Update balance
+            wrap(gameSession.balance).assign({
+                balance: gameSession.balance.balance + creditAmount
+            });
+            await em.flush();
+
+            this.logger.log(`Credit processed: ${creditAmount} ${payload.data.currency} to session ${sessionToken}`);
+        });
+
+        // Get updated session balance and the other balance type
+        const sessionBalance = gameSession.balance.balance.toFixed(2);
+        const otherBalance = await this.getOtherBalance(
+            gameSession.user.id!,
+            gameSession.balance.currency.name,
+            gameSession.balance.type
+        );
+
+        // Determine which is main and which is bonus
+        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
         return {
-            balance: '1000.00' // Return updated balance
+            balance: mainBalance,
+            bonusBalance: bonusBalance,
+            name: gameSession.user.name || 'Player'
         };
     }
 
     /**
-     * Handle get features operation - implement your business logic here
+     * Handle get features operation - retrieve active free spins/rounds
      */
-    private async handleGetFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; freeRounds?: any }> {
-        // TODO: Implement get features logic
-        // - Check available free rounds
-        // - Return feature information
+    private async handleGetFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; bonusBalance: string; name: string; freeRounds?: any }> {
+        const sessionToken = payload.data.user_game_token;
 
-        this.logger.debug(`Getting features for user: ${payload.data.user_id}`);
+        if (!sessionToken) {
+            throw new BadRequestException('Missing user_game_token');
+        }
 
-        // Placeholder implementation
+        // Find session
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { uuid: sessionToken },
+            { populate: ['balance', 'balance.currency', 'user', 'freeSpins', 'game'] }
+        );
+
+        if (!gameSession) {
+            throw new BadRequestException(`Session not found: ${sessionToken}`);
+        }
+
+        // Get active free spins for this user and game
+        const activeFreeSpins = await this.em.findOne(GameFreeSpin, {
+            user: gameSession.user,
+            game: gameSession.game,
+            isActive: true,
+            deletedAt: null
+        });
+
+        let freeRounds: any = null;
+        if (activeFreeSpins) {
+            freeRounds = {
+                id: activeFreeSpins.id,
+                count: activeFreeSpins.betCount,
+                bet: parseFloat(activeFreeSpins.denomination),
+                lines: 0,
+                mpl: activeFreeSpins.weidger,
+                cp: activeFreeSpins.bank,
+                version: 1
+            };
+        }
+
+        this.logger.debug(`Getting features for session ${sessionToken}: ${activeFreeSpins ? 'has free rounds' : 'no free rounds'}`);
+
+        // Get session balance and the other balance type
+        const sessionBalance = gameSession.balance.balance.toFixed(2);
+        const otherBalance = await this.getOtherBalance(
+            gameSession.user.id!,
+            gameSession.balance.currency.name,
+            gameSession.balance.type
+        );
+        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
         return {
-            balance: '1000.00',
-            freeRounds: {
-                id: 1,
-                count: 10,
-                bet: 5,
-                lines: 10,
-                mpl: 2,
-                cp: '1.00',
-                version: 2
+            balance: mainBalance,
+            bonusBalance: bonusBalance,
+            name: gameSession.user.name || 'Player',
+            freeRounds
+        };
+    }
+
+    /**
+     * Handle activate features operation - activate free rounds/spins
+     */
+    private async handleActivateFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; bonusBalance: string; name: string }> {
+        const sessionToken = payload.data.user_game_token;
+        const freeRoundsId = payload.data.free_rounds?.id;
+
+        if (!sessionToken) {
+            throw new BadRequestException('Missing user_game_token');
+        }
+
+        if (!freeRoundsId) {
+            throw new BadRequestException('Missing free_rounds.id');
+        }
+
+        // Find session
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { uuid: sessionToken },
+            { populate: ['balance', 'user', 'game'] }
+        );
+
+        if (!gameSession) {
+            throw new BadRequestException(`Session not found: ${sessionToken}`);
+        }
+
+        // Find and activate the free spins
+        const freeSpin = await this.em.findOne(GameFreeSpin, {
+            id: freeRoundsId,
+            user: gameSession.user,
+            isActive: true
+        });
+
+        if (!freeSpin) {
+            throw new BadRequestException(`Free rounds not found: ${freeRoundsId}`);
+        }
+
+        // Activate free spins
+        await this.em.transactional(async (em) => {
+            wrap(freeSpin).assign({
+                isActivated: true,
+                activatedAt: new Date(),
+                gameSession: gameSession
+            });
+            await em.flush();
+
+            this.logger.log(`Activated free rounds ${freeRoundsId} for session ${sessionToken}`);
+        });
+
+        // Get session balance and the other balance type
+        const sessionBalance = gameSession.balance.balance.toFixed(2);
+        const otherBalance = await this.getOtherBalance(
+            gameSession.user.id!,
+            gameSession.balance.currency.name,
+            gameSession.balance.type
+        );
+        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
+        return {
+            balance: mainBalance,
+            bonusBalance: bonusBalance,
+            name: gameSession.user.name || 'Player'
+        };
+    }
+
+    /**
+     * Handle update features operation - update free rounds progress
+     */
+    private async handleUpdateFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; bonusBalance: string; name: string }> {
+        const sessionToken = payload.data.user_game_token;
+        const freeRoundsId = payload.data.free_rounds?.id;
+        const roundWin = parseFloat(payload.data.free_rounds?.round_win || '0');
+
+        if (!sessionToken) {
+            throw new BadRequestException('Missing user_game_token');
+        }
+
+        if (!freeRoundsId) {
+            throw new BadRequestException('Missing free_rounds.id');
+        }
+
+        // Find session
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { uuid: sessionToken },
+            { populate: ['balance', 'balance.currency', 'user'] }
+        );
+
+        if (!gameSession) {
+            throw new BadRequestException(`Session not found: ${sessionToken}`);
+        }
+
+        // Find the free spins
+        const freeSpin = await this.em.findOne(GameFreeSpin, {
+            id: freeRoundsId,
+            user: gameSession.user
+        });
+
+        if (!freeSpin) {
+            throw new BadRequestException(`Free rounds not found: ${freeRoundsId}`);
+        }
+
+        // Update progress and add wins to balance
+        await this.em.transactional(async (em) => {
+            // Update free spins bank with accumulated wins
+            const currentBank = parseFloat(freeSpin.bank || '0');
+            wrap(freeSpin).assign({
+                bank: (currentBank + roundWin).toFixed(2)
+            });
+
+            // Add win to user balance
+            if (roundWin > 0) {
+                wrap(gameSession.balance).assign({
+                    balance: gameSession.balance.balance + roundWin
+                });
             }
+
+            await em.flush();
+
+            this.logger.log(`Updated free rounds ${freeRoundsId}: win=${roundWin}, new bank=${freeSpin.bank}`);
+        });
+
+        // Get session balance and the other balance type
+        const sessionBalance = gameSession.balance.balance.toFixed(2);
+        const otherBalance = await this.getOtherBalance(
+            gameSession.user.id!,
+            gameSession.balance.currency.name,
+            gameSession.balance.type
+        );
+        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
+        return {
+            balance: mainBalance,
+            bonusBalance: bonusBalance,
+            name: gameSession.user.name || 'Player'
         };
     }
 
     /**
-     * Handle activate features operation - implement your business logic here
+     * Handle end features operation - finalize free rounds
      */
-    private async handleActivateFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string }> {
-        // TODO: Implement activate features logic
-        // - Activate free rounds
-        // - Update user balance
-        // - Log activation
+    private async handleEndFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string; bonusBalance: string; name: string }> {
+        const sessionToken = payload.data.user_game_token;
+        const freeRoundsId = payload.data.free_rounds?.id;
+        const totalWin = parseFloat(payload.data.free_rounds?.win || '0');
 
-        this.logger.debug(`Activating features for user: ${payload.data.user_id}`);
+        if (!sessionToken) {
+            throw new BadRequestException('Missing user_game_token');
+        }
 
-        // Placeholder implementation
+        if (!freeRoundsId) {
+            throw new BadRequestException('Missing free_rounds.id');
+        }
+
+        // Find session
+        const gameSession = await this.em.findOne(
+            GameSession,
+            { uuid: sessionToken },
+            { populate: ['balance', 'user'] }
+        );
+
+        if (!gameSession) {
+            throw new BadRequestException(`Session not found: ${sessionToken}`);
+        }
+
+        // Find and deactivate the free spins
+        const freeSpin = await this.em.findOne(GameFreeSpin, {
+            id: freeRoundsId,
+            user: gameSession.user
+        });
+
+        if (!freeSpin) {
+            throw new BadRequestException(`Free rounds not found: ${freeRoundsId}`);
+        }
+
+        // End free spins
+        await this.em.transactional(async (em) => {
+            wrap(freeSpin).assign({
+                isActive: false,
+                deletedAt: new Date()
+            });
+            await em.flush();
+
+            this.logger.log(`Ended free rounds ${freeRoundsId} with total win: ${totalWin}`);
+        });
+
+        // Get session balance and the other balance type
+        const sessionBalance = gameSession.balance.balance.toFixed(2);
+        const otherBalance = await this.getOtherBalance(
+            gameSession.user.id!,
+            gameSession.balance.currency.name,
+            gameSession.balance.type
+        );
+        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
+        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
+
         return {
-            balance: '1000.00'
-        };
-    }
-
-    /**
-     * Handle update features operation - implement your business logic here
-     */
-    private async handleUpdateFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string }> {
-        // TODO: Implement update features logic
-        // - Update free rounds progress
-        // - Handle wins
-        // - Update counters
-
-        this.logger.debug(`Updating features for user: ${payload.data.user_id}`);
-
-        // Placeholder implementation
-        return {
-            balance: '1000.00'
-        };
-    }
-
-    /**
-     * Handle end features operation - implement your business logic here
-     */
-    private async handleEndFeaturesOperation(payload: B2BSlotsWebhookPayload): Promise<{ balance: string }> {
-        // TODO: Implement end features logic
-        // - End free rounds
-        // - Finalize wins
-        // - Update balance
-
-        this.logger.debug(`Ending features for user: ${payload.data.user_id}`);
-
-        // Placeholder implementation
-        return {
-            balance: '1000.00'
+            balance: mainBalance,
+            bonusBalance: bonusBalance,
+            name: gameSession.user.name || 'Player'
         };
     }
 }

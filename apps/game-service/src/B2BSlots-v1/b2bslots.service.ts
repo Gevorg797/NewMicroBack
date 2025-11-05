@@ -6,7 +6,7 @@ import { SessionManagerService } from '../repository/session-manager.service';
 import { IGameProvider, ProviderPayload, GameLoadResult, CloseSessionPayload } from '../interfaces/game-provider.interface';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { wrap } from '@mikro-orm/core';
-import { Game, GameProvider, GameSubProvider } from '@lib/database';
+import { Game, GameProvider, GameSubProvider, User, GameFreeSpin } from '@lib/database';
 
 @Injectable()
 export class B2BSlotsService implements IGameProvider {
@@ -150,62 +150,89 @@ export class B2BSlotsService implements IGameProvider {
   async initGameDemoSession(payload: ProviderPayload): Promise<any> {
     this.logger.debug(`Initializing demo session for game: ${payload.params.gameId}`);
 
-    const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
+    const { baseURL, key, token } = await this.settings.getProviderSettings(payload.siteId);
 
-    // Transform Superomatic-style payload to B2BSlots format
-    const b2bPayload = {
-      user_id: payload.userId.toString(),
-      user_ip: payload.params.userIp || '127.0.0.1',
-      user_auth_token: payload.params.partnerSession || payload.params.authToken,
-      currency: payload.params.currency || 'USD',
-      game_code: parseInt(payload.params.gameId) || 0,
-      game_name: payload.params.gameName || 'DemoGame'
-    };
+    // B2BSlots doesn't have separate demo/real session endpoints
+    // Generate game launch URL directly (demo mode uses special user_id or auth token)
+    const gameCode = payload.params.gameId;
+    const operatorId = token; // Operator ID from settings
+    const demoUserId = 'demo_' + Date.now();
+    const demoAuthToken = 'demo_token_' + Date.now();
+    const currency = payload.params.currency || 'USD';
+    const language = payload.params.language || 'en';
 
-    const sign = this.utils.sign(b2bPayload, key);
-    const result = await this.api.initDemo(baseURL, { ...b2bPayload, sign });
+    // Generate launch URL using utility method
+    const launchUrl = this.utils.generateGameUrlByCode(
+      baseURL,
+      parseInt(gameCode),
+      parseInt(operatorId || '0'),
+      demoUserId,
+      demoAuthToken,
+      currency,
+      language
+    );
 
     this.logger.debug('Successfully initialized demo session with B2BSlots');
-    return result;
+    return {
+      launchUrl,
+      sessionId: demoAuthToken,
+      gameUuid: gameCode,
+      currency,
+      isDemo: true
+    };
   }
 
   async initGameSession(payload: ProviderPayload): Promise<any> {
     this.logger.debug(`Initializing game session for game: ${payload.params.gameId}`);
 
-    const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
+    const { baseURL, key, token } = await this.settings.getProviderSettings(payload.siteId);
 
-
-    // Create database session first - generates our session ID
+    // Create database session first - generates our session ID and UUID
     const sessionResult = await this.sessionManager.createRealSession({
       userId: payload.userId,
       gameId: payload.params.gameId,
       denomination: payload.params.denomination?.toString() || '1.00',
       providerName: 'B2BSlots',
+      balanceType: payload.balanceType,
     });
 
-    // Send our session ID to provider
-    const b2bPayload = {
-      user_id: payload.userId.toString(),
-      user_ip: payload.params.userIp || '127.0.0.1',
-      user_auth_token: sessionResult.sessionId, // Send our session ID
-      currency: sessionResult.currency, // Use currency from user balance
-      game_code: parseInt(sessionResult.gameUuid) || 0,
-      game_name: payload.params.gameName || 'Game'
-    };
+    // B2BSlots uses direct game URL construction instead of API call
+    // The session UUID becomes the auth_token
+    const gameCode = sessionResult.gameUuid;
+    const operatorId = token; // Operator ID from settings
+    const userId = payload.userId.toString();
+    const authToken = sessionResult.sessionId; // Our session ID as auth token
+    const currency = sessionResult.currency;
+    const language = payload.params.language || 'en';
+    const homeUrl = payload.params.homeUrl;
 
-    const sign = this.utils.sign(b2bPayload, key);
-    const providerResult = await this.api.initSession(baseURL, { ...b2bPayload, sign });
+    // Generate launch URL using utility method
+    const launchUrl = this.utils.generateGameUrlByCode(
+      baseURL,
+      parseInt(gameCode),
+      parseInt(operatorId || '0'),
+      userId,
+      authToken,
+      currency,
+      language,
+      homeUrl
+    );
 
-    // Update session with provider response (launch URL, etc.)
+    // Update session with launch URL
     await this.sessionManager.updateSessionWithProviderResponse(
       sessionResult.sessionId,
-      providerResult
+      {
+        response: {
+          clientDist: launchUrl.split('?')[0],
+          token: authToken
+        }
+      }
     );
 
     this.logger.debug('Successfully initialized game session with B2BSlots');
 
     return {
-      ...providerResult,
+      launchUrl,
       sessionId: sessionResult.sessionId,
       gameUuid: sessionResult.gameUuid,
       currency: sessionResult.currency,
@@ -215,42 +242,36 @@ export class B2BSlotsService implements IGameProvider {
   async gamesFreeRoundsInfo(payload: ProviderPayload): Promise<any> {
     this.logger.debug(`Getting free rounds info for game: ${payload.params.gameId}`);
 
-    const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId);
+    const { token } = await this.settings.getProviderSettings(payload.siteId);
 
-    // Create database session first - generates our session ID
-    const sessionResult = await this.sessionManager.createRealSession({
-      userId: payload.userId,
-      gameId: payload.params.gameId,
-      denomination: payload.params.denomination?.toString() || '1.00',
-      providerName: 'B2BSlots',
+    // Get active free spins from database
+    const game = await this.em.findOne(Game, { uuid: payload.params.gameId });
+    if (!game) {
+      throw new Error(`Game not found: ${payload.params.gameId}`);
+    }
+
+    const user = await this.em.findOne(User, { id: payload.userId });
+    if (!user) {
+      throw new Error(`User not found: ${payload.userId}`);
+    }
+
+    const freeSpins = await this.em.find(GameFreeSpin, {
+      user,
+      game,
+      isActive: true,
+      deletedAt: null
     });
 
-    // Send our session ID to provider
-    const b2bPayload = {
-      user_id: payload.userId.toString(),
-      user_ip: payload.params.userIp || '127.0.0.1',
-      user_game_token: sessionResult.sessionId, // Send our session ID
-      currency: sessionResult.currency, // Use currency from user balance
-      game_code: parseInt(sessionResult.gameUuid) || 0,
-      game_name: payload.params.gameName || 'Game'
-    };
-
-    const sign = this.utils.sign(b2bPayload, key);
-    const providerResult = await this.api.freeRoundsInfo(baseURL, { ...b2bPayload, sign });
-
-    // Update session with provider response
-    await this.sessionManager.updateSessionWithProviderResponse(
-      sessionResult.sessionId,
-      providerResult
-    );
-
-    this.logger.debug('Successfully retrieved free rounds info from B2BSlots');
+    this.logger.debug(`Found ${freeSpins.length} active free spins for user ${payload.userId}`);
 
     return {
-      ...providerResult,
-      sessionId: sessionResult.sessionId,
-      gameUuid: sessionResult.gameUuid,
-      currency: sessionResult.currency,
+      freeSpins: freeSpins.map(fs => ({
+        id: fs.id,
+        count: fs.betCount,
+        denomination: fs.denomination,
+        activeUntil: fs.activeUntil,
+        isActivated: fs.isActivated
+      }))
     };
   }
 
@@ -284,11 +305,8 @@ export class B2BSlotsService implements IGameProvider {
 
     this.logger.debug(`Found active session ${sessionId} for user ${userId} on site ${siteId}`);
 
-    // Get provider settings using siteId from user
-
-
-
-    const { baseURL, key } = await this.settings.getProviderSettings(payload.siteId || 0);
+    // Get provider settings using siteId from session
+    const { baseURL, key } = await this.settings.getProviderSettings(siteId);
 
     // Transform Superomatic-style payload to B2BSlots format
     const b2bPayload = {

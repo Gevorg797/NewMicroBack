@@ -65,4 +65,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => WheelTransaction, (wt) => wt.user)
   wheelTransactions = new Collection<WheelTransaction>(this);
+
+  @Property({ columnType: 'timestamptz', nullable: true })
+  wheelUnlockExpiresAt?: Date;
 }

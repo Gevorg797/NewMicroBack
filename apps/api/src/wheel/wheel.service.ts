@@ -40,7 +40,7 @@ export class WheelService {
     @InjectRepository(FinanceTransactions)
     private readonly financeTransactionsRepository: EntityRepository<FinanceTransactions>,
     private readonly em: EntityManager,
-  ) { }
+  ) {}
 
   /**
    * Spin the wheel and return the result based on weighted distribution
@@ -109,7 +109,10 @@ export class WheelService {
   async checkIsEnough(userId: number): Promise<boolean> {
     try {
       const cutoffDate = this.getDateDaysAgo(this.DEPOSIT_CHECK_DAYS);
-      const totalDeposits = await this.calculateUserDeposits(userId, cutoffDate);
+      const totalDeposits = await this.calculateUserDeposits(
+        userId,
+        cutoffDate,
+      );
       const threshold = await this.sumToEnough();
 
       return totalDeposits >= threshold;
@@ -150,29 +153,17 @@ export class WheelService {
    */
   async checkIsWheelUnlocked(userId: number): Promise<boolean> {
     try {
-      const latestTransaction = await this.getLatestWheelTransaction(userId);
+      const user = await this.userRepository.findOne({ id: userId });
 
-      if (!latestTransaction?.wheelUnlockExpiresAt) {
+      if (!user?.wheelUnlockExpiresAt) {
         return false;
       }
 
-      return this.isDateStillValid(latestTransaction.wheelUnlockExpiresAt);
+      return this.isDateStillValid(user.wheelUnlockExpiresAt);
     } catch (error) {
       console.error('Error checking wheel unlock status:', error);
       return false;
     }
-  }
-
-  /**
-   * Get the latest wheel transaction for a user
-   */
-  private async getLatestWheelTransaction(
-    userId: number,
-  ): Promise<WheelTransaction | null> {
-    return await this.wheelTransactionRepository.findOne(
-      { user: { id: userId } },
-      { orderBy: { createdAt: 'DESC' } },
-    );
   }
 
   /**
@@ -206,14 +197,16 @@ export class WheelService {
       const expiryDate = this.calculateExpiryDate(days);
       const spinResult = await this.spinForUser(userId);
 
+      // Update user's wheel unlock expiry date
+      user.wheelUnlockExpiresAt = expiryDate;
+
       const wheelTransaction = this.wheelTransactionRepository.create({
         user,
         amount: spinResult.amount.toString(),
         status: WheelTransactionStatus.PENDING,
-        wheelUnlockExpiresAt: expiryDate,
       });
 
-      await this.em.persistAndFlush(wheelTransaction);
+      await this.em.persistAndFlush([user, wheelTransaction]);
       return true;
     } catch (error) {
       console.error('Error adding wheel access:', error);
@@ -231,20 +224,20 @@ export class WheelService {
   }
 
   /**
-   * Remove special wheel access for user by expiring latest transaction
+   * Remove special wheel access for user
    */
   async removeWheel(userId: number): Promise<boolean> {
     try {
-      const latestTransaction = await this.getLatestWheelTransaction(userId);
+      const user = await this.userRepository.findOne({ id: userId });
 
-      if (!latestTransaction) {
+      if (!user) {
         return false;
       }
 
-      latestTransaction.status = WheelTransactionStatus.EXPIRED;
-      latestTransaction.wheelUnlockExpiresAt = undefined;
+      // Remove wheel unlock expiry from user
+      user.wheelUnlockExpiresAt = undefined;
 
-      await this.em.persistAndFlush(latestTransaction);
+      await this.em.persistAndFlush(user);
       return true;
     } catch (error) {
       console.error('Error removing wheel access:', error);

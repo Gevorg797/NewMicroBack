@@ -24,7 +24,4 @@ export class WheelTransaction extends BaseEntity {
 
   @Property({ columnType: 'timestamptz', nullable: true })
   completedAt?: Date;
-
-  @Property({ columnType: 'timestamptz', nullable: true })
-  wheelUnlockExpiresAt?: Date;
 }

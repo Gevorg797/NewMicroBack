@@ -2364,8 +2364,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           statusEmoji = '🔴';
       }
 
+      const bonusType = this.getBonusStatusType(bonus.type);
+
       let text = `
-<blockquote>🏆 Тип бонуса 💎 ${bonus.type}</blockquote>
+<blockquote>🏆 Тип бонуса  ${bonusType}</blockquote>
 <blockquote>💰 Сумма бонуса: ${bonus.amount} руб.</blockquote>
 <blockquote>📍 Нужно поднять до: ${raiseTo} руб.</blockquote>
 <blockquote>${statusEmoji} Статус бонуса: ${statusText}</blockquote>`;
@@ -3334,12 +3336,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      // Update transaction with result and mark as completed
+      // Update transaction with result but keep as PENDING until video ends
       wheelTransaction.amount = winAmount.toString();
-      wheelTransaction.status = WheelTransactionStatus.COMPLETED;
-      wheelTransaction.completedAt = new Date();
+      wheelTransaction.status = WheelTransactionStatus.PENDING;
 
-      // Create Wheel type bonus
+      // Create Wheel type bonus but keep as CREATED (will be activated after video ends)
       const wageringMultiplier = 2;
       const wageringRequired = (winAmount * wageringMultiplier).toFixed(2);
       const wheelBonus = this.bonusesRepository.create({
@@ -3363,12 +3364,129 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Send as animation (autoplay, no controls, loops)
-      await ctx.replyWithAnimation({ source: fs.createReadStream(filePath) });
+      const videoMessage = await ctx.replyWithAnimation({
+        source: fs.createReadStream(filePath),
+      });
 
       await ctx.answerCbQuery();
+
+      // Complete transaction and activate bonus after video ends
+      // Typical wheel videos are 15-20 seconds, using 20 seconds to be safe
+      const VIDEO_DURATION_MS = 20000;
+
+      // Ensure IDs are available after persistAndFlush
+      const transactionId = wheelTransaction.id;
+      const bonusId = wheelBonus.id;
+
+      if (!transactionId || !bonusId) {
+        console.error('Transaction or bonus ID not available after persist');
+        return;
+      }
+
+      setTimeout(async () => {
+        try {
+          // Complete transaction and activate bonus
+          await this.completeWheelSpin(transactionId);
+
+          // Reload bonus from database to get updated status
+          const updatedBonus = await this.bonusesRepository.findOne(
+            { id: bonusId },
+            { populate: ['user'] },
+          );
+
+          if (!updatedBonus) {
+            console.error(`Bonus ${bonusId} not found after completion`);
+            return;
+          }
+
+          const keyboardButtons: any[] = [];
+
+          let text = `
+<blockquote>🏆 Тип бонуса 🎡 Колесо Фортуны</blockquote>
+<blockquote>💰 Сумма бонуса: ${updatedBonus.amount} руб.</blockquote>
+<blockquote>✅ Бонус отыгран!</blockquote>\n\n\n`;
+
+          text += `<blockquote>🔴 Статус бонуса: Не активирован</blockquote>`;
+          console.log(updatedBonus.status);
+
+          // Only show activate button if status is CREATED
+          if (updatedBonus.status === BonusStatus.CREATED) {
+            keyboardButtons.push([
+              Markup.button.callback(
+                '🎖 Активировать',
+                `activateBonus_${updatedBonus.id}`,
+              ),
+            ]);
+          }
+
+          keyboardButtons.push([
+            Markup.button.callback('⬅️ Назад', 'myBonuses'),
+          ]);
+
+          // Replace video with image and show bonus information
+          try {
+            const filePath = this.getImagePath('bik_bet_6.jpg');
+
+            // Delete the video message first
+            try {
+              await ctx.telegram.deleteMessage(
+                videoMessage.chat.id,
+                videoMessage.message_id,
+              );
+            } catch (deleteError) {
+              // Ignore delete errors, continue to send new message
+              console.log('Could not delete video message:', deleteError);
+            }
+
+            // Send new image message with bonus information
+            await ctx.telegram.sendPhoto(
+              videoMessage.chat.id,
+              { source: fs.createReadStream(filePath) },
+              {
+                caption: text,
+                parse_mode: 'HTML',
+                reply_markup:
+                  Markup.inlineKeyboard(keyboardButtons).reply_markup,
+              },
+            );
+          } catch (error: any) {
+            console.error('Error replacing video with image:', error);
+            // Don't throw, just log the error
+          }
+        } catch (error) {
+          console.error('Error in wheel spin completion callback:', error);
+        }
+      }, VIDEO_DURATION_MS);
     } catch (error) {
       console.error('Error handling wheel spin:', error);
       await ctx.answerCbQuery('❌ Ошибка при обработке запроса');
+    }
+  }
+
+  /**
+   * Complete wheel spin transaction and activate bonus after video ends
+   */
+  private async completeWheelSpin(wheelTransactionId: number): Promise<void> {
+    try {
+      // Find the wheel transaction
+      const wheelTransaction = await this.em.findOne(WheelTransaction, {
+        id: wheelTransactionId,
+        status: WheelTransactionStatus.PENDING,
+      });
+
+      if (!wheelTransaction) {
+        console.error(
+          `Wheel transaction ${wheelTransactionId} not found or already completed`,
+        );
+        return;
+      }
+
+      // Update wheel transaction to completed
+      wheelTransaction.status = WheelTransactionStatus.COMPLETED;
+      wheelTransaction.completedAt = new Date();
+      await this.em.persistAndFlush(wheelTransaction);
+    } catch (error) {
+      console.error('Error completing wheel spin:', error);
     }
   }
 

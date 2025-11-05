@@ -593,7 +593,6 @@ export class BikBetController {
     this.bot.action(/wheelSpin_(\d+)/, async (ctx) => {
       try {
         const amount = parseInt((ctx as any).match?.[1], 10);
-        await ctx.answerCbQuery();
         await this.bikbetService.handleWheelSpin(ctx, amount);
       } catch (error) {
         console.error('Wheel spin handler error:', error);

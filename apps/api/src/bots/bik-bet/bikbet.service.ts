@@ -2461,6 +2461,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           try {
             const transaction =
               await this.paymentService.getTransaction(transactionId);
+            console.log(transaction?.redirectSuccessUrl);
 
             if (transaction?.redirectSuccessUrl) {
               const text = `
@@ -2494,15 +2495,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
                 return;
               } catch (editError: any) {
-                if (
-                  !editError?.response?.description?.includes(
-                    'message is not modified',
-                  )
-                ) {
-                  throw editError;
-                }
+                await ctx.answerCbQuery(
+                  '❌ Превышено время ожидания. Попробуйте еще раз.',
+                );
+                return;
               }
-              return;
             }
 
             attempts++;

@@ -2458,10 +2458,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         const maxAttempts = 1500;
 
         const pollForRedirectUrl = async () => {
+          console.log('transaction id', transactionId);
+
           try {
             const transaction =
               await this.paymentService.getTransaction(transactionId);
-            console.log(transaction?.redirectSuccessUrl);
+            console.log(transaction);
 
             if (transaction?.redirectSuccessUrl) {
               const text = `

@@ -2455,13 +2455,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         // Poll for redirectUrl
         const transactionId = paymentResult.data.transactionId;
         let attempts = 0;
-        const maxAttempts = 30; // 30 attempts = ~15 seconds
+        const maxAttempts = 1500;
 
         const pollForRedirectUrl = async () => {
           try {
             const transaction =
               await this.paymentService.getTransaction(transactionId);
-            console.log(transaction);
 
             if (transaction?.redirectSuccessUrl) {
               const text = `
@@ -2492,6 +2491,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
                     [Markup.button.callback('🔙 Назад', 'donate_menu')],
                   ]).reply_markup,
                 });
+
+                return;
               } catch (editError: any) {
                 if (
                   !editError?.response?.description?.includes(
@@ -2506,7 +2507,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
             attempts++;
             if (attempts < maxAttempts) {
-              setTimeout(pollForRedirectUrl, 1500); // Poll every 500ms
+              setTimeout(pollForRedirectUrl, 1500); // Poll every 1500ms
             } else {
               await ctx.editMessageCaption(
                 '❌ Превышено время ожидания. Попробуйте еще раз.',

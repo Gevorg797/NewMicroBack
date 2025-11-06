@@ -54,7 +54,9 @@ import {
   YOOMONEY_METHOD_ID,
   PLATEGA_METHOD_ID,
   USDT20_METHOD_ID,
+  OPS_METHOD_ID,
 } from './payments-method-ids';
+import { DEPOSIT_PAYMENT_METHOD_ID } from './payment-data';
 
 @Injectable()
 export class BikBetService implements OnModuleInit, OnModuleDestroy {
@@ -89,6 +91,23 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   private readonly ITEMS_PER_PAGE = 10;
   private readonly SECRET_KEY = 'h553k34n45mktkm55143a';
   private cleanupInterval: NodeJS.Timeout;
+
+  // Performance optimization: Caching frequently accessed entities
+  private readonly userCache = new Map<
+    string,
+    { user: User; expiresAt: number }
+  >();
+  private readonly currencyCache = new Map<
+    CurrencyType,
+    { currency: Currency; expiresAt: number }
+  >();
+  private readonly siteCache = new Map<
+    number,
+    { site: Site; expiresAt: number }
+  >();
+  private readonly imageBufferCache = new Map<string, Buffer>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly IMAGE_CACHE_TTL = 60 * 60 * 1000; // 1 hour for images
 
   constructor(
     @InjectRepository(User)
@@ -201,7 +220,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       // Use transaction to prevent race conditions
       const em = this.userRepository.getEntityManager();
 
-      let user = await this.userRepository.findOne({ telegramId });
+      let user = await this.getCachedUser(telegramId);
 
       if (!user) {
         try {
@@ -218,10 +237,18 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
               const derivedName =
                 (ctx.from.username ?? fallbackName) || undefined;
               const siteId = 1;
-              const siteRef = await em.findOne(Site, { id: siteId });
-
+              let siteRef = await this.getCachedSite(siteId);
               if (!siteRef) {
-                throw new Error('Default site not found');
+                // Fallback to direct query if not in cache
+                siteRef = await em.findOne(Site, { id: siteId });
+                if (siteRef) {
+                  this.siteCache.set(siteId, {
+                    site: siteRef,
+                    expiresAt: Date.now() + this.CACHE_TTL,
+                  });
+                } else {
+                  throw new Error('Default site not found');
+                }
               }
 
               user = em.create(User, {
@@ -233,9 +260,17 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
               await em.persistAndFlush(user);
 
               // Create balances in the same transaction
-              const rub = await em.findOne(Currency, {
-                name: CurrencyType.RUB,
-              });
+              let rub = await this.getCachedCurrency(CurrencyType.RUB);
+              if (!rub) {
+                // Fallback to direct query if not in cache
+                rub = await em.findOne(Currency, { name: CurrencyType.RUB });
+                if (rub) {
+                  this.currencyCache.set(CurrencyType.RUB, {
+                    currency: rub,
+                    expiresAt: Date.now() + this.CACHE_TTL,
+                  });
+                }
+              }
 
               if (rub) {
                 const mainBalance = em.create(Balances, {
@@ -271,9 +306,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         const existingBalances = await this.balancesRepository.find({ user });
 
         if (existingBalances.length === 0) {
-          const rub = await this.currencyRepository.findOne({
-            name: CurrencyType.RUB,
-          });
+          const rub = await this.getCachedCurrency(CurrencyType.RUB);
 
           if (rub && user) {
             try {
@@ -345,10 +378,9 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         }
 
         // Then edit the message
-        const filePath = this.getImagePath('bik_bet_8.jpg');
         const media: any = {
           type: 'photo',
-          media: { source: fs.readFileSync(filePath) },
+          media: { source: this.getImageBuffer('bik_bet_8.jpg') },
           caption: text,
           parse_mode: 'HTML',
         };
@@ -433,27 +465,119 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  // Performance optimization: Cached user lookup
+  private async getCachedUser(telegramId: string): Promise<User | null> {
+    const now = Date.now();
+    const cached = this.userCache.get(telegramId);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.user;
+    }
+
+    const user = await this.userRepository.findOne({ telegramId });
+    if (user) {
+      this.userCache.set(telegramId, {
+        user,
+        expiresAt: now + this.CACHE_TTL,
+      });
+    }
+    return user;
+  }
+
+  // Performance optimization: Cached currency lookup
+  private async getCachedCurrency(
+    currencyType: CurrencyType,
+  ): Promise<Currency | null> {
+    const now = Date.now();
+    const cached = this.currencyCache.get(currencyType);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.currency;
+    }
+
+    const currency = await this.currencyRepository.findOne({
+      name: currencyType,
+    });
+    if (currency) {
+      this.currencyCache.set(currencyType, {
+        currency,
+        expiresAt: now + this.CACHE_TTL,
+      });
+    }
+    return currency;
+  }
+
+  // Performance optimization: Cached site lookup
+  private async getCachedSite(siteId: number): Promise<Site | null> {
+    const now = Date.now();
+    const cached = this.siteCache.get(siteId);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.site;
+    }
+
+    const site = await this.em.findOne(Site, { id: siteId });
+    if (site) {
+      this.siteCache.set(siteId, {
+        site,
+        expiresAt: now + this.CACHE_TTL,
+      });
+    }
+    return site;
+  }
+
+  // Performance optimization: Get cached image buffer or load from disk
+  private getImageBuffer(imageName: string): Buffer {
+    const cached = this.imageBufferCache.get(imageName);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const filePath = this.getImagePath(imageName);
+      const buffer = fs.readFileSync(filePath);
+      this.imageBufferCache.set(imageName, buffer);
+      return buffer;
+    } catch (error) {
+      this.logger.error(`Error loading image ${imageName}:`, error);
+      throw error;
+    }
+  }
+
+  // Performance optimization: Invalidate user cache (call after updates)
+  private invalidateUserCache(telegramId: string): void {
+    this.userCache.delete(telegramId);
+  }
+
+  // Performance optimization: Batch fetch user balances (main and bonus)
+  private async getUserBalances(user: User): Promise<{
+    main: Balances | null;
+    bonus: Balances | null;
+  }> {
+    const balances = await this.balancesRepository.find(
+      { user },
+      { populate: ['currency'] },
+    );
+
+    const main = balances.find((b) => b.type === BalanceType.MAIN) || null;
+    const bonus = balances.find((b) => b.type === BalanceType.BONUS) || null;
+
+    return { main, bonus };
+  }
+
   async game(ctx: any) {
     try {
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.reply('❌ Пользователь не найден');
         return;
       }
 
-      // Get user's main balance
-      const mainBalance = await this.balancesRepository.findOne({
-        user: user,
-        type: BalanceType.MAIN,
-      });
-
-      // Get user's bonus balance
-      const bonusBalance = await this.balancesRepository.findOne({
-        user: user,
-        type: BalanceType.BONUS,
-      });
+      // Get user's balances (optimized batch query)
+      const { main: mainBalance, bonus: bonusBalance } =
+        await this.getUserBalances(user);
 
       const mainBalanceAmount = Math.round(mainBalance?.balance || 0);
       const bonusBalanceAmount = Math.round(bonusBalance?.balance || 0);
@@ -467,7 +591,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_1.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -503,10 +631,21 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async start(ctx: any, link: string) {
-    const user = await this.userRepository.findOne(
-      { telegramId: ctx.from.id.toString() },
-      { populate: ['site'] },
-    );
+    let user = await this.getCachedUser(ctx.from.id.toString());
+    // If site not populated, fetch it
+    if (user && !user.site) {
+      user = await this.userRepository.findOne(
+        { telegramId: ctx.from.id.toString() },
+        { populate: ['site'] },
+      );
+      if (user) {
+        this.invalidateUserCache(ctx.from.id.toString());
+        this.userCache.set(ctx.from.id.toString(), {
+          user,
+          expiresAt: Date.now() + this.CACHE_TTL,
+        });
+      }
+    }
     if (!user) {
       await ctx.reply('❌ Пользователь не найден');
       return;
@@ -582,7 +721,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_1.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -797,7 +940,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_1.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -927,7 +1074,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_1.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -976,7 +1127,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_1.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -1090,7 +1245,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_1.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: caption,
         parse_mode: 'HTML',
       };
@@ -1335,10 +1494,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 <blockquote><b>• Выберите удобный способ оплаты</b></blockquote>
 `;
 
-    const filePath = this.getImagePath('bik_bet_1.jpg');
-
     await ctx.replyWithPhoto(
-      { source: fs.readFileSync(filePath) },
+      { source: this.getImageBuffer('bik_bet_1.jpg') },
       {
         caption: text,
         parse_mode: 'HTML',
@@ -1354,12 +1511,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
               `paymentSystem_fkwallet_${amount}`,
             ),
           ],
-          [
-            Markup.button.callback(
-              '💳 Оплата с карты(+5% бонус)',
-              `paymentSystem_yoomoney_${amount}`,
-            ),
-          ],
+          // [
+          //   Markup.button.callback(
+          //     '💳 Оплата с карты(+5% бонус)',
+          //     `paymentSystem_yoomoney_${amount}`,
+          //   ),
+          // ],
           [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
           [Markup.button.callback('📷 СБП', `paymentSystem_platega_${amount}`)],
           [Markup.button.callback('От 250р:', 'ignore_game')],
@@ -1369,8 +1526,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
               `paymentSystem_cryptocloud_${amount}`,
             ),
           ],
-          [Markup.button.callback('От 500р до 100 000р', 'ignore_game')],
-          [Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`)],
+          [Markup.button.callback('От 1000р до 100 000р', 'ignore_game')],
+          [
+            Markup.button.callback('💳 СБП', `paymentSystemSbp_ops_${amount}`),
+            Markup.button.callback(
+              '💳 Карта',
+              `paymentSystemCard_ops_${amount}`,
+            ),
+          ],
           [Markup.button.callback('⬅️ Назад', 'donate_menu')],
         ]).reply_markup,
       },
@@ -1397,7 +1560,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('От 50р:', 'ignore_all')],
+        [Markup.button.callback('От 50р:', 'ignore_game')],
         [
           Markup.button.callback(
             '💎 CryptoBot',
@@ -1408,23 +1571,26 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
             `paymentSystem_fkwallet_${amount}`,
           ),
         ],
-        [
-          Markup.button.callback(
-            '💳 Оплата с карты(+5% бонус)',
-            `paymentSystem_yoomoney_${amount}`,
-          ),
-        ],
-        [Markup.button.callback('От 50р до 2000р:', 'ignore_all')],
+        // [
+        //   Markup.button.callback(
+        //     '💳 Оплата с карты(+5% бонус)',
+        //     `paymentSystem_yoomoney_${amount}`,
+        //   ),
+        // ],
+        [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
         [Markup.button.callback('📷 СБП', `paymentSystem_platega_${amount}`)],
-        [Markup.button.callback('От 250р:', 'ignore_all')],
+        [Markup.button.callback('От 250р:', 'ignore_game')],
         [
           Markup.button.callback(
             '🛡 Криптовалюты',
             `paymentSystem_cryptocloud_${amount}`,
           ),
         ],
-        [Markup.button.callback('От 500р до 100 000р', 'ignore_all')],
-        [Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`)],
+        [Markup.button.callback('От 1000р до 100 000р', 'ignore_game')],
+        [
+          Markup.button.callback('💳 СБП', `paymentSystemSbp_ops_${amount}`),
+          Markup.button.callback('💳 Карта', `paymentSystemCard_ops_${amount}`),
+        ],
         [Markup.button.callback('⬅️ Назад', 'donate_menu')],
       ]).reply_markup,
     });
@@ -2055,9 +2221,9 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async fkwalletPayment(ctx: any, amount: number) {
     const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
-<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>`;
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма к оплате:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже</blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
@@ -2070,7 +2236,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     let user = await this.userRepository.findOne({ telegramId: telegramId });
 
     if (!user) {
-      const message = '⚠ Пользователь не найден. Нажмите /start';
+      const message = '⚠ Пользователь не найден';
       await ctx.reply(message);
       return;
     }
@@ -2080,8 +2246,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: FREEKASSA_METHOD_ID, // FKwallet method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.FREEKASSA, // FKwallet method ID
       });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
 
       await ctx.editMessageMedia(media, {
         reply_markup: Markup.inlineKeyboard([
@@ -2090,8 +2262,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ]).reply_markup,
       });
     } catch (error) {
-      const message = 'Создание платежа FK не удалось. Нажмите /start';
-      await ctx.reply(message);
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
       return;
     }
   }
@@ -2142,12 +2314,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cryptobotPayment(ctx: any, amount: number) {
-    const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
-<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>
-<blockquote><b>💎 Оплата через CryptoBot</b></blockquote>`;
+<blockquote><b>💎 Оплата через CryptoBot</b></blockquote>
+<blockquote><b>• Сумма: ${amount} RUB</b></blockquote>
+<blockquote><b>• Нажмите кнопку «Оплатить»
+• Оплатите счет в CryptoBot
+❗️ Баланс начислится автоматически
+</b></blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
@@ -2170,8 +2343,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 4, // CryptoBot method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.CRYPTO_BOT, // CryptoBot method ID
       });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
 
       await ctx.editMessageMedia(media, {
         reply_markup: Markup.inlineKeyboard([
@@ -2180,8 +2359,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ]).reply_markup,
       });
     } catch (error) {
-      const message = 'Создание платежа CryptoBot не удалось. Нажмите /start';
-      await ctx.reply(message);
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
       return;
     }
   }
@@ -2189,15 +2368,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async plategaPayment(ctx: any, amount: number) {
     const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
-<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>📍 Для оплаты нажмите кнопку ниже или отсканируйте QR код</b></blockquote>
-<blockquote><b>📷 Оплата через СБП (Platega)</b></blockquote>`;
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма депозита:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
 
-    const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
       type: 'photo',
-      media: { source: fs.readFileSync(filePath) },
+      media: { source: this.getImageBuffer('bik_bet_1.jpg') },
       caption: text,
       parse_mode: 'HTML',
     };
@@ -2215,8 +2392,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 5, // Platega method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.PLATEGA, // Platega method ID
       });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
 
       await ctx.editMessageMedia(media, {
         reply_markup: Markup.inlineKeyboard([
@@ -2225,8 +2408,115 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ]).reply_markup,
       });
     } catch (error) {
-      const message = 'Создание платежа Platega не удалось. Нажмите /start';
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
+      return;
+    }
+  }
+
+  async opsPaymentSbp(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
+    const text = `
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма депозита:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
+
+    const media: any = {
+      type: 'photo',
+      media: { source: this.getImageBuffer('bik_bet_1.jpg') },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
+
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
       await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.OPS_SBP, // OPS SBP method ID
+      });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
+      if (paymentResult.data?.transactionId) {
+        await ctx.editMessageCaption('Загрузка...');
+        return;
+      }
+    } catch (error) {
+      console.log(error);
+
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
+      return;
+    }
+  }
+
+  async opsPaymentCard(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
+    const text = `
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма депозита:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
+
+    const media: any = {
+      type: 'photo',
+      media: { source: this.getImageBuffer('bik_bet_1.jpg') },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
+
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.OPS_CARD, // OPS Card method ID
+      });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
+
+      try {
+        await ctx.editMessageMedia(media, {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.url('✅ Оплатить', paymentResult.paymentUrl)],
+            [Markup.button.callback('🔙 Назад', 'donate_menu')],
+          ]).reply_markup,
+        });
+      } catch (editError: any) {
+        // Ignore "message is not modified" error
+        if (
+          editError?.response?.description?.includes('message is not modified')
+        ) {
+          return;
+        }
+        throw editError;
+      }
+    } catch (error) {
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
       return;
     }
   }
@@ -2234,7 +2524,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async myBonuses(ctx: any) {
     try {
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.reply('❌ Пользователь не найден');
@@ -2262,7 +2552,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_6.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -2317,7 +2611,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async handleBonusClick(ctx: any, bonusId: number) {
     try {
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.reply('❌ Пользователь не найден');
@@ -2385,7 +2679,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_6.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -2415,7 +2713,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async activateBonus(ctx: any, bonusId: number) {
     try {
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
@@ -2458,13 +2756,6 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           status: BonusStatus.ACTIVE,
         });
 
-        if (!activeBonus) {
-          await ctx.answerCbQuery(
-            '❌ Обнаружен бонусный баланс, но активный бонус не найден',
-          );
-          return;
-        }
-
         const text = `
 <blockquote>❗️ У вас уже есть один активированный бонус, вы уверены, что хотите активировать новый?</blockquote>
 <blockquote>🗑 Активированный бонус пропадет вместе с бонусным балансом (<code>${Math.round(bonusBalanceValue)} RUB</code>)!</blockquote>`;
@@ -2472,31 +2763,37 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         const filePath = this.getImagePath('bik_bet_6.jpg');
         const media: any = {
           type: 'photo',
-          media: { source: fs.readFileSync(filePath) },
+          media: {
+            source: this.getImageBuffer(
+              filePath.split(/[/\\]/).pop() ||
+                filePath.replace(/^.*[\/\\]/, ''),
+            ),
+          },
           caption: text,
           parse_mode: 'HTML',
         };
+        const keyboardButtons: any[] = [];
 
+        keyboardButtons.push([
+          Markup.button.callback('Да', `agreeBonus_${bonus.id}`),
+        ]);
+
+        if (activeBonus) {
+          keyboardButtons.push([
+            Markup.button.callback(
+              '🎁 К активном бонусу',
+              `getActiveBonus_${activeBonus?.id}`,
+            ),
+          ]);
+        }
+        keyboardButtons.push([Markup.button.callback('⬅️ Назад', 'myBonuses')]);
         try {
           await ctx.editMessageMedia(media, {
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('Да', `agreeBonus_${bonus.id}`)],
-              [
-                Markup.button.callback(
-                  '🎁 К активном бонусу',
-                  `getActiveBonus_${activeBonus.id}`,
-                ),
-              ],
-              [Markup.button.callback('⬅️ Назад', `bonus_${bonus.id}`)],
-            ]).reply_markup,
+            reply_markup: Markup.inlineKeyboard(keyboardButtons).reply_markup,
           });
         } catch (error: any) {
-          // Ignore "message is not modified" error
-          if (
-            !error?.response?.description?.includes('message is not modified')
-          ) {
-            throw error;
-          }
+          await ctx.answerCbQuery('❌ Бонус не найден');
+          return;
         }
 
         await ctx.answerCbQuery();
@@ -2573,7 +2870,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_6.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -2601,7 +2902,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       await ctx.answerCbQuery();
 
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.reply('❌ Пользователь не найден');
@@ -2646,7 +2947,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const filePath = this.getImagePath('bik_bet_6.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -2692,7 +2997,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async transferBonusBalance(ctx: any, bonusId: number) {
     try {
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
@@ -2802,7 +3107,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async agreeBonusActivation(ctx: any, bonusId: number) {
     try {
       const telegramId = String(ctx.from.id);
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
@@ -3092,15 +3397,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async bonuses(ctx: any) {
-    const text = `<blockquote><b>🎁 Раздел "Бонусы" в Bik Bet</b></blockquote>
-<blockquote>Здесь собраны все актуальные предложения:
+    const text = `<blockquote><b>🎁 Раздел “Бонусы” в Bik Bet
+Здесь собраны все актуальные предложения:
 💥 За активность
 🎉 За участие в акциях
-🎁 И просто так — в знак благодарности, что Вы с нами</blockquote>
-<blockquote>На каждый бонус действует единое правило — отыгрыш x2 от суммы бонуса.
-Но обратите внимание: условия получения и использования могут отличаться.</blockquote>
-<blockquote>Проявляйте активность и активируйте как можно больше бонусов, чтобы играть с максимальной выгодой! 🚀</blockquote>`;
-
+🎁 И просто так — в знак благодарности, что Вы с нами</b></blockquote>\n
+<blockquote><b>На каждый бонус действует единое правило — отыгрыш x2 от суммы бонуса.
+Но обратите внимание: условия получения и использования могут отличаться.</b></blockquote>\n
+<blockquote><i>Проявляйте активность и активируйте как можно больше бонусов, чтобы играть с максимальной выгодой! 🚀</i></blockquote>`;
     const filePath = this.getImagePath('bik_bet_6.jpg');
     const media: any = {
       type: 'photo',
@@ -3271,7 +3575,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async handleWheelSpin(ctx: any, amount: number) {
     try {
       const telegramId = ctx.from.id.toString();
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
 
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
@@ -3402,16 +3706,15 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           const keyboardButtons: any[] = [];
 
           let text = `
-<blockquote>🏆 Тип бонуса 🎡 Колесо Фортуны</blockquote>
-<blockquote>💰 Сумма бонуса: ${updatedBonus.amount} руб.</blockquote>
-<blockquote>✅ Бонус отыгран!</blockquote>\n\n\n`;
-
-          text += `<blockquote>🔴 Статус бонуса: Не активирован</blockquote>`;
-          console.log(updatedBonus.status);
+<blockquote>🎁 Поздравляем!</blockquote>
+<blockquote>💰 Ваш выигрыш: ${updatedBonus.amount} руб.</blockquote>
+<blockquote>❗️ Вы можете забрать его в разделе "Мои бонусы", в профиле</blockquote>
+<blockquote>⏳ Колесо будет доступно через 24ч</blockquote>`;
 
           // Only show activate button if status is CREATED
           if (updatedBonus.status === BonusStatus.CREATED) {
             keyboardButtons.push([
+              Markup.button.callback('🎰 Играть!', 'games'),
               Markup.button.callback(
                 '🎖 Активировать',
                 `activateBonus_${updatedBonus.id}`,
@@ -3491,10 +3794,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async promosInfo(ctx: any) {
-    const text = `<blockquote><b>🎁 Добро пожаловать в промокоды! 🎁</b></blockquote>
-<blockquote>Здесь вы можете вводить актуальные промокоды с нашего канала и получать приятные бонусы на бонусный баланс.</blockquote>
-<blockquote>Успейте активировать — лимит может закончиться в любой момент!</blockquote>
-<blockquote><b>🚀 Следите за новостями и будьте первыми в очереди за бонусами!</b></blockquote>`;
+    const text = `<blockquote><b>🎁 Добро пожаловать в промокоды! 🎁</b></blockquote>\n
+<blockquote>Здесь вы можете вводить актуальные промокоды с нашего канала и получать приятные бонусы на бонусный баланс.</blockquote>\n
+<blockquote><b>Успейте активировать</b> — лимит может закончиться в любой момент!</blockquote>\n
+<blockquote>🚀 Следите за новостями и будьте первыми в очереди за бонусами!</blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_6.jpg');
     const media: any = {
@@ -4198,18 +4501,35 @@ ${promolist}
       0,
     );
     const threshold = 10000;
-    const progressPercent = Math.min(
-      100,
-      Math.floor((totalDeposited / threshold) * 100),
-    );
-    const formattedTotal = `${Math.floor(totalDeposited).toLocaleString('ru-RU')}₽`;
+    let text;
+    const channelLink = 'https://t.me/bikbetsupportVIP';
+    const buttons: any[] = [];
+    if (totalDeposited >= threshold) {
+      text = `<blockquote>🚀 Вам открыт вход в VIP-Клуб!</blockquote>
+<blockquote><i>Теперь у вас есть уникальная возможность присоединиться к закрытому сообществу игроков, которые делают крупные ставки и получают эксклюзивные бонусы. В VIP-Клубе вас ждут:</i></blockquote>
+<blockquote><i>🔒 Приватный канал с эксклюзивными промокодами и акциями
+⚡ Личный VIP-менеджер, который подбирает бонусы специально под вас
+💎 Повышенные привилегии, специальные ивенты и многое другое</i></blockquote>
+<blockquote><i>💎 Чтобы вступить, напишите новому VIP-менеджеру — и получите доступ к закрытому каналу и всем привилегиям VIP!</i></blockquote>
+<blockquote><i>❗ Ваших депозитов хватает на вступление</i></blockquote>`;
 
-    const text = `<blockquote><b>👑 VIP-Клуб</b></blockquote>
+      buttons.push([Markup.button.url('🚀 Войти в клуб!', channelLink)]);
+    } else {
+      const progressPercent = Math.min(
+        100,
+        Math.floor((totalDeposited / threshold) * 100),
+      );
+      const formattedTotal = `${Math.floor(totalDeposited).toLocaleString('ru-RU')}₽`;
+
+      text = `<blockquote><b>👑 VIP-Клуб</b></blockquote>
 <blockquote>Ощутите VIP-опыт: быстрые выводы, персональные бонусы, закрытые акции и индивидуальная поддержка ждут вас 🫡</blockquote>
-<blockquote><b>🏆 Чтобы попасть в приватный канал и получить все привилегии, необходимо сделать суммарный депозит 10 000₽ с момента запуска VIP-Клуба.</b></blockquote>
-<blockquote><b>💎 Ваш текущий прогресс:</b></blockquote>
-<blockquote>┗ ${formattedTotal} / 10 000₽ | ${progressPercent}%</blockquote>
-<blockquote><b>🎁 Продолжайте пополнять счёт, чтобы открыть доступ к эксклюзивным бонусам, личному VIP менеджеру и закрытым ивентам!</b></blockquote>`;
+<blockquote>🏆 Чтобы попасть в приватный канал и получить все привилегии, необходимо сделать суммарный депозит 10 000₽ с момента запуска VIP-Клуба.</blockquote>
+<blockquote><b>💎 Ваш текущий прогресс:</b>
+┗ ${formattedTotal} / 10 000₽ | ${progressPercent}%</blockquote>
+<blockquote>🎁 Продолжайте пополнять счёт, чтобы открыть доступ к эксклюзивным бонусам, личному VIP менеджеру и закрытым ивентам!</blockquote>`;
+
+      buttons.push([Markup.button.callback('💸 Пополнить баланс', 'donate')]);
+    }
 
     const filePath = this.getImagePath('bik_bet_11.jpg');
     const media: any = {
@@ -4218,12 +4538,6 @@ ${promolist}
       caption: text,
       parse_mode: 'HTML',
     };
-
-    const channelLink = 'https://t.me/bikbetsupportVIP';
-    const buttons: any[] = [];
-    if (totalDeposited >= threshold) {
-      buttons.push([Markup.button.url('👑 Перейти в VIP канал', channelLink)]);
-    }
     buttons.push([Markup.button.callback('⬅️ Назад', 'bonuses')]);
 
     await ctx.editMessageMedia(media, {
@@ -4744,7 +5058,11 @@ ${entriesText}
       const filePath = this.getImagePath('bik_bet_5.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -4853,7 +5171,11 @@ ${entriesText}
       const filePath = this.getImagePath('bik_bet_5.jpg');
       const media: any = {
         type: 'photo',
-        media: { source: fs.readFileSync(filePath) },
+        media: {
+          source: this.getImageBuffer(
+            filePath.split(/[/\\]/).pop() || filePath.replace(/^.*[\/\\]/, ''),
+          ),
+        },
         caption: text,
         parse_mode: 'HTML',
       };
@@ -5661,6 +5983,10 @@ ${entriesText}
       userStates: this.userStates.size,
       currentPage: this.currentPage.size,
       lastMessageId: this.lastMessageId.size,
+      userCache: this.userCache.size,
+      currencyCache: this.currencyCache.size,
+      siteCache: this.siteCache.size,
+      imageCache: this.imageBufferCache.size,
       heapUsed: process.memoryUsage().heapUsed,
     };
 
@@ -5668,6 +5994,24 @@ ${entriesText}
     const ONE_DAY = 24 * 60 * 60 * 1000;
     this.currentPage.cleanupOlderThan(ONE_DAY);
     this.lastMessageId.cleanupOlderThan(ONE_DAY);
+
+    // Clean up expired cache entries
+    const now = Date.now();
+    for (const [key, value] of this.userCache.entries()) {
+      if (value.expiresAt <= now) {
+        this.userCache.delete(key);
+      }
+    }
+    for (const [key, value] of this.currencyCache.entries()) {
+      if (value.expiresAt <= now) {
+        this.currencyCache.delete(key);
+      }
+    }
+    for (const [key, value] of this.siteCache.entries()) {
+      if (value.expiresAt <= now) {
+        this.siteCache.delete(key);
+      }
+    }
 
     // Warn if userStates gets too large (possible leak)
     if (this.userStates.size > 5000) {
@@ -6116,7 +6460,7 @@ ${entriesText}
    */
   async handleWheelToggleConfirm(ctx: any, telegramId: string, action: string) {
     try {
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
         return;
@@ -6172,7 +6516,7 @@ ${entriesText}
    */
   async handleRemoveWheel(ctx: any, telegramId: string) {
     try {
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
         return;
@@ -6210,7 +6554,7 @@ ${entriesText}
    */
   async handleUnlockWheelPrompt(ctx: any, telegramId: string) {
     try {
-      const user = await this.userRepository.findOne({ telegramId });
+      const user = await this.getCachedUser(telegramId);
       if (!user) {
         await ctx.answerCbQuery('❌ Пользователь не найден');
         return;

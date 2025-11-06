@@ -43,11 +43,11 @@ export class FreekassaService implements IPaymentProvider {
     );
 
     if (!transaction) {
-      throw new NotFoundException('transaction not found');
+      return { error: 'transaction not found' };
     }
 
     if (!transaction.subMethod.method.providerSettings) {
-      throw new NotFoundException('Provider not found');
+      return { error: 'Provider not found' };
     }
 
     const shopId = transaction.subMethod.method.providerSettings
@@ -66,7 +66,7 @@ export class FreekassaService implements IPaymentProvider {
       orderId,
     );
 
-    const paymentUrl = `${transaction.subMethod.method.providerSettings.paymentFormLink}?m=${shopId}&oa=${orderAmount}&o=${orderId}&s=${sign}&currency=${currencyCode}`;
+    const paymentUrl = `${transaction.subMethod.method.providerSettings.paymentFormLink}?m=${shopId}&oa=${orderAmount}&o=${orderId}&s=${sign}&currency=${currencyCode}&i=1`;
 
     return { paymentUrl };
   }

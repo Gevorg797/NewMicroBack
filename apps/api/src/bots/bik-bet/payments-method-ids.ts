@@ -4,3 +4,4 @@ export const CARD_METHOD_ID = 3;
 export const YOOMONEY_METHOD_ID = 4;
 export const PLATEGA_METHOD_ID = 5;
 export const USDT20_METHOD_ID = 6;
+export const OPS_METHOD_ID = 7;

@@ -32,6 +32,7 @@ export interface PaymentResult {
   paymentUrl?: string;
   invoiceId?: string;
   data?: any;
+  error?: string;
 }
 
 /**

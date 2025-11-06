@@ -206,16 +206,16 @@ export class CryptobotService implements IPaymentProvider {
     );
 
     if (!transaction) {
-      throw new NotFoundException('Transaction not found');
+      return { error: 'Transaction not found' };
     }
 
     const providerSettings = transaction?.subMethod.method.providerSettings;
     if (!providerSettings) {
-      throw new NotFoundException('Provider settings not found');
+      return { error: 'Provider settings not found' };
     }
 
     if (!transaction.user?.telegramId) {
-      throw new BadRequestException('User telegram ID not found');
+      return { error: 'User telegram ID not found' };
     }
 
     // Get exchange rate and convert RUB to USDT

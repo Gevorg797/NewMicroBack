@@ -617,7 +617,6 @@ export class BikBetController {
           await ctx.answerCbQuery('Некорректная сумма');
           return;
         }
-        await ctx.answerCbQuery();
         await this.bikbetService.fkwalletPayment(ctx, amount);
       } catch (error) {
         console.error('FKwallet payment handler error:', error);
@@ -657,7 +656,6 @@ export class BikBetController {
           await ctx.answerCbQuery('Некорректная сумма');
           return;
         }
-        await ctx.answerCbQuery();
         await this.bikbetService.cryptobotPayment(ctx, amount);
       } catch (error) {
         console.error('CryptoBot payment handler error:', error);
@@ -681,6 +679,51 @@ export class BikBetController {
         await this.bikbetService.plategaPayment(ctx, amount);
       } catch (error) {
         console.error('Platega payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // OPS SBP payment handler: paymentSystemSbp_ops<amount>
+    this.bot.action(/paymentSystemSbp_ops_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+
+        if (amount < 1000) {
+          await ctx.answerCbQuery('❌ Сумма не может быть меньше 1000руб!');
+          return;
+        }
+
+        await this.bikbetService.opsPaymentSbp(ctx, amount);
+      } catch (error) {
+        console.error('OPS SBP payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // OPS Card payment handler: paymentSystemCard_ops<amount>
+    this.bot.action(/paymentSystemCard_ops(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.opsPaymentCard(ctx, amount);
+      } catch (error) {
+        console.error('OPS Card payment handler error:', error);
         try {
           await ctx.answerCbQuery('Ошибка обработки платежа');
         } catch (e) {

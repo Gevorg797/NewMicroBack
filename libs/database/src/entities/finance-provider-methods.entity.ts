@@ -51,6 +51,8 @@ export enum MethodNameEnum {
   CARD = 'CARD',
   WALLET = 'WALLET',
   CRYPTO = 'CRYPTO',
+  PLATEGA = 'PLATEGA',
+  OPS = 'OPS',
 }
 
 @Entity({ tableName: 'financeProviderMethods' })

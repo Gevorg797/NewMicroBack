@@ -55,6 +55,7 @@ import {
   PLATEGA_METHOD_ID,
   USDT20_METHOD_ID,
 } from './payments-method-ids';
+import { DEPOSIT_PAYMENT_METHOD_ID } from './payment-data';
 
 @Injectable()
 export class BikBetService implements OnModuleInit, OnModuleDestroy {
@@ -1509,12 +1510,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
               `paymentSystem_fkwallet_${amount}`,
             ),
           ],
-          [
-            Markup.button.callback(
-              '💳 Оплата с карты(+5% бонус)',
-              `paymentSystem_yoomoney_${amount}`,
-            ),
-          ],
+          // [
+          //   Markup.button.callback(
+          //     '💳 Оплата с карты(+5% бонус)',
+          //     `paymentSystem_yoomoney_${amount}`,
+          //   ),
+          // ],
           [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
           [Markup.button.callback('📷 СБП', `paymentSystem_platega_${amount}`)],
           [Markup.button.callback('От 250р:', 'ignore_game')],
@@ -1524,8 +1525,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
               `paymentSystem_cryptocloud_${amount}`,
             ),
           ],
-          [Markup.button.callback('От 500р до 100 000р', 'ignore_game')],
-          [Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`)],
+          [Markup.button.callback('От 1000р до 100 000р', 'ignore_game')],
+          [
+            Markup.button.callback('💳 СБП', `paymentSystem_1plat_${amount}`),
+            Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`),
+          ],
           [Markup.button.callback('⬅️ Назад', 'donate_menu')],
         ]).reply_markup,
       },
@@ -1552,7 +1556,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
     await ctx.editMessageMedia(media, {
       reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('От 50р:', 'ignore_all')],
+        [Markup.button.callback('От 50р:', 'ignore_game')],
         [
           Markup.button.callback(
             '💎 CryptoBot',
@@ -1563,23 +1567,26 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
             `paymentSystem_fkwallet_${amount}`,
           ),
         ],
-        [
-          Markup.button.callback(
-            '💳 Оплата с карты(+5% бонус)',
-            `paymentSystem_yoomoney_${amount}`,
-          ),
-        ],
-        [Markup.button.callback('От 50р до 2000р:', 'ignore_all')],
+        // [
+        //   Markup.button.callback(
+        //     '💳 Оплата с карты(+5% бонус)',
+        //     `paymentSystem_yoomoney_${amount}`,
+        //   ),
+        // ],
+        [Markup.button.callback('От 50р до 2000р:', 'ignore_game')],
         [Markup.button.callback('📷 СБП', `paymentSystem_platega_${amount}`)],
-        [Markup.button.callback('От 250р:', 'ignore_all')],
+        [Markup.button.callback('От 250р:', 'ignore_game')],
         [
           Markup.button.callback(
             '🛡 Криптовалюты',
             `paymentSystem_cryptocloud_${amount}`,
           ),
         ],
-        [Markup.button.callback('От 500р до 100 000р', 'ignore_all')],
-        [Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`)],
+        [Markup.button.callback('От 1000р до 100 000р', 'ignore_game')],
+        [
+          Markup.button.callback('💳 СБП', `paymentSystem_1plat_${amount}`),
+          Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`),
+        ],
         [Markup.button.callback('⬅️ Назад', 'donate_menu')],
       ]).reply_markup,
     });
@@ -2235,7 +2242,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: FREEKASSA_METHOD_ID, // FKwallet method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.FREEKASSA, // FKwallet method ID
       });
 
       await ctx.editMessageMedia(media, {
@@ -2325,7 +2332,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 4, // CryptoBot method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.CRYPTO_BOT, // CryptoBot method ID
       });
 
       await ctx.editMessageMedia(media, {

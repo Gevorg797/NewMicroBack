@@ -59,11 +59,11 @@ export class OpsService implements IPaymentProvider {
       privateKey: transaction.subMethod.method.providerSettings.privateKey,
       clientTransactionId: String(transaction.id),
       clientUserId: String(transaction.user.id),
-      callbackUrl: 'https://test.com',
+      callbackUrl: transaction.subMethod.method.providerSettings.callbackUrl,
       responseCallbackUrl:
         transaction.subMethod.method.providerSettings.paymentFormLink,
       clientUserIp: '1.1.1.1',
-      backUrl: 'test.com',
+      backUrl: 'bik-bet.com',
     };
 
     try {

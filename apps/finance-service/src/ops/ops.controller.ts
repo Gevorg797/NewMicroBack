@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FINANCE_PATTERNS } from 'libs/config';
 import { OpsService } from './ops.service';
+import { AnyARecord } from 'node:dns';
 
 @ApiTags('ops')
 @Controller('ops')
@@ -27,9 +28,9 @@ export class OpsController {
   }
 
   @Post('url/webhook')
-  @ApiOperation({ summary: 'Handle Ops webhook callback' })
-  @ApiBody({ description: 'Ops webhook data' })
-  async handleUrlCallback(@Body() body: any, @Headers() headers: any) {
-    return this.opsService.handleUrlCallback({ body, headers });
+  @ApiOperation({ summary: 'Handle Ops webhook response url' })
+  @ApiBody({ description: 'Ops resposne url' })
+  async handleUrlCallback(@Body() body: AnyARecord) {
+    return this.opsService.handleUrlCallback({ body });
   }
 }

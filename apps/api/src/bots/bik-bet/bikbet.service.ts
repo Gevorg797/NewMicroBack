@@ -2756,13 +2756,6 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           status: BonusStatus.ACTIVE,
         });
 
-        if (!activeBonus) {
-          await ctx.answerCbQuery(
-            '❌ Обнаружен бонусный баланс, но активный бонус не найден',
-          );
-          return;
-        }
-
         const text = `
 <blockquote>❗️ У вас уже есть один активированный бонус, вы уверены, что хотите активировать новый?</blockquote>
 <blockquote>🗑 Активированный бонус пропадет вместе с бонусным балансом (<code>${Math.round(bonusBalanceValue)} RUB</code>)!</blockquote>`;
@@ -2779,27 +2772,28 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           caption: text,
           parse_mode: 'HTML',
         };
+        const keyboardButtons: any[] = [];
 
+        keyboardButtons.push([
+          Markup.button.callback('Да', `agreeBonus_${bonus.id}`),
+        ]);
+
+        if (activeBonus) {
+          keyboardButtons.push([
+            Markup.button.callback(
+              '🎁 К активном бонусу',
+              `getActiveBonus_${activeBonus?.id}`,
+            ),
+          ]);
+        }
+        keyboardButtons.push([Markup.button.callback('⬅️ Назад', 'myBonuses')]);
         try {
           await ctx.editMessageMedia(media, {
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback('Да', `agreeBonus_${bonus.id}`)],
-              [
-                Markup.button.callback(
-                  '🎁 К активном бонусу',
-                  `getActiveBonus_${activeBonus.id}`,
-                ),
-              ],
-              [Markup.button.callback('⬅️ Назад', `bonus_${bonus.id}`)],
-            ]).reply_markup,
+            reply_markup: Markup.inlineKeyboard(keyboardButtons).reply_markup,
           });
         } catch (error: any) {
-          // Ignore "message is not modified" error
-          if (
-            !error?.response?.description?.includes('message is not modified')
-          ) {
-            throw error;
-          }
+          await ctx.answerCbQuery('❌ Бонус не найден');
+          return;
         }
 
         await ctx.answerCbQuery();

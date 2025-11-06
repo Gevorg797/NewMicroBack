@@ -130,10 +130,44 @@ export class OpsService implements IPaymentProvider {
   async handleUrlCallback(payload: CallbackPayload) {
     const { body } = payload;
 
-    // TODO: Implement callback handling logic here
-    // This is a placeholder structure - you can implement the actual callback logic
+    const { transactionId, clientTransactionId, redirectUrl } = body;
 
-    console.log('Ops callback received:', body);
+    if (!clientTransactionId) {
+      throw new Error('clientTransactionId is required');
+    }
+
+    if (!redirectUrl) {
+      throw new Error('redirectUrl is required');
+    }
+
+    // Find transaction by clientTransactionId (which is our transaction.id)
+    const em = this.financeTransactionRepo.getEntityManager();
+    const transaction = await em.findOne(
+      FinanceTransactions,
+      { id: Number(clientTransactionId) },
+      {
+        populate: ['user', 'subMethod.method.providerSettings'],
+      },
+    );
+
+    if (!transaction) {
+      throw new Error(`Transaction with ID ${clientTransactionId} not found`);
+    }
+
+    // Update transaction with redirectUrl and paymentTransactionId
+    transaction.redirectSuccessUrl = redirectUrl;
+    if (transactionId) {
+      transaction.paymentTransactionId = String(transactionId);
+    }
+
+    // Persist and flush the changes
+    await em.persistAndFlush(transaction);
+
+    console.log('Transaction updated:', {
+      id: transaction.id,
+      redirectSuccessUrl: transaction.redirectSuccessUrl,
+      paymentTransactionId: transaction.paymentTransactionId,
+    });
 
     return { data: 'success' };
   }

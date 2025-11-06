@@ -2451,6 +2451,76 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       }
       if (paymentResult.data?.transactionId) {
         await ctx.editMessageCaption('Загрузка...');
+
+        // Poll for redirectUrl
+        const transactionId = paymentResult.data.transactionId;
+        let attempts = 0;
+        const maxAttempts = 30; // 30 attempts = ~15 seconds
+
+        const pollForRedirectUrl = async () => {
+          try {
+            const transaction =
+              await this.paymentService.getTransaction(transactionId);
+            console.log(transaction);
+
+            if (transaction?.redirectSuccessUrl) {
+              const text = `
+<blockquote><b>💎 Оплата через OPS</b></blockquote>
+<blockquote><b>• Сумма: ${amount} RUB</b></blockquote>
+<blockquote><b>• Нажмите кнопку «Оплатить»
+• Оплатите счет в OPS
+❗️ Баланс начислится автоматически
+</b></blockquote>`;
+
+              const filePath = this.getImagePath('bik_bet_1.jpg');
+              const media: any = {
+                type: 'photo',
+                media: { source: fs.readFileSync(filePath) },
+                caption: text,
+                parse_mode: 'HTML',
+              };
+
+              try {
+                await ctx.editMessageMedia(media, {
+                  reply_markup: Markup.inlineKeyboard([
+                    [
+                      Markup.button.url(
+                        '✅ Оплатить',
+                        transaction.redirectSuccessUrl,
+                      ),
+                    ],
+                    [Markup.button.callback('🔙 Назад', 'donate_menu')],
+                  ]).reply_markup,
+                });
+              } catch (editError: any) {
+                if (
+                  !editError?.response?.description?.includes(
+                    'message is not modified',
+                  )
+                ) {
+                  throw editError;
+                }
+              }
+              return;
+            }
+
+            attempts++;
+            if (attempts < maxAttempts) {
+              setTimeout(pollForRedirectUrl, 1500); // Poll every 500ms
+            } else {
+              await ctx.editMessageCaption(
+                '❌ Превышено время ожидания. Попробуйте еще раз.',
+              );
+            }
+          } catch (error) {
+            console.error('Error polling for redirectUrl:', error);
+            await ctx.editMessageCaption(
+              '❌ Ошибка при получении ссылки на оплату.',
+            );
+          }
+        };
+        // Start polling after a short delay
+        setTimeout(pollForRedirectUrl, 1500);
         return;
       }
     } catch (error) {

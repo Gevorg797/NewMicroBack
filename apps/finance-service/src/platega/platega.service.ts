@@ -46,9 +46,7 @@ export class PlategaService implements IPaymentProvider {
     const secretKey = providerSettings.privateKey as string; // X-Secret
 
     if (!merchantId || !secretKey) {
-      throw new BadRequestException(
-        'Platega credentials not configured properly',
-      );
+      return { error: 'Platega credentials not configured properly' };
     }
 
     const apiUrl = `${providerSettings.baseURL}/transaction/process`;
@@ -83,7 +81,7 @@ export class PlategaService implements IPaymentProvider {
       const redirectUrl = result.redirect;
 
       if (!redirectUrl) {
-        throw new BadRequestException('No redirect URL received from Platega');
+        return { error: 'No redirect URL received from Platega' };
       }
 
       // Store Platega transaction ID for callback matching
@@ -93,17 +91,13 @@ export class PlategaService implements IPaymentProvider {
         .persistAndFlush(transaction);
 
       // Try to get QR code
-      let qrUrl: string | null = null;
-      try {
-        qrUrl = await this.getQRCode(plategaTransactionId);
-      } catch (error) {
-        console.warn(
-          `QR code not available yet for tx ${plategaTransactionId}:`,
-          error.message,
-        );
-        // QR might not be ready yet, continue without it
-      }
+      let qrUrl: any | null = null;
 
+      qrUrl = await this.getQRCode(plategaTransactionId);
+
+      if (qrUrl.error) {
+        return { error: qrUrl.error };
+      }
       return {
         paymentUrl: qrUrl || undefined,
       };
@@ -126,16 +120,16 @@ export class PlategaService implements IPaymentProvider {
         errorData?.error ||
         error.message;
 
-      throw new BadRequestException(
-        `Platega request failed: ${providerMessage}${errorDetails ? ` | Validation errors: ${errorDetails}` : ''}`,
-      );
+      return { error: 'Platega request failed' };
     }
   }
 
   /**
    * Get QR code URL for a transaction
    */
-  private async getQRCode(plategaTransactionId: string): Promise<string> {
+  private async getQRCode(
+    plategaTransactionId: string,
+  ): Promise<string | { error: string }> {
     const url = `https://app.platega.io/transaction/${plategaTransactionId}`;
 
     try {
@@ -145,14 +139,12 @@ export class PlategaService implements IPaymentProvider {
       const qr = result.qr;
 
       if (!qr) {
-        throw new Error('QR code not available');
+        return { error: 'QR code not available' };
       }
 
       return qr;
     } catch (error) {
-      throw new Error(
-        `Failed to get QR code: ${error.response?.data?.message || error.message}`,
-      );
+      return { error: 'Failed to get QR code' };
     }
   }
 

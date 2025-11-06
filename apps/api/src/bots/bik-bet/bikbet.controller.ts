@@ -617,7 +617,6 @@ export class BikBetController {
           await ctx.answerCbQuery('Некорректная сумма');
           return;
         }
-        await ctx.answerCbQuery();
         await this.bikbetService.fkwalletPayment(ctx, amount);
       } catch (error) {
         console.error('FKwallet payment handler error:', error);
@@ -657,7 +656,6 @@ export class BikBetController {
           await ctx.answerCbQuery('Некорректная сумма');
           return;
         }
-        await ctx.answerCbQuery();
         await this.bikbetService.cryptobotPayment(ctx, amount);
       } catch (error) {
         console.error('CryptoBot payment handler error:', error);

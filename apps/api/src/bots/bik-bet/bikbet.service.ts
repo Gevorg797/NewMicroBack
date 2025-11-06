@@ -2217,9 +2217,9 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async fkwalletPayment(ctx: any, amount: number) {
     const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
-<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>`;
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма к оплате:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже</blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
@@ -2232,7 +2232,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     let user = await this.userRepository.findOne({ telegramId: telegramId });
 
     if (!user) {
-      const message = '⚠ Пользователь не найден. Нажмите /start';
+      const message = '⚠ Пользователь не найден';
       await ctx.reply(message);
       return;
     }
@@ -2245,6 +2245,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         methodId: DEPOSIT_PAYMENT_METHOD_ID.FREEKASSA, // FKwallet method ID
       });
 
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
+
       await ctx.editMessageMedia(media, {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.url('✅ Оплатить', paymentResult.paymentUrl)],
@@ -2252,8 +2258,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ]).reply_markup,
       });
     } catch (error) {
-      const message = 'Создание платежа FK не удалось. Нажмите /start';
-      await ctx.reply(message);
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
       return;
     }
   }
@@ -2304,12 +2310,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async cryptobotPayment(ctx: any, amount: number) {
-    const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
-<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>📍 Для оплаты нажмите кнопку ниже</b></blockquote>
-<blockquote><b>💎 Оплата через CryptoBot</b></blockquote>`;
+<blockquote><b>💎 Оплата через CryptoBot</b></blockquote>
+<blockquote><b>• Сумма: ${amount} RUB</b></blockquote>
+<blockquote><b>• Нажмите кнопку «Оплатить»
+• Оплатите счет в CryptoBot
+❗️ Баланс начислится автоматически
+</b></blockquote>`;
 
     const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
@@ -2335,6 +2342,12 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         methodId: DEPOSIT_PAYMENT_METHOD_ID.CRYPTO_BOT, // CryptoBot method ID
       });
 
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
+
       await ctx.editMessageMedia(media, {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.url('✅ Оплатить', paymentResult.paymentUrl)],
@@ -2342,8 +2355,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ]).reply_markup,
       });
     } catch (error) {
-      const message = 'Создание платежа CryptoBot не удалось. Нажмите /start';
-      await ctx.reply(message);
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
       return;
     }
   }
@@ -2351,15 +2364,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
   async plategaPayment(ctx: any, amount: number) {
     const uuid = crypto.randomInt(10000, 9999999);
     const text = `
-<blockquote><b>🆔 ID депозита: ${uuid}</b></blockquote>
-<blockquote><b>💰 Сумма к оплате: ${amount} RUB</b></blockquote>
-<blockquote><b>📍 Для оплаты нажмите кнопку ниже или отсканируйте QR код</b></blockquote>
-<blockquote><b>📷 Оплата через СБП (Platega)</b></blockquote>`;
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма депозита:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
 
-    const filePath = this.getImagePath('bik_bet_1.jpg');
     const media: any = {
       type: 'photo',
-      media: { source: fs.readFileSync(filePath) },
+      media: { source: this.getImageBuffer('bik_bet_1.jpg') },
       caption: text,
       parse_mode: 'HTML',
     };
@@ -2377,8 +2388,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: 5, // Platega method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.PLATEGA, // Platega method ID
       });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
 
       await ctx.editMessageMedia(media, {
         reply_markup: Markup.inlineKeyboard([
@@ -2387,8 +2404,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ]).reply_markup,
       });
     } catch (error) {
-      const message = 'Создание платежа Platega не удалось. Нажмите /start';
-      await ctx.reply(message);
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
       return;
     }
   }

@@ -126,23 +126,23 @@ export class FinanceService {
     );
 
     if (!subMethod) {
-      throw new Error('Payment method not found');
+      return { error: 'Payment method not found' };
     }
 
     if (!subMethod.isEnabled) {
-      throw new Error('Payment method is not available');
+      return { error: 'Payment method is not available' };
     }
 
     if (subMethod.minAmount > data.amount) {
-      throw new Error(`Minimum amount is ${subMethod.minAmount}`);
+      return { error: `Minimum amount is ${subMethod.minAmount}` };
     }
 
     if (subMethod.maxAmount < data.amount) {
-      throw new Error(`Maximum amount is ${subMethod.maxAmount}`);
+      return { error: `Maximum amount is ${subMethod.maxAmount}` };
     }
 
     if (!subMethod.method.providerSettings) {
-      throw new Error('Provider settings not found');
+      return { error: 'Provider settings not found' };
     }
 
     // Get user's main balance to get currency
@@ -151,7 +151,7 @@ export class FinanceService {
       .findOne(User, { id: data.userId });
 
     if (!user) {
-      throw new Error('User not found');
+      return { error: 'User not found' };
     }
 
     const mainBalance = await this.transactionManager.getMainBalance(user);
@@ -197,7 +197,7 @@ export class FinanceService {
         transaction.id as number,
         error.message,
       );
-      throw error;
+      return { error: error };
     }
   }
 

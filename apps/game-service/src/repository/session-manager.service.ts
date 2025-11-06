@@ -14,7 +14,8 @@ import {
 
 export interface CreateSessionParams {
     userId: number;
-    gameId: string;
+    gameId: number;
+    gameIdStr?: string;
     denomination: string;
     providerName?: string;
     isDemo?: boolean;
@@ -48,7 +49,7 @@ export class SessionManagerService {
 
         // Fetch and validate all required entities in parallel
         const [game, user, balance, existingLiveSession] = await Promise.all([
-            this.em.findOne(Game, { uuid: params.gameId }),
+            this.em.findOne(Game, { id: params.gameId }),
             this.em.findOne(User, { id: params.userId }),
             this.em.findOne(
                 Balances,
@@ -112,7 +113,7 @@ export class SessionManagerService {
 
         return {
             sessionId,
-            gameUuid: params.gameId,
+            gameUuid: game.uuid,
             currency: balance.currency.name,
             balanceType: balance.type, // Return the balance type from the balance entity
         };
@@ -134,17 +135,16 @@ export class SessionManagerService {
             throw new Error(`Session not found: ${sessionId}`);
         }
 
-        // Extract token/uuid based on provider response format
-        // Superomatic uses response.token
-        const providerLaunchUrl = providerResponse?.response?.clientDist || null;
+        // Extract launch URL and token from provider response
+        // Both Superomatic and B2BSlots now provide complete URL in clientDist
+        const launchURL = providerResponse?.response?.clientDist || null;
         const providerToken = providerResponse?.response?.token || null;
-
 
         // Update session with provider response data
         const updates: Partial<GameSession> = {
-            launchURL: `${providerLaunchUrl}?t=${providerToken}`,
+            launchURL: launchURL,
             isAlive: true, // Mark session as alive when provider response is received
-            ...(providerToken && { uuid: providerToken }), // Update UUID only if Superomatic provides a token
+            ...(providerToken && { uuid: providerToken }), // Update UUID with provider token
             metadata: {
                 ...(session.metadata || {}),
                 providerResponse,

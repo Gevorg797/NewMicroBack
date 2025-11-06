@@ -52,7 +52,8 @@ export class GameService {
             balanceType: sessionPayload.balanceType, // Pass balance type to provider
             params: {
                 ...sessionPayload.params,
-                gameId: providerInfo.gameIdStr,
+                gameId: providerInfo.gameId,
+                gameUuid: providerInfo.gameIdStr,
             },
         };
 

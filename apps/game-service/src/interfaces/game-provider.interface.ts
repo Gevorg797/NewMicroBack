@@ -31,6 +31,7 @@ export interface LoadGamesPayload {
 
 export interface GameProviderInfo {
     providerName: string;
+    gameId: number;
     gameIdStr: string;
 }
 

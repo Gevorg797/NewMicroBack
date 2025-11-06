@@ -2462,8 +2462,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
           try {
             const transaction =
-              await this.paymentService.getTransaction(transactionId);
-            console.log(transaction);
+              await this.financeTransactionsRepository.findOne({
+                id: transactionId,
+              });
+            console.log(transaction?.redirectSuccessUrl);
 
             if (transaction?.redirectSuccessUrl) {
               const text = `

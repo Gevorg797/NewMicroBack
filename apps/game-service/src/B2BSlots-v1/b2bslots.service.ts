@@ -223,7 +223,7 @@ export class B2BSlotsService implements IGameProvider {
       sessionResult.sessionId,
       {
         response: {
-          clientDist: launchUrl.split('?')[0],
+          clientDist: launchUrl,
           token: authToken
         }
       }

@@ -180,16 +180,24 @@ export class SuperomaticService implements IExtendedGameProvider {
                 sign,
             });
 
-            // Update session with provider response (launch URL, etc.)
+            // Construct complete launch URL
+            const completeLaunchUrl = `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`;
+
+            // Update session with complete launch URL
             await this.sessionManager.updateSessionWithProviderResponse(
                 sessionResult.sessionId,
-                providerResponse
+                {
+                    response: {
+                        clientDist: completeLaunchUrl,
+                        token: providerResponse.response.token
+                    }
+                }
             );
 
             this.logger.debug('Successfully initialized game session with Superomatic');
 
             return {
-                launchUrl: `${providerResponse.response.clientDist}?t=${providerResponse.response.token}`, // Construct full launch URL
+                launchUrl: completeLaunchUrl,
                 sessionId: sessionResult.sessionId,
                 gameUuid: sessionResult.gameUuid,
                 currency: sessionResult.currency,

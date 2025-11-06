@@ -67,7 +67,7 @@ export class ProviderStrategyFactory {
             throw new UnknownProviderException(gameId, providerName);
         }
 
-        return { providerName: normalizedProviderName, gameIdStr };
+        return { providerName: normalizedProviderName, gameId, gameIdStr };
     }
 
     /**

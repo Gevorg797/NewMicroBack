@@ -42,15 +42,15 @@ export interface IPaymentProvider {
   /**
    * Create a payin (deposit) order
    */
-  createPayinOrder(payload: PaymentPayload): Promise<PaymentResult>;
+  createPayinOrder(payload: PaymentPayload);
 
   /**
    * Create a payout (withdrawal) process
    */
-  createPayoutProcess(payload: PayoutPayload): Promise<any>;
+  createPayoutProcess(payload: PayoutPayload);
 
   /**
    * Handle payment callback/webhook
    */
-  handleCallback(payload: CallbackPayload): Promise<void>;
+  handleCallback(payload: CallbackPayload);
 }

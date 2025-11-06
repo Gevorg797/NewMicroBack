@@ -116,13 +116,15 @@ export class OpsService implements IPaymentProvider {
     };
   }
 
-  async handleCallback(payload: CallbackPayload): Promise<void> {
+  async handleCallback(payload: CallbackPayload) {
     const { body } = payload;
 
     // TODO: Implement callback handling logic here
     // This is a placeholder structure - you can implement the actual callback logic
 
     console.log('Ops callback received:', body);
+
+    return { data: 'success' };
   }
 
   async handleUrlCallback(payload: CallbackPayload) {

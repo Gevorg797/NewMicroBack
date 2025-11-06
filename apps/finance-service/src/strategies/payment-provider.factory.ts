@@ -4,6 +4,7 @@ import { YoomoneyServcie } from '../yoomoney/yoomoney.service';
 import { FreekassaService } from '../freekassa/freekassa.service';
 import { CryptobotService } from '../cryptobot/cryptobot.service';
 import { PlategaService } from '../platega/platega.service';
+import { OpsService } from '../ops/ops.service';
 import {
   PAYMENT_PROVIDER_NAMES,
   PAYMENT_PROVIDER_IDENTIFIERS,
@@ -24,6 +25,7 @@ export class PaymentProviderFactory {
     private readonly freekassaService: FreekassaService,
     private readonly cryptobotService: CryptobotService,
     private readonly plategaService: PlategaService,
+    private readonly opsService: OpsService,
   ) {
     this.initializeProviderMap();
   }
@@ -42,6 +44,7 @@ export class PaymentProviderFactory {
       this.cryptobotService,
     );
     this.providerMap.set(PAYMENT_PROVIDER_NAMES.PLATEGA, this.plategaService);
+    this.providerMap.set(PAYMENT_PROVIDER_NAMES.OPS, this.opsService);
 
     this.logger.log(
       `Initialized ${this.providerMap.size} payment provider strategies`,
@@ -103,6 +106,15 @@ export class PaymentProviderFactory {
       )
     ) {
       return PAYMENT_PROVIDER_NAMES.PLATEGA;
+    }
+
+    // Check Ops identifiers
+    if (
+      PAYMENT_PROVIDER_IDENTIFIERS.OPS.some((id) =>
+        lowerProviderName.includes(id),
+      )
+    ) {
+      return PAYMENT_PROVIDER_NAMES.OPS;
     }
 
     // Return the original name if no match

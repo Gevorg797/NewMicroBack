@@ -5,6 +5,7 @@ import { FreekassaModule } from './freekassa/freekassa.module';
 import { CryptobotModule } from './cryptobot/cryptobot.module';
 import { YoomoneyModule } from './yoomoney/yoomoney.module';
 import { PlategaModule } from './platega/platega.module';
+import { OpsModule } from './ops/ops.module';
 import { HealthModule } from './health/health.module';
 import { RepositoryModule } from './repository/repository.module';
 import { FinanceService } from './finance.service';
@@ -21,6 +22,7 @@ import { FinanceTransactions, FinanceProviderSubMethods } from '@lib/database';
     CryptobotModule,
     YoomoneyModule,
     PlategaModule,
+    OpsModule,
     HealthModule,
   ],
   controllers: [FinanceController],

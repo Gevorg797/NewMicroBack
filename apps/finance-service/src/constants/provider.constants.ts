@@ -7,6 +7,7 @@ export const PAYMENT_PROVIDER_NAMES = {
   FREEKASSA: 'freekassa',
   CRYPTOBOT: 'cryptobot',
   PLATEGA: 'platega',
+  OPS: 'ops',
 } as const;
 
 export const PAYMENT_PROVIDER_IDENTIFIERS = {
@@ -14,6 +15,7 @@ export const PAYMENT_PROVIDER_IDENTIFIERS = {
   FREEKASSA: ['freekassa', 'freekasa', 'free kassa'],
   CRYPTOBOT: ['cryptobot', 'crypto bot'],
   PLATEGA: ['platega', 'plat'],
+  OPS: ['ops'],
 } as const;
 
 export type PaymentProviderName =

@@ -105,21 +105,6 @@ export class PlategaService implements IPaymentProvider {
       // Log detailed error information
       console.log(error.response?.data || error.message);
 
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      // Extract error details
-      const errorData = error.response?.data;
-      const errorDetails = errorData?.errors
-        ? JSON.stringify(errorData.errors)
-        : '';
-      const providerMessage =
-        errorData?.title ||
-        errorData?.message ||
-        errorData?.error ||
-        error.message;
-
       return { error: 'Platega request failed' };
     }
   }

@@ -687,6 +687,51 @@ export class BikBetController {
       }
     });
 
+    // OPS SBP payment handler: paymentSystemSbp_ops<amount>
+    this.bot.action(/paymentSystemSbp_ops_(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+
+        if (amount < 1000) {
+          await ctx.answerCbQuery('❌ Сумма не может быть меньше 1000руб!');
+          return;
+        }
+
+        await this.bikbetService.opsPaymentSbp(ctx, amount);
+      } catch (error) {
+        console.error('OPS SBP payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
+    // OPS Card payment handler: paymentSystemCard_ops<amount>
+    this.bot.action(/paymentSystemCard_ops(.+)/, async (ctx) => {
+      try {
+        const amount = Number((ctx as any).match?.[1]);
+        if (!Number.isFinite(amount)) {
+          await ctx.answerCbQuery('Некорректная сумма');
+          return;
+        }
+        await ctx.answerCbQuery();
+        await this.bikbetService.opsPaymentCard(ctx, amount);
+      } catch (error) {
+        console.error('OPS Card payment handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка обработки платежа');
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // Game button click handler
     this.bot.action('games', async (ctx) => {
       await ctx.answerCbQuery();

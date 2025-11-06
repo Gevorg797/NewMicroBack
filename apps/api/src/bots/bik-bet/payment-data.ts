@@ -2,6 +2,6 @@ export const DEPOSIT_PAYMENT_METHOD_ID = {
   FREEKASSA: 1,
   CRYPTO_BOT: 2,
   PLATEGA: 3,
-  SBP: 2,
-  CARD: 3,
+  OPS_SBP: 4,
+  OPS_CARD: 5,
 };

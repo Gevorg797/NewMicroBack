@@ -54,6 +54,7 @@ import {
   YOOMONEY_METHOD_ID,
   PLATEGA_METHOD_ID,
   USDT20_METHOD_ID,
+  OPS_METHOD_ID,
 } from './payments-method-ids';
 import { DEPOSIT_PAYMENT_METHOD_ID } from './payment-data';
 
@@ -1527,8 +1528,11 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           ],
           [Markup.button.callback('От 1000р до 100 000р', 'ignore_game')],
           [
-            Markup.button.callback('💳 СБП', `paymentSystem_1plat_${amount}`),
-            Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`),
+            Markup.button.callback('💳 СБП', `paymentSystemSbp_ops_${amount}`),
+            Markup.button.callback(
+              '💳 Карта',
+              `paymentSystemCard_ops_${amount}`,
+            ),
           ],
           [Markup.button.callback('⬅️ Назад', 'donate_menu')],
         ]).reply_markup,
@@ -1584,8 +1588,8 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         ],
         [Markup.button.callback('От 1000р до 100 000р', 'ignore_game')],
         [
-          Markup.button.callback('💳 СБП', `paymentSystem_1plat_${amount}`),
-          Markup.button.callback('💳 Карта', `paymentSystem_1plat_${amount}`),
+          Markup.button.callback('💳 СБП', `paymentSystemSbp_ops_${amount}`),
+          Markup.button.callback('💳 Карта', `paymentSystemCard_ops_${amount}`),
         ],
         [Markup.button.callback('⬅️ Назад', 'donate_menu')],
       ]).reply_markup,
@@ -2403,6 +2407,113 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           [Markup.button.callback('🔙 Назад', 'donate_menu')],
         ]).reply_markup,
       });
+    } catch (error) {
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
+      return;
+    }
+  }
+
+  async opsPaymentSbp(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
+    const text = `
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма депозита:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
+
+    const media: any = {
+      type: 'photo',
+      media: { source: this.getImageBuffer('bik_bet_1.jpg') },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
+
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.OPS_SBP, // OPS SBP method ID
+      });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
+      if (paymentResult.data?.transactionId) {
+        await ctx.editMessageCaption('Загрузка...');
+        return;
+      }
+    } catch (error) {
+      console.log(error);
+
+      const message = '❌ Техническая проблема';
+      await ctx.answerCbQuery(message);
+      return;
+    }
+  }
+
+  async opsPaymentCard(ctx: any, amount: number) {
+    const uuid = crypto.randomInt(10000, 9999999);
+    const text = `
+<b>🆔 ID депозита:</b> ${uuid}\n
+<b>💰 Сумма депозита:</b> ${amount} руб.\n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
+
+    const media: any = {
+      type: 'photo',
+      media: { source: this.getImageBuffer('bik_bet_1.jpg') },
+      caption: text,
+      parse_mode: 'HTML',
+    };
+    const telegramId = String(ctx.from.id);
+    let user = await this.userRepository.findOne({ telegramId: telegramId });
+
+    if (!user) {
+      const message = '⚠ Пользователь не найден. Нажмите /start';
+      await ctx.reply(message);
+      return;
+    }
+
+    try {
+      // Create payment request using PaymentService
+      const paymentResult = await this.paymentService.payin({
+        userId: user.id!,
+        amount: amount,
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.OPS_CARD, // OPS Card method ID
+      });
+
+      if (paymentResult.error) {
+        const message = '❌ Техническая проблема';
+        await ctx.answerCbQuery(message);
+        return;
+      }
+
+      try {
+        await ctx.editMessageMedia(media, {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.url('✅ Оплатить', paymentResult.paymentUrl)],
+            [Markup.button.callback('🔙 Назад', 'donate_menu')],
+          ]).reply_markup,
+        });
+      } catch (editError: any) {
+        // Ignore "message is not modified" error
+        if (
+          editError?.response?.description?.includes('message is not modified')
+        ) {
+          return;
+        }
+        throw editError;
+      }
     } catch (error) {
       const message = '❌ Техническая проблема';
       await ctx.answerCbQuery(message);

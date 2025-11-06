@@ -10,4 +10,6 @@ export const FINANCE_PATTERNS = {
   YOOMONEY_CREATE_PAYOUT: 'yoomoney.createPayout',
   PLATEGA_CREATE_PAYIN: 'platega.createPayin',
   PLATEGA_CREATE_PAYOUT: 'platega.createPayout',
+  OPS_CREATE_PAYIN: 'ops.createPayin',
+  OPS_CREATE_PAYOUT: 'ops.createPayout',
 };

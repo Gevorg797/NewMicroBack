@@ -30,7 +30,7 @@ export class OpsController {
   @Post('url/webhook')
   @ApiOperation({ summary: 'Handle Ops webhook response url' })
   @ApiBody({ description: 'Ops resposne url' })
-  async handleUrlCallback(@Body() body: AnyARecord) {
+  async handleUrlCallback(@Body() body: any) {
     return this.opsService.handleUrlCallback({ body });
   }
 }

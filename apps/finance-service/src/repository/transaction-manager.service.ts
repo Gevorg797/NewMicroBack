@@ -141,10 +141,7 @@ export class TransactionManagerService {
    * Validate transaction is not already processed
    */
   validateTransactionNotProcessed(transaction: FinanceTransactions): void {
-    if (
-      transaction.status === PaymentTransactionStatus.COMPLETED ||
-      transaction.status === PaymentTransactionStatus.FAILED
-    ) {
+    if (transaction.status === PaymentTransactionStatus.COMPLETED) {
       throw new TransactionAlreadyProcessedException(
         transaction.id as number,
         transaction.status,

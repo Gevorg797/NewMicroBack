@@ -12,6 +12,7 @@ import { FinanceService } from './finance.service';
 import { FinanceController } from './finance.controller';
 import { PaymentProviderFactory } from './strategies/payment-provider.factory';
 import { FinanceTransactions, FinanceProviderSubMethods } from '@lib/database';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { FinanceTransactions, FinanceProviderSubMethods } from '@lib/database';
     PlategaModule,
     OpsModule,
     HealthModule,
+    NotificationsModule,
   ],
   controllers: [FinanceController],
   providers: [FinanceService, PaymentProviderFactory],

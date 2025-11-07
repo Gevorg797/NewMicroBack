@@ -16,6 +16,16 @@ export interface DepositFailureNotificationOptions
   reason?: string;
 }
 
+export interface PayoutFailureNotificationOptions {
+  userTelegramId?: string | null;
+  transactionId?: number;
+  amount: number;
+  providerName?: string;
+  methodId?: number;
+  reason: string;
+  technicalMessage?: string;
+}
+
 @Injectable()
 export class PaymentNotificationService {
   private readonly logger = new Logger(PaymentNotificationService.name);
@@ -91,6 +101,47 @@ export class PaymentNotificationService {
     }
   }
 
+  async notifyPayoutFailure(
+    options: PayoutFailureNotificationOptions,
+  ): Promise<void> {
+    const {
+      userTelegramId,
+      transactionId,
+      amount,
+      providerName,
+      methodId,
+      reason,
+      technicalMessage,
+    } = options;
+
+    const userMessage = this.buildUserPayoutFailureMessage(
+      transactionId,
+      amount,
+      reason,
+    );
+
+    if (userTelegramId) {
+      await this.sendTelegramMessage(
+        userTelegramId,
+        userMessage.text,
+        userMessage.keyboard,
+      );
+    }
+
+    const channelMessage = this.buildChannelPayoutFailureMessage(
+      userTelegramId,
+      transactionId,
+      amount,
+      providerName,
+      methodId,
+      technicalMessage || reason,
+    );
+
+    if (channelMessage && this.channelId) {
+      await this.sendTelegramMessage(this.channelId, channelMessage);
+    }
+  }
+
   private buildUserSuccessMessage(transactionId: number, amount: number) {
     const text = `✅ Ваш платеж <b>№${transactionId}</b> на сумму <b>${amount} RUB</b> был найден!\n\nСредства начислены на ваш баланс!`;
 
@@ -154,6 +205,53 @@ export class PaymentNotificationService {
     }
 
     return text;
+  }
+
+  private buildUserPayoutFailureMessage(
+    transactionId: number | undefined,
+    amount: number,
+    reason: string,
+  ) {
+    const title = transactionId
+      ? `❌ Ваш вывод <b>№${transactionId}</b>`
+      : '❌ Ваш вывод';
+
+    const text = `${title} на сумму <b>${amount} RUB</b> не выполнен.
+
+Причина: ${reason}
+
+Если вопрос не решён, обратитесь в поддержку.`;
+
+    const keyboard = {
+      inline_keyboard: [[{ text: '⬅️ Назад', callback_data: 'start' }]],
+    };
+
+    return { text, keyboard };
+  }
+
+  private buildChannelPayoutFailureMessage(
+    userTelegramId: string | null | undefined,
+    transactionId: number | undefined,
+    amount: number,
+    providerName?: string,
+    methodId?: number,
+    reason?: string,
+  ) {
+    const lines = [
+      '❌ Ошибка вывода',
+      transactionId ? `ID запроса: ${transactionId}` : null,
+      `Сумма: ${amount} RUB`,
+      providerName ? `Метод: ${providerName}` : null,
+      methodId ? `ID метода: ${methodId}` : null,
+      userTelegramId ? `Юзер: ${userTelegramId}` : null,
+      reason ? `Причина: ${reason}` : null,
+    ].filter(Boolean);
+
+    if (!lines.length) {
+      return null;
+    }
+
+    return lines.join('\n');
   }
 
   private async sendTelegramMessage(

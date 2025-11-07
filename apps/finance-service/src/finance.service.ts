@@ -21,6 +21,8 @@ import {
 } from './interfaces/payment-provider.interface';
 import { TransactionManagerService } from './repository/transaction-manager.service';
 import { CreatePayinDto, CreatePayoutDto } from './dto/create-payment.dto';
+import { PaymentNotificationService } from './notifications/payment-notification.service';
+import { InsufficientBalanceException } from './exceptions/finance-service.exceptions';
 
 @Injectable()
 export class FinanceService {
@@ -33,6 +35,7 @@ export class FinanceService {
     private readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
     @InjectRepository(FinanceProviderSubMethods)
     private readonly subMethodsRepo: EntityRepository<FinanceProviderSubMethods>,
+    private readonly notificationService: PaymentNotificationService,
   ) {
     this.logger.log('FinanceService initialized');
   }
@@ -209,96 +212,125 @@ export class FinanceService {
       `Processing payout for user ${data.userId}, amount ${data.amount}`,
     );
 
+    let providerName = 'Unknown';
+    let user: User | null = null;
+    let transaction: FinanceTransactions | null = null;
+
     // Get payment method with provider settings
-    const subMethod = await this.subMethodsRepo.findOne(
-      { id: data.methodId },
-      {
-        populate: [
-          'method.providerSettings',
-          'method.providerSettings.provider',
-        ],
-      },
-    );
+    try {
+      const subMethod = await this.subMethodsRepo.findOne(
+        { id: data.methodId },
+        {
+          populate: [
+            'method.providerSettings',
+            'method.providerSettings.provider',
+          ],
+        },
+      );
 
-    if (!subMethod) {
-      throw new Error('Payment method not found');
-    }
-    // Get user and check balance
-    const user = await this.financeTransactionRepo
-      .getEntityManager()
-      .findOne(User, { id: data.userId });
+      if (!subMethod) {
+        throw new Error('Payment method not found');
+      }
 
-    if (!user) {
-      throw new Error('User not found');
-    }
+      providerName =
+        subMethod.method.providerSettings?.provider?.name || 'Unknown';
 
-    const mainBalance = await this.transactionManager.checkSufficientBalance(
-      user,
-      data.amount,
-    );
-
-    // Create transaction
-    const transaction = this.financeTransactionRepo.create({
-      amount: data.amount,
-      type: PaymentTransactionType.PAYOUT,
-      subMethod,
-      requisite: data.requisite,
-      user: this.financeTransactionRepo
+      // Get user and check balance
+      user = await this.financeTransactionRepo
         .getEntityManager()
-        .getReference(User, data.userId),
-      currency: this.financeTransactionRepo
-        .getEntityManager()
-        .getReference(Currency, mainBalance.currency.id as number),
-      status: PaymentTransactionStatus.PENDING,
-      userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
-    });
+        .findOne(User, { id: data.userId });
 
-    if (!transaction) {
-      throw new Error('Failed to create transaction');
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const mainBalance = await this.transactionManager.checkSufficientBalance(
+        user,
+        data.amount,
+      );
+
+      // Create transaction
+      transaction = this.financeTransactionRepo.create({
+        amount: data.amount,
+        type: PaymentTransactionType.PAYOUT,
+        subMethod,
+        requisite: data.requisite,
+        user: this.financeTransactionRepo
+          .getEntityManager()
+          .getReference(User, data.userId),
+        currency: this.financeTransactionRepo
+          .getEntityManager()
+          .getReference(Currency, mainBalance.currency.id as number),
+        status: PaymentTransactionStatus.PENDING,
+        userResponseStatus: PaymentTransactionUserResponseStatus.PENDING,
+      });
+
+      if (!transaction) {
+        throw new Error('Failed to create transaction');
+      }
+
+      // Debit the amount from user's main balance (ensures balance >= 0)
+      await this.transactionManager.debitBalance(
+        user,
+        data.amount,
+        transaction,
+      );
+
+      this.logger.log(
+        `Debited ${data.amount} from user ${user.id} for payout transaction ${transaction.id}`,
+      );
+
+      // Only process automated payouts for CryptoBot
+      // if (providerName.toLowerCase() === 'cryptobot') {
+      //   try {
+      //     const result = await this.createPayoutOrder(providerName, {
+      //       transactionId: transaction.id as number,
+      //       amount: data.amount,
+      //       requisite: data.requisite,
+      //       to: data.requisite,
+      //     });
+
+      //     this.logger.log(
+      //       `Payout initiated successfully for transaction ${transaction.id}`,
+      //     );
+      //     return result;
+      //   } catch (error) {
+      //     // Mark transaction as failed and refund balance
+      //     this.logger.warn(
+      //       `CryptoBot payout failed for transaction ${transaction.id}: ${error.message}. Refunding balance...`,
+      //     );
+      //     await this.transactionManager.failPayoutAndRefund(
+      //       transaction.id as number,
+      //     );
+      //     this.logger.log(
+      //       `Balance refunded for failed transaction ${transaction.id}`,
+      //     );
+      //     throw error;
+      //   }
+      // }
+
+      // For other providers (manual processing), just return the transaction
+      return transaction;
+    } catch (error: any) {
+      const isKnownError = this.isKnownPayoutError(error);
+
+      if (!isKnownError) {
+        await this.handleUnexpectedPayoutFailure({
+          error,
+          transaction,
+          user,
+          amount: data.amount,
+          providerName,
+          methodId: data.methodId,
+        });
+      }
+
+      if (isKnownError) {
+        throw error;
+      }
+
+      throw new Error('Сервис вывода временно недоступен. Попробуйте позже.');
     }
-
-    // Debit the amount from user's main balance (ensures balance >= 0)
-    await this.transactionManager.debitBalance(user, data.amount, transaction);
-
-    this.logger.log(
-      `Debited ${data.amount} from user ${user.id} for payout transaction ${transaction.id}`,
-    );
-
-    // Check if provider supports automated payouts
-    const providerName =
-      subMethod.method.providerSettings.provider.name.toLowerCase();
-
-    // Only process automated payouts for CryptoBot
-    // if (providerName === 'cryptobot') {
-    //   try {
-    //     const result = await this.createPayoutOrder(providerName, {
-    //       transactionId: transaction.id as number,
-    //       amount: data.amount,
-    //       requisite: data.requisite,
-    //       to: data.requisite,
-    //     });
-
-    //     this.logger.log(
-    //       `Payout initiated successfully for transaction ${transaction.id}`,
-    //     );
-    //     return result;
-    //   } catch (error) {
-    //     // Mark transaction as failed and refund balance
-    //     this.logger.warn(
-    //       `CryptoBot payout failed for transaction ${transaction.id}: ${error.message}. Refunding balance...`,
-    //     );
-    //     await this.transactionManager.failPayoutAndRefund(
-    //       transaction.id as number,
-    //     );
-    //     this.logger.log(
-    //       `Balance refunded for failed transaction ${transaction.id}`,
-    //     );
-    //     throw error;
-    //   }
-    // }
-
-    // For other providers (manual processing), just return the transaction
-    return transaction;
   }
 
   /**
@@ -314,5 +346,120 @@ export class FinanceService {
     );
 
     return { success: true, message: 'Payout rejected and balance refunded' };
+  }
+
+  async completePayout(
+    transactionId: number,
+    paymentTransactionId?: string,
+  ): Promise<any> {
+    this.logger.log(`Completing payout transaction ${transactionId}`);
+
+    const reference =
+      paymentTransactionId || `manual-${transactionId}-${Date.now()}`;
+
+    await this.transactionManager.completePayout(transactionId, reference);
+
+    this.logger.log(`Payout transaction ${transactionId} marked as completed`);
+
+    const transaction = await this.transactionManager.getTransaction(
+      transactionId,
+      ['user', 'subMethod', 'currency'],
+    );
+
+    return transaction;
+  }
+
+  private isKnownPayoutError(error: any): boolean {
+    if (!error) {
+      return false;
+    }
+
+    if (error instanceof InsufficientBalanceException) {
+      return true;
+    }
+
+    const message = error.message || '';
+
+    return (
+      message === 'Payment method not found' || message === 'User not found'
+    );
+  }
+
+  private mapErrorToUserReason(error: any): string {
+    const message = error?.message || '';
+
+    if (message.includes('ETIMEDOUT')) {
+      return 'Время ожидания ответа от платежного сервиса истекло.';
+    }
+
+    if (message.toLowerCase().includes('timeout')) {
+      return 'Превышено время ожидания ответа сервиса вывода.';
+    }
+
+    return 'Техническая ошибка. Попробуйте позже.';
+  }
+
+  private mapErrorToTechnicalMessage(error: any): string {
+    if (!error) {
+      return 'Unknown error';
+    }
+
+    if (error.stack) {
+      return error.message || 'Error without message';
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch (serializationError) {
+      return `${error}`;
+    }
+  }
+
+  private async handleUnexpectedPayoutFailure(params: {
+    error: any;
+    transaction: FinanceTransactions | null;
+    user: User | null;
+    amount: number;
+    providerName: string;
+    methodId: number;
+  }): Promise<void> {
+    const { error, transaction, user, amount, providerName, methodId } = params;
+
+    this.logger.error(
+      `Unexpected payout failure for user ${user?.id ?? 'unknown'}: ${error?.message}`,
+      error?.stack,
+    );
+
+    if (transaction?.id) {
+      try {
+        await this.transactionManager.failPayoutAndRefund(
+          Number(transaction.id),
+        );
+      } catch (refundError: any) {
+        this.logger.warn(
+          `Failed to refund payout transaction ${transaction.id}: ${refundError?.message}`,
+        );
+      }
+    }
+
+    try {
+      await this.notificationService.notifyPayoutFailure({
+        userTelegramId: user?.telegramId,
+        transactionId: transaction?.id ? Number(transaction.id) : undefined,
+        amount,
+        providerName,
+        methodId,
+        reason: this.mapErrorToUserReason(error),
+        technicalMessage: this.mapErrorToTechnicalMessage(error),
+      });
+    } catch (notifyError: any) {
+      this.logger.warn(
+        `Failed to send payout failure notification: ${notifyError?.message}`,
+      );
+    }
   }
 }

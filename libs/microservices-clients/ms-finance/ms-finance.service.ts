@@ -111,4 +111,30 @@ export class MsFinanceService {
       throw error;
     }
   }
+
+  async completePayout(
+    transactionId: number,
+    paymentTransactionId?: string,
+  ): Promise<any> {
+    try {
+      const result = await firstValueFrom(
+        this.client.send('finance.payout.complete', {
+          transactionId,
+          paymentTransactionId,
+        }),
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Payout completion failed');
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error(
+        `Payout completion failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

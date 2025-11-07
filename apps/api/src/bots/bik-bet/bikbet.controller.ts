@@ -547,6 +547,37 @@ export class BikBetController {
       }
     });
 
+    // Withdraw approve handler: withdraw_<id>_approve_<method>
+    this.bot.action(/withdraw_(\d+)_approve_(.+)/, async (ctx) => {
+      try {
+        const match = (ctx as any).match;
+        const withdrawalId = Number(match?.[1]);
+        const method = match?.[2];
+
+        if (!Number.isFinite(withdrawalId) || !method) {
+          await ctx.answerCbQuery('Некорректный запрос', {
+            show_alert: true,
+          });
+          return;
+        }
+
+        await this.bikbetService.handleWithdrawApprove(
+          ctx,
+          withdrawalId,
+          method,
+        );
+      } catch (error) {
+        console.error('Withdraw approve handler error:', error);
+        try {
+          await ctx.answerCbQuery('Ошибка подтверждения вывода', {
+            show_alert: true,
+          });
+        } catch (e) {
+          // Ignore if callback query already answered
+        }
+      }
+    });
+
     // Withdraw reject handler: withdraw_<id>_reject_<method>
     this.bot.action(/withdraw_(\d+)_reject_(.+)/, async (ctx) => {
       try {
@@ -571,6 +602,17 @@ export class BikBetController {
         } catch (e) {
           // Ignore if callback query already answered
         }
+      }
+    });
+
+    // Game history (admin) placeholder: gameDump_<userId>
+    this.bot.action(/gameDump_(\d+)/, async (ctx) => {
+      try {
+        await ctx.answerCbQuery('⚙️ Разработка в процессе', {
+          show_alert: true,
+        });
+      } catch (error) {
+        console.error('Game dump placeholder error:', error);
       }
     });
 

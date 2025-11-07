@@ -50,6 +50,38 @@ export class FinanceController {
   }
 
   /**
+   * Complete payout (withdrawal) request
+   */
+  @MessagePattern('finance.payout.complete')
+  async completePayout(
+    @Payload()
+    data: {
+      transactionId: number;
+      paymentTransactionId?: string;
+    },
+  ) {
+    try {
+      const result = await this.financeService.completePayout(
+        data.transactionId,
+        data.paymentTransactionId,
+      );
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Payout complete failed: ${error.message}`,
+        error.stack,
+      );
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
    * Get transaction details
    */
   @MessagePattern('finance.transaction.get')

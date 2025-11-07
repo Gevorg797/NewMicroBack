@@ -5893,6 +5893,77 @@ ${entriesText}
     });
   }
 
+  async handleWithdrawApprove(ctx: any, withdrawalId: number, method: string) {
+    try {
+      const withdrawal = await this.paymentService.getTransaction(withdrawalId);
+
+      if (!withdrawal) {
+        await ctx.answerCbQuery('❌ Транзакция не найдена', {
+          show_alert: true,
+        });
+        return;
+      }
+
+      const userTgId = withdrawal.user?.telegramId;
+      const amount = withdrawal.amount;
+
+      await this.paymentService.completePayout(withdrawalId);
+
+      await ctx.answerCbQuery('✅ Запрос подтвержден');
+
+      const adminText = `
+<blockquote>✅ Запрос на вывод успешно одобрен.</blockquote>
+<blockquote>📌 <b>ID запроса: </b><code>№${withdrawalId}</code></blockquote>
+<blockquote>💳 <b>Метод: </b><code>${method}</code></blockquote>
+<blockquote>👤 <b>Пользователь:</b> <code>${userTgId ?? 'Unknown'}</code></blockquote>
+<blockquote>💰 <b>Сумма:</b> <code>${Math.floor(amount)} RUB</code></blockquote>
+`;
+
+      const replyMarkup = Markup.inlineKeyboard(
+        userTgId
+          ? [[Markup.button.url('🔍 К юзеру', `tg://user?id=${userTgId}`)]]
+          : [],
+      ).reply_markup;
+
+      await ctx.editMessageText(adminText, {
+        parse_mode: 'HTML',
+        reply_markup: replyMarkup,
+      });
+
+      if (userTgId) {
+        await ctx.telegram.sendMessage(
+          userTgId,
+          `
+<blockquote>✅ Ваш запрос на вывод №${withdrawalId} на сумму ${Math.floor(amount)} RUB одобрен.</blockquote>
+<blockquote>💰 Средства отправлены. Спасибо, что с нами!</blockquote>
+`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: '🏠 Главное меню',
+                    callback_data: 'start',
+                  },
+                ],
+              ],
+            },
+          },
+        );
+      }
+    } catch (error) {
+      console.error('Withdraw approve error:', error);
+      try {
+        await ctx.answerCbQuery('❌ Ошибка подтверждения запроса', {
+          show_alert: true,
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
   async handleWithdrawReject(ctx: any, withdrawalId: number, method: string) {
     try {
       // Get transaction details

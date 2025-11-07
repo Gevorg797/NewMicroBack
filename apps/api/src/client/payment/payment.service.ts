@@ -75,4 +75,24 @@ export class PaymentService {
       throw error;
     }
   }
+
+  async completePayout(transactionId: number, paymentTransactionId?: string) {
+    try {
+      const result = await this.msFinanceService.completePayout(
+        transactionId,
+        paymentTransactionId,
+      );
+
+      this.logger.log(
+        `Payout completion successful for transaction ${transactionId}`,
+      );
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Payout completion failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

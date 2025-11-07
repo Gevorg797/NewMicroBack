@@ -78,6 +78,15 @@
         ]
       }
     },
+    "payment-bot": {
+      "type": "application",
+      "root": "apps/payment-bot",
+      "entryFile": "main",
+      "sourceRoot": "apps/payment-bot/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/payment-bot/tsconfig.app.json"
+      }
+    },
     "senders": {
       "type": "application",
       "root": "apps/senders",

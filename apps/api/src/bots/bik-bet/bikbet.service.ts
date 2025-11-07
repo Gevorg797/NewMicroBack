@@ -2455,26 +2455,24 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         // Poll for redirectUrl
         const transactionId = paymentResult.data.transactionId;
         let attempts = 0;
-        const maxAttempts = 1500;
+        const maxAttempts = 100;
 
         const pollForRedirectUrl = async () => {
           console.log('transaction id', transactionId);
 
           try {
             const transaction =
-              await this.financeTransactionsRepository.findOne({
-                id: transactionId,
-              });
+              await this.financeTransactionsRepository.findOne(
+                { id: transactionId },
+                { refresh: true },
+              );
             console.log(transaction?.redirectSuccessUrl);
 
             if (transaction?.redirectSuccessUrl) {
               const text = `
-<blockquote><b>💎 Оплата через OPS</b></blockquote>
-<blockquote><b>• Сумма: ${amount} RUB</b></blockquote>
-<blockquote><b>• Нажмите кнопку «Оплатить»
-• Оплатите счет в OPS
-❗️ Баланс начислится автоматически
-</b></blockquote>`;
+<b>🆔 ID депозита:</b> ${uuid} \n
+<b>💰 Сумма депозита: </b> ${amount} руб. \n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
 
               const filePath = this.getImagePath('bik_bet_1.jpg');
               const media: any = {

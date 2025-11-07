@@ -23,6 +23,7 @@ import {
   PaymentResult,
 } from '../interfaces/payment-provider.interface';
 import { TransactionManagerService } from '../repository/transaction-manager.service';
+import { PaymentNotificationService } from '../notifications/payment-notification.service';
 
 @Injectable()
 export class CryptobotService implements IPaymentProvider {
@@ -36,6 +37,7 @@ export class CryptobotService implements IPaymentProvider {
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionsRepo: EntityRepository<FinanceTransactions>,
     readonly transactionManager: TransactionManagerService,
+    private readonly notificationService: PaymentNotificationService,
   ) {}
 
   async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {

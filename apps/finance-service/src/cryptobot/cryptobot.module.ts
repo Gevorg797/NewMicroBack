@@ -10,6 +10,7 @@ import {
   FinanceTransactions,
 } from '@lib/database';
 import { RepositoryModule } from '../repository/repository.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RepositoryModule } from '../repository/repository.module';
       Balances,
     ]),
     RepositoryModule,
+    NotificationsModule,
   ],
   exports: [CryptobotService],
   providers: [CryptobotService],

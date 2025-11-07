@@ -9,6 +9,7 @@ import {
   FinanceTransactions,
 } from '@lib/database';
 import { RepositoryModule } from '../repository/repository.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RepositoryModule } from '../repository/repository.module';
       FinanceTransactions,
     ]),
     RepositoryModule,
+    NotificationsModule,
   ],
   exports: [YoomoneyServcie],
   providers: [YoomoneyServcie],

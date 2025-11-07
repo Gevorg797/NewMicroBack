@@ -1,0 +1,184 @@
+import { Injectable, Logger } from '@nestjs/common';
+import axios from 'axios';
+
+const TELEGRAM_API_BASE = 'https://api.telegram.org';
+const DEFAULT_DEPOSITS_CHANNEL_ID = '-1002939266999';
+
+export interface DepositNotificationOptions {
+  userTelegramId?: string | null;
+  transactionId: number;
+  amount: number;
+  providerName: string;
+}
+
+export interface DepositFailureNotificationOptions
+  extends DepositNotificationOptions {
+  reason?: string;
+}
+
+@Injectable()
+export class PaymentNotificationService {
+  private readonly logger = new Logger(PaymentNotificationService.name);
+
+  private get botToken(): string | null {
+    return process.env.PAYMENT_BOT_TOKEN || process.env.BOT_TOKEN || null;
+  }
+
+  private get channelId(): string | null {
+    return (
+      process.env.PAYMENTS_CHANNEL_ID || DEFAULT_DEPOSITS_CHANNEL_ID || null
+    );
+  }
+
+  async notifyDepositSuccess(
+    options: DepositNotificationOptions,
+  ): Promise<void> {
+    const { userTelegramId, transactionId, amount, providerName } = options;
+
+    const userMessage = this.buildUserSuccessMessage(transactionId, amount);
+    if (userTelegramId) {
+      await this.sendTelegramMessage(
+        userTelegramId,
+        userMessage.text,
+        userMessage.keyboard,
+      );
+    }
+
+    const channelMessage = this.buildChannelSuccessMessage(
+      userTelegramId,
+      transactionId,
+      amount,
+      providerName,
+    );
+
+    if (channelMessage && this.channelId) {
+      await this.sendTelegramMessage(
+        this.channelId,
+        channelMessage.text,
+        channelMessage.keyboard,
+      );
+    }
+  }
+
+  async notifyDepositFailure(
+    options: DepositFailureNotificationOptions,
+  ): Promise<void> {
+    const { userTelegramId, transactionId, amount, providerName, reason } =
+      options;
+
+    const userMessage = this.buildUserFailureMessage(
+      transactionId,
+      amount,
+      providerName,
+    );
+    if (userTelegramId) {
+      await this.sendTelegramMessage(
+        userTelegramId,
+        userMessage.text,
+        userMessage.keyboard,
+      );
+    }
+
+    const channelMessage = this.buildChannelFailureMessage(
+      transactionId,
+      amount,
+      providerName,
+      reason,
+    );
+
+    if (channelMessage && this.channelId) {
+      await this.sendTelegramMessage(this.channelId, channelMessage);
+    }
+  }
+
+  private buildUserSuccessMessage(transactionId: number, amount: number) {
+    const text = `✅ Ваш платеж <b>№${transactionId}</b> на сумму <b>${amount} RUB</b> был найден!\n\nСредства начислены на ваш баланс!`;
+
+    const keyboard = {
+      inline_keyboard: [[{ text: '🎰 Играть!', callback_data: 'games' }]],
+    };
+
+    return { text, keyboard };
+  }
+
+  private buildUserFailureMessage(
+    transactionId: number,
+    amount: number,
+    providerName: string,
+  ) {
+    const text = `❌ Ваш платеж <b>№${transactionId}</b> на сумму <b>${amount} RUB</b> в <b>${providerName}</b> не прошёл.\n\nЕсли средства были списаны, обратитесь в поддержку.`;
+
+    const keyboard = {
+      inline_keyboard: [[{ text: '⬅️ Назад', callback_data: 'start' }]],
+    };
+
+    return { text, keyboard };
+  }
+
+  private buildChannelSuccessMessage(
+    userTelegramId: string | null | undefined,
+    transactionId: number,
+    amount: number,
+    providerName: string,
+  ) {
+    if (!userTelegramId) {
+      return null;
+    }
+
+    const text = `✅ Депозит на сумму <b>${amount} RUB</b> оплачен!\n👤 Юзер: <code>${userTelegramId}</code>\n🏦 Метод: ${providerName}`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '🔍 К юзеру',
+            url: `tg://user?id=${userTelegramId}`,
+          },
+        ],
+      ],
+    };
+
+    return { text, keyboard };
+  }
+
+  private buildChannelFailureMessage(
+    transactionId: number,
+    amount: number,
+    providerName: string,
+    reason?: string,
+  ) {
+    let text = `❌ Ошибка пополнения\nПлатеж №${transactionId}\nСумма: ${amount} RUB\nМетод: ${providerName}`;
+
+    if (reason) {
+      text += `\nПричина: ${reason}`;
+    }
+
+    return text;
+  }
+
+  private async sendTelegramMessage(
+    chatId: string | number,
+    text: string,
+    keyboard?: any,
+  ): Promise<void> {
+    const token = this.botToken;
+
+    if (!token) {
+      this.logger.warn('Telegram bot token is not configured');
+      return;
+    }
+
+    try {
+      await axios.post(`${TELEGRAM_API_BASE}/bot${token}/sendMessage`, {
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        reply_markup: keyboard,
+      });
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to send Telegram message to ${chatId}: ${error.message}`,
+      );
+    }
+  }
+}

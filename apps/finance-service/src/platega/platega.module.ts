@@ -9,6 +9,7 @@ import {
   FinanceTransactions,
 } from '@lib/database';
 import { RepositoryModule } from '../repository/repository.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,16 +20,10 @@ import { RepositoryModule } from '../repository/repository.module';
       FinanceTransactions,
     ]),
     RepositoryModule,
+    NotificationsModule,
   ],
   exports: [PlategaService],
   providers: [PlategaService],
   controllers: [PlategaController],
 })
 export class PlategaModule {}
-
-
-
-
-
-
-

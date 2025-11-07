@@ -18,6 +18,7 @@ import {
   PaymentResult,
 } from '../interfaces/payment-provider.interface';
 import { TransactionManagerService } from '../repository/transaction-manager.service';
+import { PaymentNotificationService } from '../notifications/payment-notification.service';
 
 @Injectable()
 export class FreekassaService implements IPaymentProvider {
@@ -30,6 +31,7 @@ export class FreekassaService implements IPaymentProvider {
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
     readonly transactionManager: TransactionManagerService,
+    private readonly notificationService: PaymentNotificationService,
   ) {}
 
   async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
@@ -104,7 +106,12 @@ export class FreekassaService implements IPaymentProvider {
 
     const transaction = await this.transactionManager.getTransaction(
       Number(MERCHANT_ORDER_ID),
-      ['subMethod.method.providerSettings', 'user', 'currency'],
+      [
+        'subMethod.method.providerSettings',
+        'subMethod.method.providerSettings.provider',
+        'user',
+        'currency',
+      ],
     );
 
     this.transactionManager.validateTransactionNotProcessed(transaction);
@@ -130,5 +137,16 @@ export class FreekassaService implements IPaymentProvider {
       AMOUNT,
       intid || 'freekassa-' + transaction.id,
     );
+
+    const providerName =
+      transaction.subMethod?.method?.providerSettings?.provider?.name ||
+      'Freekassa';
+
+    await this.notificationService.notifyDepositSuccess({
+      userTelegramId: transaction.user.telegramId,
+      transactionId: transaction.id as number,
+      amount: Number(AMOUNT),
+      providerName,
+    });
   }
 }

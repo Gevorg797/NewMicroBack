@@ -21,6 +21,7 @@ import {
   PaymentResult,
 } from '../interfaces/payment-provider.interface';
 import { TransactionManagerService } from '../repository/transaction-manager.service';
+import { PaymentNotificationService } from '../notifications/payment-notification.service';
 
 @Injectable()
 export class YoomoneyServcie implements IPaymentProvider {
@@ -32,6 +33,7 @@ export class YoomoneyServcie implements IPaymentProvider {
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
     readonly transactionManager: TransactionManagerService,
+    readonly notificationService: PaymentNotificationService,
   ) {}
 
   async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
@@ -39,7 +41,12 @@ export class YoomoneyServcie implements IPaymentProvider {
 
     const transaction = await this.transactionManager.getTransaction(
       transactionId,
-      ['subMethod.method.providerSettings', 'subMethod.method', 'user'],
+      [
+        'subMethod.method.providerSettings',
+        'subMethod.method.providerSettings.provider',
+        'subMethod.method',
+        'user',
+      ],
     );
 
     const providerSettings = transaction?.subMethod.method.providerSettings;
@@ -135,7 +142,12 @@ export class YoomoneyServcie implements IPaymentProvider {
 
     const transaction = await this.transactionManager.getTransaction(
       Number(label),
-      ['subMethod.method.providerSettings', 'user', 'currency'],
+      [
+        'subMethod.method.providerSettings',
+        'subMethod.method.providerSettings.provider',
+        'user',
+        'currency',
+      ],
     );
 
     this.transactionManager.validateTransactionNotProcessed(transaction);
@@ -158,6 +170,17 @@ export class YoomoneyServcie implements IPaymentProvider {
       Number(amount),
       operation_id,
     );
+
+    const providerName =
+      transaction.subMethod?.method?.providerSettings?.provider?.name ||
+      'YooMoney';
+
+    await this.notificationService.notifyDepositSuccess({
+      userTelegramId: transaction.user.telegramId,
+      transactionId: transaction.id as number,
+      amount: Number(amount),
+      providerName,
+    });
   }
 
   private generateSignature(

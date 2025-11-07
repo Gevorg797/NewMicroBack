@@ -20,6 +20,7 @@ import {
   PaymentResult,
 } from '../interfaces/payment-provider.interface';
 import { TransactionManagerService } from '../repository/transaction-manager.service';
+import { PaymentNotificationService } from '../notifications/payment-notification.service';
 
 @Injectable()
 export class PlategaService implements IPaymentProvider {
@@ -31,6 +32,7 @@ export class PlategaService implements IPaymentProvider {
     @InjectRepository(FinanceTransactions)
     readonly financeTransactionRepo: EntityRepository<FinanceTransactions>,
     readonly transactionManager: TransactionManagerService,
+    private readonly notificationService: PaymentNotificationService,
   ) {}
 
   async createPayinOrder(payload: PaymentPayload): Promise<PaymentResult> {
@@ -38,7 +40,12 @@ export class PlategaService implements IPaymentProvider {
 
     const transaction = await this.transactionManager.getTransaction(
       transactionId,
-      ['subMethod.method.providerSettings', 'subMethod.method', 'user'],
+      [
+        'subMethod.method.providerSettings',
+        'subMethod.method.providerSettings.provider',
+        'subMethod.method',
+        'user',
+      ],
     );
 
     const providerSettings = transaction?.subMethod.method.providerSettings;
@@ -138,7 +145,12 @@ export class PlategaService implements IPaymentProvider {
 
     const transaction = await this.transactionManager.getTransaction(
       transactionId,
-      ['subMethod.method.providerSettings', 'subMethod.method', 'user'],
+      [
+        'subMethod.method.providerSettings',
+        'subMethod.method.providerSettings.provider',
+        'subMethod.method',
+        'user',
+      ],
     );
 
     const providerSettings = transaction?.subMethod.method.providerSettings;
@@ -230,7 +242,12 @@ export class PlategaService implements IPaymentProvider {
     const transaction = await this.financeTransactionRepo.findOne(
       { paymentTransactionId: id },
       {
-        populate: ['subMethod.method.providerSettings', 'user', 'currency'],
+        populate: [
+          'subMethod.method.providerSettings',
+          'subMethod.method.providerSettings.provider',
+          'user',
+          'currency',
+        ],
       },
     );
 
@@ -248,17 +265,36 @@ export class PlategaService implements IPaymentProvider {
     }
 
     // Handle different statuses
+    const providerName =
+      transaction.subMethod?.method?.providerSettings?.provider?.name ||
+      'Platega';
+
     if (status === 'success' || status === 'completed' || status === 'paid') {
       await this.transactionManager.completePayin(
         transaction.id as number,
         Number(amount),
         String(id),
       );
+
+      await this.notificationService.notifyDepositSuccess({
+        userTelegramId: transaction.user.telegramId,
+        transactionId: transaction.id as number,
+        amount: Number(amount),
+        providerName,
+      });
     } else if (status === 'failed' || status === 'cancelled') {
       await this.transactionManager.failTransaction(
         transaction.id as number,
         `Payment ${status}`,
       );
+
+      await this.notificationService.notifyDepositFailure({
+        userTelegramId: transaction.user.telegramId,
+        transactionId: transaction.id as number,
+        amount: Number(amount),
+        providerName,
+        reason: `Payment ${status}`,
+      });
     }
     // For other statuses (pending, processing), do nothing and wait for next callback
   }

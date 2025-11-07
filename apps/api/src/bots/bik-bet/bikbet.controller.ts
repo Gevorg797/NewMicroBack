@@ -667,6 +667,11 @@ export class BikBetController {
       }
     });
 
+    // CryptoCloud payment handler: paymentSystem_cryptocloud_<amount>
+    this.bot.action(/paymentSystem_cryptocloud_(.+)/, async (ctx) => {
+      await ctx.answerCbQuery('⏳ В разработке');
+    });
+
     // Platega payment handler: paymentSystem_platega_<amount>
     this.bot.action(/paymentSystem_platega_(.+)/, async (ctx) => {
       try {

@@ -5,3 +5,11 @@ export const DEPOSIT_PAYMENT_METHOD_ID = {
   OPS_SBP: 4,
   OPS_CARD: 5,
 };
+
+export const WITHDRAW_PAYMENT_METHOD_ID = {
+  FREEKASSA: 6,
+  CRYPTO_BOT: 7,
+  USDT20: 8,
+  SBP: 9,
+  CARD: 10,
+};

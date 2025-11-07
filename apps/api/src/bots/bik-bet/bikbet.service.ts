@@ -56,7 +56,10 @@ import {
   USDT20_METHOD_ID,
   OPS_METHOD_ID,
 } from './payments-method-ids';
-import { DEPOSIT_PAYMENT_METHOD_ID } from './payment-data';
+import {
+  DEPOSIT_PAYMENT_METHOD_ID,
+  WITHDRAW_PAYMENT_METHOD_ID,
+} from './payment-data';
 
 @Injectable()
 export class BikBetService implements OnModuleInit, OnModuleDestroy {
@@ -4949,7 +4952,7 @@ ${entriesText}
     this.userStates.set(userId, {
       withdrawAmount: amount,
       withdrawMethod: 'CryptoBot',
-      withdrawMethodId: 4, // CryptoBot method ID
+      withdrawMethodId: WITHDRAW_PAYMENT_METHOD_ID.CRYPTO_BOT, // CryptoBot method ID
     });
 
     let text = `
@@ -5462,7 +5465,7 @@ ${entriesText}
       state: 'awaiting_withdraw_fkwallet',
       withdrawAmount: amount,
       withdrawMethod: 'FKwallet',
-      withdrawMethodId: FREEKASSA_METHOD_ID, // FKwallet method ID
+      withdrawMethodId: WITHDRAW_PAYMENT_METHOD_ID.FREEKASSA,
     });
 
     const savedFKwalletId = user?.paymentPayoutRequisite?.freekassa_id;
@@ -5516,7 +5519,7 @@ ${entriesText}
       state: 'awaiting_withdraw_usdt20',
       withdrawAmount: amount,
       withdrawMethod: 'USDT20',
-      withdrawMethodId: USDT20_METHOD_ID, // USDT20 method ID
+      withdrawMethodId: WITHDRAW_PAYMENT_METHOD_ID.USDT20,
     });
 
     const savedUSDT20Address = user?.paymentPayoutRequisite?.usdt_trc20;
@@ -5847,7 +5850,7 @@ ${entriesText}
       state: 'awaiting_withdraw_card',
       withdrawAmount: amount,
       withdrawMethod: 'Card',
-      withdrawMethodId: 5, // Platega method ID
+      withdrawMethodId: WITHDRAW_PAYMENT_METHOD_ID.CARD,
     });
 
     const savedCardNumber = user?.paymentPayoutRequisite?.card;
@@ -6043,7 +6046,7 @@ ${entriesText}
       state: 'awaiting_withdraw_sbp',
       withdrawAmount: amount,
       withdrawMethod: 'SBP',
-      withdrawMethodId: 5, // Platega method ID
+      withdrawMethodId: WITHDRAW_PAYMENT_METHOD_ID.SBP,
     });
 
     const savedPhone = user?.paymentPayoutRequisite?.sbp;

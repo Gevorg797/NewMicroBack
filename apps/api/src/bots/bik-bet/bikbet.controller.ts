@@ -63,9 +63,23 @@ export class BikBetController {
       if (!isAdmin) return;
 
       await ctx.answerCbQuery();
-      await ctx.reply('💬 <b>Рассылка</b>\n\nФункция в разработке...', {
-        parse_mode: 'HTML',
-      });
+      await this.bikbetService.startSpamFlow(ctx);
+    });
+
+    this.bot.action('spam_confirm_yes', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.handleSpamConfirmation(ctx, true);
+    });
+
+    this.bot.action('spam_confirm_no', async (ctx) => {
+      const isAdmin = await checkIsTelegramAdmin(ctx);
+      if (!isAdmin) return;
+
+      await ctx.answerCbQuery();
+      await this.bikbetService.handleSpamConfirmation(ctx, false);
     });
 
     this.bot.action('search_user', async (ctx) => {
@@ -1217,6 +1231,19 @@ export class BikBetController {
       await this.bikbetService.myBonuses(ctx);
     });
 
+    // Handle incoming photos for admin flows
+    this.bot.on('photo', async (ctx) => {
+      try {
+        const handledSpamPhoto =
+          await this.bikbetService.handleSpamPhotoInput(ctx);
+        if (handledSpamPhoto) {
+          return;
+        }
+      } catch (error) {
+        console.error('Photo message handler error:', error);
+      }
+    });
+
     // Handle text messages for custom deposit/withdraw amounts and admin commands
     this.bot.on('text', async (ctx) => {
       try {
@@ -1237,6 +1264,12 @@ export class BikBetController {
         const handledPromoDelete =
           await this.bikbetService.handlePromoDeleteInput(ctx);
         if (handledPromoDelete) {
+          return;
+        }
+
+        const handledSpamText =
+          await this.bikbetService.handleSpamTextMessage(ctx);
+        if (handledSpamText) {
           return;
         }
 

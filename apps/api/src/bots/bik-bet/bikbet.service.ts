@@ -83,6 +83,14 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         userTgId: number;
         amount: number;
       };
+      spamDraft?: {
+        text?: string;
+        photoFileId?: string;
+        promptMessageId?: number;
+        photoPromptMessageId?: number;
+        previewMessageId?: number;
+        confirmMessageId?: number;
+      };
     }
   >();
   // Use SelfCleaningMap to prevent memory leaks from unbounded growth
@@ -207,6 +215,71 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       .update(message)
       .digest('hex');
     return `slot_${userId}_${hmacHash.substring(0, 16)}`;
+  }
+
+  private getCancelReplyKeyboard() {
+    return Markup.keyboard([[Markup.button.text('❌ Отмена')]]).resize()
+      .reply_markup;
+  }
+
+  private getSpamBroadcastKeyboard() {
+    return Markup.inlineKeyboard([
+      [Markup.button.callback('🎰 Играть!', 'games')],
+    ]);
+  }
+
+  private getCtxChatId(ctx: any): number | undefined {
+    return (
+      ctx.chat?.id ??
+      ctx.message?.chat?.id ??
+      ctx.callbackQuery?.message?.chat?.id ??
+      ctx.from?.id
+    );
+  }
+
+  private async cleanupSpamDraftMessages(
+    ctx: any,
+    adminId: number,
+    options?: { keepConfirm?: boolean },
+  ) {
+    const state = this.userStates.get(adminId);
+    const draft = state?.spamDraft;
+    if (!draft) {
+      return;
+    }
+
+    const chatId = this.getCtxChatId(ctx);
+    if (!chatId) {
+      return;
+    }
+
+    const messageIds = [
+      draft.promptMessageId,
+      draft.photoPromptMessageId,
+      draft.previewMessageId,
+    ];
+
+    if (!options?.keepConfirm) {
+      messageIds.push(draft.confirmMessageId);
+    }
+
+    for (const messageId of messageIds) {
+      if (!messageId) {
+        continue;
+      }
+      try {
+        await ctx.telegram.deleteMessage(chatId, messageId);
+      } catch (error) {
+        // Ignore deletion errors
+      }
+    }
+
+    draft.promptMessageId = undefined;
+    draft.photoPromptMessageId = undefined;
+    draft.previewMessageId = undefined;
+    if (!options?.keepConfirm) {
+      draft.confirmMessageId = undefined;
+    }
   }
 
   async checkSubscription(ctx: any, channelId: string, link: string) {
@@ -6424,6 +6497,309 @@ ${entriesText}
       console.error('Error showing admin menu:', error);
       await ctx.reply('❌ Ошибка загрузки админ-панели');
     }
+  }
+
+  async startSpamFlow(ctx: any) {
+    try {
+      const adminId = ctx.from.id;
+      await this.cleanupSpamDraftMessages(ctx, adminId);
+
+      const promptText =
+        '✏️<i> Отправьте текст рассылки:</i>\n\n' +
+        '<blockquote>📍 Для отмены нажмите кнопку "❌ Отмена":</blockquote>';
+
+      const promptMessage = await ctx.reply(promptText, {
+        parse_mode: 'HTML',
+        reply_markup: this.getCancelReplyKeyboard(),
+      });
+
+      this.userStates.set(adminId, {
+        state: 'spam_waiting_text',
+        spamDraft: {
+          promptMessageId: promptMessage.message_id,
+        },
+      });
+    } catch (error) {
+      console.error('Error starting spam flow:', error);
+      await ctx.reply('❌ Не удалось начать рассылку. Попробуйте позже.');
+    }
+  }
+
+  async handleSpamTextMessage(ctx: any): Promise<boolean> {
+    const adminId = ctx.from.id;
+    const userState = this.userStates.get(adminId);
+
+    if (!userState) {
+      return false;
+    }
+
+    const currentState = userState.state;
+    const text = ctx.message?.text?.trim();
+
+    if (!text) {
+      return false;
+    }
+
+    if (
+      (currentState === 'spam_waiting_text' ||
+        currentState === 'spam_waiting_photo' ||
+        currentState === 'spam_confirm') &&
+      text === '❌ Отмена'
+    ) {
+      await this.cleanupSpamDraftMessages(ctx, adminId);
+
+      try {
+        const loadingMsg = await ctx.reply('Загрузка...', {
+          reply_markup: { remove_keyboard: true },
+        });
+        const chatId = this.getCtxChatId(ctx);
+        if (chatId) {
+          await ctx.telegram.deleteMessage(chatId, loadingMsg.message_id);
+        }
+      } catch (error) {
+        // Ignore errors while removing keyboard/loading message
+      }
+
+      this.clearUserState(adminId);
+      await ctx.reply(
+        '<blockquote>❌ Действие успешно отменено!</blockquote>',
+        {
+          parse_mode: 'HTML',
+        },
+      );
+      await this.showAdminMenu(ctx);
+      return true;
+    }
+
+    if (currentState !== 'spam_waiting_text') {
+      if (currentState === 'spam_waiting_photo') {
+        await ctx.reply('📷 Пожалуйста, отправьте фото для рассылки.', {
+          parse_mode: 'HTML',
+        });
+        return true;
+      }
+      return false;
+    }
+
+    try {
+      const chatId = this.getCtxChatId(ctx);
+      if (chatId && userState.spamDraft?.promptMessageId) {
+        try {
+          await ctx.telegram.deleteMessage(
+            chatId,
+            userState.spamDraft.promptMessageId,
+          );
+        } catch (error) {
+          // Ignore deletion errors
+        }
+      }
+
+      if (!userState.spamDraft) {
+        userState.spamDraft = {};
+      }
+
+      userState.spamDraft.text = text;
+      userState.spamDraft.promptMessageId = undefined;
+
+      const photoPrompt = await ctx.reply(
+        '🖼 <i>Отправьте фото к посту:</i>\n\n<blockquote>📍 Для отмены нажмите кнопку "❌ Отмена":</blockquote>',
+        {
+          parse_mode: 'HTML',
+          reply_markup: this.getCancelReplyKeyboard(),
+        },
+      );
+
+      userState.spamDraft.photoPromptMessageId = photoPrompt.message_id;
+      userState.state = 'spam_waiting_photo';
+      this.userStates.set(adminId, userState);
+
+      return true;
+    } catch (error) {
+      console.error('Error handling spam text message:', error);
+      await ctx.reply('❌ Не удалось обработать сообщение. Попробуйте снова.');
+      return true;
+    }
+  }
+
+  async handleSpamPhotoInput(ctx: any): Promise<boolean> {
+    const adminId = ctx.from.id;
+    const userState = this.userStates.get(adminId);
+
+    if (!userState || userState.state !== 'spam_waiting_photo') {
+      return false;
+    }
+
+    const photos = ctx.message?.photo;
+    if (!photos || photos.length === 0) {
+      return false;
+    }
+
+    const photo = photos[photos.length - 1];
+
+    try {
+      const chatId = this.getCtxChatId(ctx);
+      if (chatId && userState.spamDraft?.photoPromptMessageId) {
+        try {
+          await ctx.telegram.deleteMessage(
+            chatId,
+            userState.spamDraft.photoPromptMessageId,
+          );
+        } catch (error) {
+          // Ignore deletion errors
+        }
+      }
+
+      if (!userState.spamDraft) {
+        userState.spamDraft = {};
+      }
+
+      userState.spamDraft.photoFileId = photo.file_id;
+      userState.spamDraft.photoPromptMessageId = undefined;
+
+      const caption = userState.spamDraft.text ?? '';
+
+      const previewMessage = await ctx.replyWithPhoto(photo.file_id, {
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: { remove_keyboard: true },
+      });
+
+      const confirmKeyboard = Markup.inlineKeyboard([
+        [Markup.button.callback('✅ Запустить', 'spam_confirm_yes')],
+        [Markup.button.callback('❌ Отмена', 'spam_confirm_no')],
+      ]);
+
+      const confirmMessage = await ctx.reply(
+        'Вот так будет выглядеть объявление. Запускаем рассылку?',
+        {
+          parse_mode: 'HTML',
+          reply_markup: confirmKeyboard.reply_markup,
+        },
+      );
+
+      userState.spamDraft.previewMessageId = previewMessage.message_id;
+      userState.spamDraft.confirmMessageId = confirmMessage.message_id;
+      userState.state = 'spam_confirm';
+      this.userStates.set(adminId, userState);
+
+      return true;
+    } catch (error) {
+      console.error('Error handling spam photo message:', error);
+      await ctx.reply('❌ Не удалось обработать фото. Попробуйте снова.');
+      return true;
+    }
+  }
+
+  async handleSpamConfirmation(ctx: any, confirmed: boolean) {
+    const adminId = ctx.from.id;
+    const userState = this.userStates.get(adminId);
+
+    if (!userState || userState.state !== 'spam_confirm') {
+      return;
+    }
+
+    const draft = userState.spamDraft;
+    if (!draft?.text || !draft?.photoFileId) {
+      await ctx.editMessageText(
+        '❌ Данные рассылки не найдены. Повторите попытку.',
+      );
+      this.clearUserState(adminId);
+      return;
+    }
+
+    if (!confirmed) {
+      await this.cleanupSpamDraftMessages(ctx, adminId, { keepConfirm: true });
+
+      try {
+        await ctx.editMessageText(
+          '<blockquote>❌ Действие отменено!</blockquote>',
+          {
+            parse_mode: 'HTML',
+          },
+        );
+      } catch (error) {
+        // Ignore edit errors
+      }
+
+      this.clearUserState(adminId);
+      await this.showAdminMenu(ctx);
+      return;
+    }
+
+    await this.cleanupSpamDraftMessages(ctx, adminId, { keepConfirm: true });
+
+    try {
+      const userIds = await this.getAllTelegramUserIds();
+
+      const totalUsers = userIds.length;
+
+      if (totalUsers === 0) {
+        await ctx.editMessageText(
+          '<blockquote>ℹ️ Не найдено пользователей для рассылки.</blockquote>',
+          { parse_mode: 'HTML' },
+        );
+        this.clearUserState(adminId);
+        await this.showAdminMenu(ctx);
+        return;
+      }
+
+      const estimatedSeconds = Math.max(1, Math.round(totalUsers / 4.5));
+
+      await ctx.editMessageText(
+        `<i>Рассылка запущена.\nКол-во юзеров: ${totalUsers} чел.</i>\n\n<blockquote>Примерное время ожидания ~${estimatedSeconds} сек.</blockquote>`,
+        { parse_mode: 'HTML' },
+      );
+
+      const keyboard = this.getSpamBroadcastKeyboard();
+      let successCount = 0;
+      let failedCount = 0;
+
+      for (const telegramId of userIds) {
+        try {
+          await ctx.telegram.sendPhoto(telegramId, draft.photoFileId, {
+            caption: draft.text,
+            parse_mode: 'HTML',
+            reply_markup: keyboard.reply_markup,
+          });
+          successCount += 1;
+        } catch (error) {
+          failedCount += 1;
+        }
+      }
+
+      await ctx.editMessageText(
+        `<i>🎉 Рассылка успешно окончена!</i>\n\n<blockquote>Успешно отправлено: <b>${successCount}</b>\nНе отправлено: <b>${failedCount}</b>\n\nВсего юзеров в боте: <b>${totalUsers}</b></blockquote>`,
+        { parse_mode: 'HTML' },
+      );
+
+      this.clearUserState(adminId);
+      await this.showAdminMenu(ctx);
+    } catch (error) {
+      console.error('Error during spam broadcast:', error);
+      try {
+        await ctx.editMessageText(
+          '<blockquote>❌ Не удалось выполнить рассылку. Попробуйте позже.</blockquote>',
+          { parse_mode: 'HTML' },
+        );
+      } catch (editError) {
+        // Ignore edit failure
+      }
+      this.clearUserState(adminId);
+    }
+  }
+
+  private async getAllTelegramUserIds(): Promise<string[]> {
+    const users = await this.userRepository.find(
+      {},
+      {
+        fields: ['telegramId'],
+        filters: false,
+      },
+    );
+
+    return users
+      .map((user) => user.telegramId)
+      .filter((id): id is string => Boolean(id));
   }
 
   /**

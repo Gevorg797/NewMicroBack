@@ -46,6 +46,13 @@ This is a microservices-based gaming platform with NestJS applications and share
 - **Type**: Application
 - **Dependencies**: Database (optional), external APIs (optional)
 
+### 7. Payment Bot Service
+- **Port**: Configurable (PAYMENT_BOT_PORT)
+- **Prefix**: `payment-bot`
+- **Purpose**: Telegram bot for payment notifications and handling
+- **Type**: HTTP API + Telegram Bot
+- **Dependencies**: Database, Telegram Bot API
+
 ## Environment Variables
 
 Each microservice has its own environment configuration. Create `.env` files in each app directory:
@@ -164,6 +171,31 @@ DB_PASSWORD=
 CRONJOBS_PORT=
 ```
 
+### Payment Bot Service (.env in apps/payment-bot/)
+```bash
+# Environment
+NODE_ENV=DEV
+
+# Database Configuration
+DB_HOST=
+DB_PORT=
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+
+# Service Configuration
+PAYMENT_BOT_PORT=
+
+# Bot Configuration
+PAYMENT_BOT_TOKEN=8527291743:AAHjXUYxdBJ9eAjB95-AaXWu7EmYNZL6BXI
+BASE_URL=
+
+# Service Configuration
+FINANCE_TCP_HOST=
+FINANCE_TCP_PORT=
+FINANCE_HTTP_PORT=
+```
+
 ## Build Commands
 
 ### Install Dependencies
@@ -191,6 +223,7 @@ npm run start:game-service:dev
 npm run start:finance-service:dev
 npm run start:file-service:dev
 npm run start:cronjobs:dev
+npm run start:payment-bot:dev
 ```
 
 ### Production Mode
@@ -202,6 +235,19 @@ npm run start:game-service:prod
 npm run start:finance-service:prod
 npm run start:file-service:prod
 npm run start:cronjobs:prod
+npm run start:payment-bot:prod
+```
+
+### Local Development Mode (with watch)
+```bash
+# Run specific service in local development with hot reload
+npm run start:admin:local
+npm run start:api:local
+npm run start:game-service:local
+npm run start:finance-service:local
+npm run start:file-service:local
+npm run start:cronjobs:local
+npm run start:payment-bot:local
 ```
 
 **Note**: Each microservice has its own environment configuration and runs independently.

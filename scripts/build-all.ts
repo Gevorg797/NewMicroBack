@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 
-const projects = ['admin', 'api', 'game-service', 'finance-service', 'file-service', 'cronjobs'];
+const projects = ['admin', 'api', 'game-service', 'finance-service', 'file-service', 'cronjobs', 'payment-bot'];
 
 for (const project of projects) {
   console.log(`🚀 Building ${project}`);

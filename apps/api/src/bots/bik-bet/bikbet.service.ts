@@ -2450,7 +2450,17 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         return;
       }
       if (paymentResult.data?.transactionId) {
-        await ctx.editMessageCaption('Загрузка...');
+        try {
+          await ctx.editMessageCaption('Загрузка...');
+        } catch (editError: any) {
+          if (
+            !editError?.response?.description?.includes(
+              'message is not modified',
+            )
+          ) {
+            throw editError;
+          }
+        }
 
         // Poll for redirectUrl
         const transactionId = paymentResult.data.transactionId;
@@ -2488,7 +2498,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
                         transaction.redirectSuccessUrl,
                       ),
                     ],
-                    [Markup.button.callback('🔙 Назад', 'check_subscription')],
+                    [Markup.button.callback('🔙 Назад', 'start')],
                   ]).reply_markup,
                 });
 
@@ -2534,7 +2544,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     const text = `
 <b>🆔 ID депозита:</b> ${uuid}\n
 <b>💰 Сумма депозита:</b> ${amount} руб.\n
-<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 30 минут на оплату</blockquote>`;
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 15 минут на оплату</blockquote>`;
 
     const media: any = {
       type: 'photo',
@@ -2556,7 +2566,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
       const paymentResult = await this.paymentService.payin({
         userId: user.id!,
         amount: amount,
-        methodId: DEPOSIT_PAYMENT_METHOD_ID.OPS_CARD, // OPS Card method ID
+        methodId: DEPOSIT_PAYMENT_METHOD_ID.OPS_CARD, // OPS CARD method ID
       });
 
       if (paymentResult.error) {
@@ -2564,24 +2574,90 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         await ctx.answerCbQuery(message);
         return;
       }
-
-      try {
-        await ctx.editMessageMedia(media, {
-          reply_markup: Markup.inlineKeyboard([
-            [Markup.button.url('✅ Оплатить', paymentResult.paymentUrl)],
-            [Markup.button.callback('🔙 Назад', 'donate_menu')],
-          ]).reply_markup,
-        });
-      } catch (editError: any) {
-        // Ignore "message is not modified" error
-        if (
-          editError?.response?.description?.includes('message is not modified')
-        ) {
-          return;
+      if (paymentResult.data?.transactionId) {
+        try {
+          await ctx.editMessageCaption('Загрузка...');
+        } catch (editError: any) {
+          if (
+            !editError?.response?.description?.includes(
+              'message is not modified',
+            )
+          ) {
+            throw editError;
+          }
         }
-        throw editError;
+
+        // Poll for redirectUrl
+        const transactionId = paymentResult.data.transactionId;
+        let attempts = 0;
+        const maxAttempts = 100;
+
+        const pollForRedirectUrl = async () => {
+          try {
+            const transaction =
+              await this.financeTransactionsRepository.findOne(
+                { id: transactionId },
+                { refresh: true },
+              );
+
+            if (transaction?.redirectSuccessUrl) {
+              const text = `
+<b>🆔 ID депозита:</b> ${uuid} \n
+<b>💰 Сумма депозита: </b> ${amount} руб. \n
+<blockquote>📍 Для оплаты нажмите кнопку ниже, у вас есть 15 минут на оплату</blockquote>`;
+
+              const filePath = this.getImagePath('bik_bet_1.jpg');
+              const media: any = {
+                type: 'photo',
+                media: { source: fs.readFileSync(filePath) },
+                caption: text,
+                parse_mode: 'HTML',
+              };
+
+              try {
+                await ctx.editMessageMedia(media, {
+                  reply_markup: Markup.inlineKeyboard([
+                    [
+                      Markup.button.url(
+                        '✅ Оплатить',
+                        transaction.redirectSuccessUrl,
+                      ),
+                    ],
+                    [Markup.button.callback('🔙 Назад', 'start')],
+                  ]).reply_markup,
+                });
+
+                return;
+              } catch (editError: any) {
+                await ctx.answerCbQuery(
+                  '❌ Превышено время ожидания. Попробуйте еще раз.',
+                );
+                return;
+              }
+            }
+
+            attempts++;
+            if (attempts < maxAttempts) {
+              setTimeout(pollForRedirectUrl, 1500); // Poll every 1500ms
+            } else {
+              await ctx.editMessageCaption(
+                '❌ Превышено время ожидания. Попробуйте еще раз.',
+              );
+            }
+          } catch (error) {
+            console.error('Error polling for redirectUrl:', error);
+            await ctx.editMessageCaption(
+              '❌ Ошибка при получении ссылки на оплату.',
+            );
+          }
+        };
+        // Start polling after a short delay
+        setTimeout(pollForRedirectUrl, 1500);
+        return;
       }
     } catch (error) {
+      console.log(error);
+
       const message = '❌ Техническая проблема';
       await ctx.answerCbQuery(message);
       return;

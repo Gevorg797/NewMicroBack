@@ -713,14 +713,18 @@ export class BikBetController {
     });
 
     // OPS Card payment handler: paymentSystemCard_ops<amount>
-    this.bot.action(/paymentSystemCard_ops(.+)/, async (ctx) => {
+    this.bot.action(/paymentSystemCard_ops_(.+)/, async (ctx) => {
       try {
         const amount = Number((ctx as any).match?.[1]);
+
         if (!Number.isFinite(amount)) {
           await ctx.answerCbQuery('Некорректная сумма');
           return;
         }
-        await ctx.answerCbQuery();
+        if (amount < 1000) {
+          await ctx.answerCbQuery('❌ Сумма не может быть меньше 1000руб!');
+          return;
+        }
         await this.bikbetService.opsPaymentCard(ctx, amount);
       } catch (error) {
         console.error('OPS Card payment handler error:', error);

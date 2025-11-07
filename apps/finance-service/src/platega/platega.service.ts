@@ -235,6 +235,7 @@ export class PlategaService implements IPaymentProvider {
   }
 
   async handleCallback(payload: CallbackPayload): Promise<void> {
+    console.log('platega callback', payload);
     const { body } = payload;
     const { id, status, amount } = body;
 

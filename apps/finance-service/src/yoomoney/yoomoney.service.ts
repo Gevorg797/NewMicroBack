@@ -137,6 +137,8 @@ export class YoomoneyServcie implements IPaymentProvider {
   }
 
   async handleCallback(payload: CallbackPayload): Promise<void> {
+    console.log('yoomoney callback', payload);
+
     const body = payload.body as YooMoneyCallbackDto;
     const { operation_id, amount, sha1_hash, label } = body;
 

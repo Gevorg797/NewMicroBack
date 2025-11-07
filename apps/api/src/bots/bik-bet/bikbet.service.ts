@@ -2488,7 +2488,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
                         transaction.redirectSuccessUrl,
                       ),
                     ],
-                    [Markup.button.callback('🔙 Назад', 'donate_menu')],
+                    [Markup.button.callback('🔙 Назад', 'check_subscription')],
                   ]).reply_markup,
                 });
 

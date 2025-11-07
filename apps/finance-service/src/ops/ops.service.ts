@@ -163,12 +163,6 @@ export class OpsService implements IPaymentProvider {
     // Persist and flush the changes
     await em.persistAndFlush(transaction);
 
-    console.log('Transaction updated:', {
-      id: transaction.id,
-      redirectSuccessUrl: transaction.redirectSuccessUrl,
-      paymentTransactionId: transaction.paymentTransactionId,
-    });
-
     return { data: 'success' };
   }
 }

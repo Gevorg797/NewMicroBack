@@ -82,6 +82,7 @@ jobs:
           yq e -i ".\"bik-bet-finance-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-finance-service/values.yaml
           yq e -i ".\"bik-bet-game-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-game-service/values.yaml
           yq e -i ".\"bik-bet-file-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-file-service/values.yaml
+          yq e -i ".\"bik-bet-payment-bot-service\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-payment-bot-service/values.yaml
           yq e -i ".\"bik-bet-cronjobs\".image.tag = \"$NEW_VERSION_TAG\"" ./app-gitops/clusters/dev-bik-bet/bik-bet-cronjobs/values.yaml
       - name: Git push
         run: |-

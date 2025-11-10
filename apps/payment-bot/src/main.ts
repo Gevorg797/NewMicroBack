@@ -61,7 +61,7 @@ async function bootstrap() {
 
     app.enableCors({ origin: '*' });
 
-    await app.listen(Number(process.env.APP_PORT), '0.0.0.0');
+    await app.listen(Number(process.env.PAYMENT_BOT_PORT), '0.0.0.0');
 }
 void bootstrap();
 

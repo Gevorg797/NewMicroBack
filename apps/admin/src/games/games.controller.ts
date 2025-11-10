@@ -82,4 +82,12 @@ export class GamesController {
     async getGames(@Query() query: PaginateQuery) {
         return this.gamesService.getGames(query);
     }
+
+    @Get('b2b-games-by-provider')
+    @ApiOperation({ summary: 'Get all B2B games grouped by sub-providers' })
+    @ApiResponse({ status: 200, description: 'B2B games retrieved successfully' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getB2BGamesWithProviders() {
+        return this.gamesService.getB2BGamesWithProviders();
+    }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MsGameService } from 'libs/microservices-clients/ms-game/ms-game.service';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { Game } from '@lib/database';
+import { Game, GameProvider, GameSubProvider } from '@lib/database';
 import { paginate, PaginateQuery, PaginateResult } from 'libs/utils/pagination';
 
 @Injectable()
@@ -67,5 +67,49 @@ export class GamesService {
       ['subProvider', 'subProvider.provider', 'categories'], // Relations to populate
       ['name', 'type', 'subProvider.name', 'subProvider.provider.name'] // Searchable fields
     );
+  }
+
+  async getB2BGamesWithProviders() {
+    // Find B2BSlots provider
+    const b2bProvider = await this.em.findOne(GameProvider, {
+      name: { $ilike: '%b2b%' }
+    }, { populate: ['subProviders'] });
+
+    if (!b2bProvider) {
+      return {};
+    }
+
+    const result: any = {};
+
+    // Get all sub-providers for B2B
+    const subProviders = await this.em.find(GameSubProvider, {
+      provider: b2bProvider.id
+    });
+
+    // For each sub-provider, get all games
+    for (const subProvider of subProviders) {
+      const games = await this.em.find(Game, {
+        subProvider: subProvider.id,
+        deletedAt: null
+      });
+
+      // Convert subProvider name to uppercase key format (e.g., "Play'n GO" -> "PLAYNGO")
+      const subProviderKey = subProvider.name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      // Map games with provider name included
+      const gamesData = games.map(game => ({
+        name: game.name,
+        id: game.id,
+        provider: b2bProvider.name
+      }));
+
+      result[subProviderKey] = gamesData;
+    }
+
+    return result;
   }
 }

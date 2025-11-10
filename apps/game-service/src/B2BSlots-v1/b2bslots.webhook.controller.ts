@@ -1,5 +1,4 @@
-import { Controller, Post, Body, Logger, HttpCode, HttpStatus, Req } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Post, Body, Logger, HttpCode, HttpStatus } from '@nestjs/common';
 import { B2BSlotsWebhookService } from './b2bslots.webhook.service';
 
 interface B2BSlotsWebhookPayload {
@@ -58,10 +57,9 @@ export class B2BSlotsWebhookController {
      */
     @Post('auth')
     @HttpCode(HttpStatus.OK)
-    async handleAuthWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleAuthWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots auth webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processAuthWebhook(payload, clientIP);
+        return this.webhookService.processAuthWebhook(payload);
     }
 
     /**
@@ -69,10 +67,9 @@ export class B2BSlotsWebhookController {
      */
     @Post('debit')
     @HttpCode(HttpStatus.OK)
-    async handleDebitWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleDebitWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots debit webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processDebitWebhook(payload, clientIP);
+        return this.webhookService.processDebitWebhook(payload);
     }
 
     /**
@@ -80,10 +77,9 @@ export class B2BSlotsWebhookController {
      */
     @Post('credit')
     @HttpCode(HttpStatus.OK)
-    async handleCreditWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleCreditWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots credit webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processCreditWebhook(payload, clientIP);
+        return this.webhookService.processCreditWebhook(payload);
     }
 
     /**
@@ -91,10 +87,9 @@ export class B2BSlotsWebhookController {
      */
     @Post('get-features')
     @HttpCode(HttpStatus.OK)
-    async handleGetFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleGetFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots get features webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processGetFeaturesWebhook(payload, clientIP);
+        return this.webhookService.processGetFeaturesWebhook(payload);
     }
 
     /**
@@ -102,10 +97,9 @@ export class B2BSlotsWebhookController {
      */
     @Post('activate-features')
     @HttpCode(HttpStatus.OK)
-    async handleActivateFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleActivateFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots activate features webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processActivateFeaturesWebhook(payload, clientIP);
+        return this.webhookService.processActivateFeaturesWebhook(payload);
     }
 
     /**
@@ -113,10 +107,9 @@ export class B2BSlotsWebhookController {
      */
     @Post('update-features')
     @HttpCode(HttpStatus.OK)
-    async handleUpdateFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleUpdateFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots update features webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processUpdateFeaturesWebhook(payload, clientIP);
+        return this.webhookService.processUpdateFeaturesWebhook(payload);
     }
 
     /**
@@ -124,9 +117,8 @@ export class B2BSlotsWebhookController {
      */
     @Post('end-features')
     @HttpCode(HttpStatus.OK)
-    async handleEndFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload, @Req() req: Request) {
+    async handleEndFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Received B2BSlots end features webhook for user: ${payload.data.user_id}`);
-        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        return this.webhookService.processEndFeaturesWebhook(payload, clientIP);
+        return this.webhookService.processEndFeaturesWebhook(payload);
     }
 }

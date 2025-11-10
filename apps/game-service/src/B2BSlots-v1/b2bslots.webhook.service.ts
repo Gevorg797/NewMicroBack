@@ -58,7 +58,6 @@ export class B2BSlotsWebhookService {
 
     // B2BSlots webhook security settings
     private readonly webhookSecret = process.env.B2BSLOTS_WEBHOOK_SECRET || 'your-webhook-secret';
-    private readonly allowedIPs = process.env.B2BSLOTS_ALLOWED_IPS?.split(',') || ['127.0.0.1'];
     private readonly timestampTolerance = 300; // 5 minutes in seconds
     private readonly operatorId = parseInt(process.env.B2BSLOTS_OPERATOR_ID || '0');
 
@@ -67,7 +66,7 @@ export class B2BSlotsWebhookService {
     /**
      * Validate webhook authenticity
      */
-    private validateWebhookAuth(payload: B2BSlotsWebhookPayload, clientIP?: string): void {
+    private validateWebhookAuth(payload: B2BSlotsWebhookPayload): void {
         // 1. Validate signature if provided
         if (payload.signature) {
             if (!this.verifySignature(payload)) {
@@ -84,13 +83,7 @@ export class B2BSlotsWebhookService {
             }
         }
 
-        // 3. Validate IP address if provided
-        if (clientIP && !this.allowedIPs.includes(clientIP)) {
-            this.logger.error(`Unauthorized IP address: ${clientIP}`);
-            throw new UnauthorizedException('IP address not allowed');
-        }
-
-        // 4. Validate required fields
+        // 3. Validate required fields
         if (!payload.data || !payload.data.user_id || !payload.data.currency) {
             this.logger.error('Missing required webhook fields');
             throw new BadRequestException('Missing required fields');
@@ -141,11 +134,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process auth webhook - called when game is initialized
      */
-    async processAuthWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processAuthWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing auth webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             // Extract session token from user_game_token or user_auth_token
@@ -212,11 +205,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process debit webhook (bet/withdrawal)
      */
-    async processDebitWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processDebitWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing debit webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             const result = await this.handleDebitOperation(payload);
@@ -257,11 +250,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process credit webhook (win/deposit)
      */
-    async processCreditWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processCreditWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing credit webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             const result = await this.handleCreditOperation(payload);
@@ -302,11 +295,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process get features webhook
      */
-    async processGetFeaturesWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processGetFeaturesWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing get features webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             const result = await this.handleGetFeaturesOperation(payload);
@@ -354,11 +347,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process activate features webhook
      */
-    async processActivateFeaturesWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processActivateFeaturesWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing activate features webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             const result = await this.handleActivateFeaturesOperation(payload);
@@ -397,11 +390,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process update features webhook
      */
-    async processUpdateFeaturesWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processUpdateFeaturesWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing update features webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             const result = await this.handleUpdateFeaturesOperation(payload);
@@ -440,11 +433,11 @@ export class B2BSlotsWebhookService {
     /**
      * Process end features webhook
      */
-    async processEndFeaturesWebhook(payload: B2BSlotsWebhookPayload, clientIP?: string) {
+    async processEndFeaturesWebhook(payload: B2BSlotsWebhookPayload) {
         this.logger.debug(`Processing end features webhook for user: ${payload.data.user_id}`);
 
         // Validate webhook authenticity
-        this.validateWebhookAuth(payload, clientIP);
+        // this.validateWebhookAuth(payload);
 
         try {
             const result = await this.handleEndFeaturesOperation(payload);

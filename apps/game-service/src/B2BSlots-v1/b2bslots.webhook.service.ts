@@ -1,6 +1,6 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { GameSession, GameTransaction, GameTransactionType, GameFreeSpin, Balances, BalanceType } from '@lib/database';
+import { GameSession, GameTransaction, GameTransactionType, GameFreeSpin, BalanceType } from '@lib/database';
 import { wrap } from '@mikro-orm/core';
 import * as crypto from 'crypto';
 
@@ -63,26 +63,6 @@ export class B2BSlotsWebhookService {
     private readonly operatorId = parseInt(process.env.B2BSLOTS_OPERATOR_ID || '0');
 
     constructor(private readonly em: EntityManager) { }
-
-    /**
-     * Get the other balance type (if session uses MAIN, get BONUS and vice versa)
-     */
-    private async getOtherBalance(userId: number, currencyName: string, currentBalanceType: BalanceType): Promise<string> {
-        // Get the opposite balance type
-        const otherType = currentBalanceType === BalanceType.MAIN ? BalanceType.BONUS : BalanceType.MAIN;
-
-        const otherBalance = await this.em.findOne(Balances, {
-            user: { id: userId },
-            type: otherType
-        }, { populate: ['currency'] });
-
-        // Filter by currency
-        if (otherBalance && otherBalance.currency.name === currencyName) {
-            return otherBalance.balance.toFixed(2);
-        }
-
-        return '0.00';
-    }
 
     /**
      * Validate webhook authenticity
@@ -195,17 +175,8 @@ export class B2BSlotsWebhookService {
                 throw new BadRequestException(`Currency mismatch. Expected: ${gameSession.balance.currency.name}, Got: ${payload.data.currency}`);
             }
 
-            // Get session balance and the other balance type (for bonus_balance)
+            // Get session balance (only return balance related to this session)
             const sessionBalance = gameSession.balance.balance.toFixed(2);
-            const otherBalance = await this.getOtherBalance(
-                gameSession.user.id!,
-                gameSession.balance.currency.name,
-                gameSession.balance.type
-            );
-
-            // Determine which is main and which is bonus based on session balance type
-            const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-            const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
             this.logger.debug('Successfully processed B2BSlots auth webhook');
             return {
@@ -215,8 +186,8 @@ export class B2BSlotsWebhookService {
                     operator_id: this.operatorId,
                     user_id: payload.data.user_id,
                     user_nickname: gameSession.user.name || 'Player',
-                    balance: mainBalance,
-                    bonus_balance: bonusBalance,
+                    balance: sessionBalance,
+                    bonus_balance: '0.00',
                     game_token: sessionToken,
                     error_code: 0,
                     error_description: 'ok',
@@ -576,21 +547,12 @@ export class B2BSlotsWebhookService {
             this.logger.log(`Debit processed: ${debitAmount} ${payload.data.currency} from session ${sessionToken}`);
         });
 
-        // Get updated session balance and the other balance type
+        // Get updated session balance (only return balance related to this session)
         const sessionBalance = gameSession.balance.balance.toFixed(2);
-        const otherBalance = await this.getOtherBalance(
-            gameSession.user.id!,
-            gameSession.balance.currency.name,
-            gameSession.balance.type
-        );
-
-        // Determine which is main and which is bonus
-        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
         return {
-            balance: mainBalance,
-            bonusBalance: bonusBalance,
+            balance: sessionBalance,
+            bonusBalance: '0.00',
             name: gameSession.user.name || 'Player'
         };
     }
@@ -639,16 +601,9 @@ export class B2BSlotsWebhookService {
         if (creditAmount === 0) {
             this.logger.log(`No win for session ${sessionToken}`);
             const sessionBalance = gameSession.balance.balance.toFixed(2);
-            const otherBalance = await this.getOtherBalance(
-                gameSession.user.id!,
-                gameSession.balance.currency.name,
-                gameSession.balance.type
-            );
-            const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-            const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
             return {
-                balance: mainBalance,
-                bonusBalance: bonusBalance,
+                balance: sessionBalance,
+                bonusBalance: '0.00',
                 name: gameSession.user.name || 'Player'
             };
         }
@@ -675,21 +630,12 @@ export class B2BSlotsWebhookService {
             this.logger.log(`Credit processed: ${creditAmount} ${payload.data.currency} to session ${sessionToken}`);
         });
 
-        // Get updated session balance and the other balance type
+        // Get updated session balance (only return balance related to this session)
         const sessionBalance = gameSession.balance.balance.toFixed(2);
-        const otherBalance = await this.getOtherBalance(
-            gameSession.user.id!,
-            gameSession.balance.currency.name,
-            gameSession.balance.type
-        );
-
-        // Determine which is main and which is bonus
-        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
         return {
-            balance: mainBalance,
-            bonusBalance: bonusBalance,
+            balance: sessionBalance,
+            bonusBalance: '0.00',
             name: gameSession.user.name || 'Player'
         };
     }
@@ -738,19 +684,12 @@ export class B2BSlotsWebhookService {
 
         this.logger.debug(`Getting features for session ${sessionToken}: ${activeFreeSpins ? 'has free rounds' : 'no free rounds'}`);
 
-        // Get session balance and the other balance type
+        // Get session balance (only return balance related to this session)
         const sessionBalance = gameSession.balance.balance.toFixed(2);
-        const otherBalance = await this.getOtherBalance(
-            gameSession.user.id!,
-            gameSession.balance.currency.name,
-            gameSession.balance.type
-        );
-        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
         return {
-            balance: mainBalance,
-            bonusBalance: bonusBalance,
+            balance: sessionBalance,
+            bonusBalance: '0.00',
             name: gameSession.user.name || 'Player',
             freeRounds
         };
@@ -805,19 +744,12 @@ export class B2BSlotsWebhookService {
             this.logger.log(`Activated free rounds ${freeRoundsId} for session ${sessionToken}`);
         });
 
-        // Get session balance and the other balance type
+        // Get session balance (only return balance related to this session)
         const sessionBalance = gameSession.balance.balance.toFixed(2);
-        const otherBalance = await this.getOtherBalance(
-            gameSession.user.id!,
-            gameSession.balance.currency.name,
-            gameSession.balance.type
-        );
-        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
         return {
-            balance: mainBalance,
-            bonusBalance: bonusBalance,
+            balance: sessionBalance,
+            bonusBalance: '0.00',
             name: gameSession.user.name || 'Player'
         };
     }
@@ -879,19 +811,12 @@ export class B2BSlotsWebhookService {
             this.logger.log(`Updated free rounds ${freeRoundsId}: win=${roundWin}, new bank=${freeSpin.bank}`);
         });
 
-        // Get session balance and the other balance type
+        // Get session balance (only return balance related to this session)
         const sessionBalance = gameSession.balance.balance.toFixed(2);
-        const otherBalance = await this.getOtherBalance(
-            gameSession.user.id!,
-            gameSession.balance.currency.name,
-            gameSession.balance.type
-        );
-        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
         return {
-            balance: mainBalance,
-            bonusBalance: bonusBalance,
+            balance: sessionBalance,
+            bonusBalance: '0.00',
             name: gameSession.user.name || 'Player'
         };
     }
@@ -944,19 +869,12 @@ export class B2BSlotsWebhookService {
             this.logger.log(`Ended free rounds ${freeRoundsId} with total win: ${totalWin}`);
         });
 
-        // Get session balance and the other balance type
+        // Get session balance (only return balance related to this session)
         const sessionBalance = gameSession.balance.balance.toFixed(2);
-        const otherBalance = await this.getOtherBalance(
-            gameSession.user.id!,
-            gameSession.balance.currency.name,
-            gameSession.balance.type
-        );
-        const mainBalance = gameSession.balance.type === BalanceType.MAIN ? sessionBalance : otherBalance;
-        const bonusBalance = gameSession.balance.type === BalanceType.BONUS ? sessionBalance : otherBalance;
 
         return {
-            balance: mainBalance,
-            bonusBalance: bonusBalance,
+            balance: sessionBalance,
+            bonusBalance: '0.00',
             name: gameSession.user.name || 'Player'
         };
     }

@@ -1,0 +1,3311 @@
+{
+  "data": {
+    "GAMINATOR": [
+      {
+        "name": "Always Hot",
+        "id": 1,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bananas Go Bahamas",
+        "id": 2,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Beetle Mania",
+        "id": 3,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book Of Ra",
+        "id": 4,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Venetian Carnival",
+        "id": 5,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Columbus",
+        "id": 6,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dolphin's Pearl",
+        "id": 7,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Target",
+        "id": 8,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Just Jewels",
+        "id": 9,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Lady's Charm",
+        "id": 10,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Money",
+        "id": 11,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Marco Polo",
+        "id": 12,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Money Game",
+        "id": 13,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Oliver's Bar",
+        "id": 14,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaons Gold II",
+        "id": 15,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Queen Of Hearts",
+        "id": 16,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Riches Of India",
+        "id": 17,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Roller Coaster",
+        "id": 18,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sharky",
+        "id": 19,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sizzing Hot",
+        "id": 20,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ultra Hot",
+        "id": 21,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Unicorn Magic",
+        "id": 22,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Aztec Gold",
+        "id": 23,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cash Machine",
+        "id": 24,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cleopatra Gold",
+        "id": 25,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Traffic",
+        "id": 26,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Da Vinci Diamonds",
+        "id": 27,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golds Fever",
+        "id": 28,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Knights Of The Grail",
+        "id": 29,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Monopoly",
+        "id": 30,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mystics Adventure",
+        "id": 31,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaon's Treasure",
+        "id": 32,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Russian Treasure",
+        "id": 33,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sultan Castle",
+        "id": 34,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Treasure Castle",
+        "id": 35,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Vegas Babe",
+        "id": 36,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Brazilian Beauty",
+        "id": 37,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pirates Gold",
+        "id": 38,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "River Belle",
+        "id": 39,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chinese Gate Treasure",
+        "id": 40,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crushin",
+        "id": 41,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cuba Libre",
+        "id": 42,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Deep Water Fishing",
+        "id": 43,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaoh's Gold 2",
+        "id": 44,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Faust",
+        "id": 45,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Kilimanjaro Treasure",
+        "id": 46,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Cash",
+        "id": 47,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Riches Of India",
+        "id": 48,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ronin",
+        "id": 49,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Secret Of Temptation ",
+        "id": 50,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Zeus",
+        "id": 51,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Indiana Jones Adventure",
+        "id": 52,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bush Explorer",
+        "id": 53,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "D'Artagnan",
+        "id": 54,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Strip Tease",
+        "id": 55,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gold Spell",
+        "id": 56,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Midnight",
+        "id": 57,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lord Of The Ocean",
+        "id": 58,
+        "provider": "Superomatic"
+      }
+    ],
+    "GAMINATOR2": [
+      {
+        "name": "Dianas Realm",
+        "id": 59,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Four Queens",
+        "id": 60,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lions",
+        "id": 61,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Tiki Island",
+        "id": 62,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Waikiki Beach",
+        "id": 63,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaohs Gold III",
+        "id": 64,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dynasty Of Ming",
+        "id": 65,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Royal Treasures",
+        "id": 66,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wonderful Flute",
+        "id": 67,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Polar Fox",
+        "id": 68,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Banana Splash",
+        "id": 69,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Attila",
+        "id": 70,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Buzzzin' Bugs",
+        "id": 71,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Columbus Deluxe",
+        "id": 72,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "First Class Traveler",
+        "id": 73,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golden Planet",
+        "id": 74,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Holmes Watson",
+        "id": 75,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Secret Forest",
+        "id": 76,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Glyphons Gold",
+        "id": 77,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Kings Of Cash",
+        "id": 78,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Treasure Diver",
+        "id": 79,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Illusionist",
+        "id": 80,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "King Of Cards",
+        "id": 81,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Black Gold",
+        "id": 82,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Geisha Story",
+        "id": 83,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Student Driver",
+        "id": 84,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "World Cup Mania",
+        "id": 85,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Merry Farm",
+        "id": 86,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gold Fever",
+        "id": 87,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Welcome Las Vegas",
+        "id": 88,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Space Races",
+        "id": 89,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Caesarius",
+        "id": 90,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chocolatier Secrets",
+        "id": 91,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Cards",
+        "id": 92,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fan Adventures",
+        "id": 93,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Festive Eggs",
+        "id": 94,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gold Of Atlantis",
+        "id": 95,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gold Of Pirates",
+        "id": 96,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Hats",
+        "id": 97,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Microcosmos",
+        "id": 98,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Safari Cards",
+        "id": 99,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Santas Helper",
+        "id": 100,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Piramid Of Secrets",
+        "id": 101,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sky Masters",
+        "id": 102,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sushi Roulette",
+        "id": 103,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Burning Hot Admiral",
+        "id": 104,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Burning Target Admiral",
+        "id": 105,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Emperor's China",
+        "id": 106,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hat Trick",
+        "id": 107,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Party",
+        "id": 108,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Jewels 4 All",
+        "id": 109,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Knights And Dragons",
+        "id": 110,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sizzling Hot Admiral",
+        "id": 111,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Star Attraction",
+        "id": 112,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Treasure Jewels",
+        "id": 113,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ultra Hot Admiral",
+        "id": 114,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Exotic Fruits",
+        "id": 115,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Monkey",
+        "id": 116,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cupid's Arrow",
+        "id": 117,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golden Rings",
+        "id": 118,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Russian Fairytale",
+        "id": 119,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruit Cocktail",
+        "id": 120,
+        "provider": "Superomatic"
+      }
+    ],
+    "GAMINATOR_EROTIC": [
+      {
+        "name": "Australian Women",
+        "id": 121,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Blazin Asians",
+        "id": 122,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Charming Girls",
+        "id": 123,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Party",
+        "id": 124,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Delicious Desires",
+        "id": 125,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Erotic World",
+        "id": 126,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fancy Chicks",
+        "id": 127,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Favourite Things",
+        "id": 128,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Girls + Girls",
+        "id": 129,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Girls Of Dream",
+        "id": 130,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Happy Holidays",
+        "id": 131,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Latex Style",
+        "id": 132,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Latin Ladies",
+        "id": 133,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mega Boobs",
+        "id": 134,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Naked Beauties",
+        "id": 135,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Queens Of Strip",
+        "id": 136,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Red Hot",
+        "id": 137,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Shocking Blondes",
+        "id": 138,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Stockings Cool",
+        "id": 139,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Tasty Flavors",
+        "id": 140,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Tits For Play",
+        "id": 141,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chica Boom",
+        "id": 142,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Do Me Right",
+        "id": 143,
+        "provider": "Superomatic"
+      }
+    ],
+    "WAZDAN": [
+      {
+        "name": "Black Horse",
+        "id": 144,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Target",
+        "id": 145,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Fruits",
+        "id": 146,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Fruits 81",
+        "id": 147,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Fruits 4",
+        "id": 148,
+        "provider": "Superomatic"
+      }
+    ],
+    "IGROSOFT": [
+      {
+        "name": "Crazy Monkey",
+        "id": 149,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruit Coctail",
+        "id": 150,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Stirlitz",
+        "id": 151,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruit Coctail 2",
+        "id": 152,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Life",
+        "id": 153,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Life 2",
+        "id": 154,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gnome",
+        "id": 155,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bank Robbery",
+        "id": 156,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky",
+        "id": 157,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dragon Treasure",
+        "id": 158,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rock Climber",
+        "id": 159,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Garage II",
+        "id": 160,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Island",
+        "id": 161,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Keks",
+        "id": 162,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lart Du Nu",
+        "id": 163,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Piratos",
+        "id": 164,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Whisky",
+        "id": 165,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fairy Land",
+        "id": 166,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Alcatras",
+        "id": 167,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Village Life",
+        "id": 168,
+        "provider": "Superomatic"
+      }
+    ],
+    "VENERA": [
+      {
+        "name": "RouletteVenera",
+        "id": 169,
+        "provider": "Superomatic"
+      }
+    ],
+    "IGT": [
+      {
+        "name": "Davinci Diamonds",
+        "id": 170,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pixies of the Forest",
+        "id": 171,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cleopatra",
+        "id": 172,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wolf Run",
+        "id": 173,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Elephant King",
+        "id": 174,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lobstermania 2",
+        "id": 175,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Arctic Fox",
+        "id": 186,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cat Paws",
+        "id": 187,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Day Of The Dead",
+        "id": 188,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Diamond Queen",
+        "id": 189,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dragon Dance",
+        "id": 190,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "El Gran Festival",
+        "id": 191,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Kilimanjaro",
+        "id": 192,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "100 Ladies",
+        "id": 193,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lady Swan",
+        "id": 194,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Prowling Panther",
+        "id": 195,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Savanna",
+        "id": 196,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sham Rockers",
+        "id": 197,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Treasures Of The Pyramids",
+        "id": 198,
+        "provider": "Superomatic"
+      }
+    ],
+    "NETENT_BY_SUPEROMATIC": [
+      {
+        "name": "Dead Or Alive",
+        "id": 176,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Who's The Bride",
+        "id": 177,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Star Burst",
+        "id": 178,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweety Honey Fruity",
+        "id": 179,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Twin Spin",
+        "id": 180,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Spinsane",
+        "id": 181,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pirate from the East",
+        "id": 182,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Twin Happiness",
+        "id": 183,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Victorious MAX",
+        "id": 184,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bollywood Story",
+        "id": 185,
+        "provider": "Superomatic"
+      }
+    ],
+    "GREENTUBE": [
+      {
+        "name": "Reel King",
+        "id": 199,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Royals",
+        "id": 200,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book Of Ra",
+        "id": 201,
+        "provider": "Superomatic"
+      }
+    ],
+    "GAMINATOR_INT": [
+      {
+        "name": "Bananas Interactive",
+        "id": 202,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book Of Ra Interactive",
+        "id": 203,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Columbus Interactive",
+        "id": 204,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Target Interactive",
+        "id": 205,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Just Jewels Interactive",
+        "id": 206,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Marco Polo Interactive",
+        "id": 207,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Money Game Interactive",
+        "id": 208,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sultan Castle Interactive",
+        "id": 209,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Vegas Babe Interactive",
+        "id": 210,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruit Party",
+        "id": 211,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Life's A Beach",
+        "id": 212,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Traffic Interactive",
+        "id": 213,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gold Spell Interactive",
+        "id": 214,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Lady's Charm Interactive",
+        "id": 215,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaoh's Gold II Interactive",
+        "id": 216,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Queen Of Hearts Interactive",
+        "id": 217,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "D'Artagnan Interactive",
+        "id": 218,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Oliver's Bar Interactive",
+        "id": 219,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Aztec Gold Interactive",
+        "id": 220,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cash Machine Interactive",
+        "id": 221,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fairy Land",
+        "id": 222,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Beetle Mania Interactive",
+        "id": 223,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Knights Of The Grail Interactive",
+        "id": 224,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Roller Coaster Interactive",
+        "id": 225,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Venetian Carnival Interactive",
+        "id": 226,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Money Interactive",
+        "id": 227,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Monopoly Interactive",
+        "id": 228,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaon's Treasure Interactive",
+        "id": 229,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Russian Treasure Interactive",
+        "id": 230,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Spicy Pizza",
+        "id": 231,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dolphin Tale",
+        "id": 232,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Muchos Grande",
+        "id": 233,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Devils Luck",
+        "id": 234,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Boogie Monsters",
+        "id": 235,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sizzing Hot Interactive",
+        "id": 236,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pirates Gold Interactive",
+        "id": 237,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Unicorn Magic Interactive",
+        "id": 238,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Treasure Castle Interactive",
+        "id": 239,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Riches Of India Interactive",
+        "id": 240,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sharky Interactive",
+        "id": 241,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Alladin’s Wishes",
+        "id": 242,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fantasy Fortune",
+        "id": 243,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gold Fever Interactive",
+        "id": 244,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Scoop The Cash",
+        "id": 245,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Indiana Jones Interactive",
+        "id": 246,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Astro",
+        "id": 247,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wasabi-San",
+        "id": 248,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Davinci Diamonds Interactive",
+        "id": 249,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "LuckyFlowers",
+        "id": 250,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Beer Fest",
+        "id": 251,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bust Safe",
+        "id": 252,
+        "provider": "Superomatic"
+      }
+    ],
+    "APOLLO": [
+      {
+        "name": "Blood",
+        "id": 253,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bonus Joker II",
+        "id": 254,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dice81",
+        "id": 255,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mystery Joker II",
+        "id": 256,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Smiling Joker II",
+        "id": 257,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Horror Joker",
+        "id": 258,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Burning Dice",
+        "id": 259,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wooden Fruits",
+        "id": 260,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Atlantis",
+        "id": 261,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Fruits 27",
+        "id": 262,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Horus Eye",
+        "id": 263,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Jewel Fruits",
+        "id": 264,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Eldorado Treasure",
+        "id": 265,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hell",
+        "id": 266,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "War Of The Titans",
+        "id": 267,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rur",
+        "id": 268,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky 81",
+        "id": 269,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Turbo Slots",
+        "id": 270,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Midnight Fruits 81",
+        "id": 271,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pandora",
+        "id": 272,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "RichFish",
+        "id": 273,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "MagicLady",
+        "id": 274,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gangster World",
+        "id": 275,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mad Mechanic Deluxe",
+        "id": 276,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Four Fruits 2",
+        "id": 277,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Slot Birds",
+        "id": 278,
+        "provider": "Superomatic"
+      }
+    ],
+    "MEGAJACK": [
+      {
+        "name": "Aztec Gold",
+        "id": 279,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Aztec Gold 2",
+        "id": 280,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Aztec Pyramid",
+        "id": 281,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sizzling Girls",
+        "id": 282,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Corsair Treasure",
+        "id": 283,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Slot-O-Pol",
+        "id": 284,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Slot-O-Pol Deluxe",
+        "id": 285,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Champagne",
+        "id": 286,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Slot-So-Cool",
+        "id": 287,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Circus Fortune",
+        "id": 288,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Slot-So-Cool Deluxe",
+        "id": 289,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Devil Deluxe",
+        "id": 290,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sparkling",
+        "id": 291,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wildest",
+        "id": 292,
+        "provider": "Superomatic"
+      }
+    ],
+    "VIDEO": [
+      {
+        "name": "Gladiator",
+        "id": 293,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hobbit",
+        "id": 294,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "John Carter",
+        "id": 295,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Playboy",
+        "id": 296,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Show Girls",
+        "id": 297,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Avengers",
+        "id": 298,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Hot",
+        "id": 299,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wreck It Ralph",
+        "id": 300,
+        "provider": "Superomatic"
+      }
+    ],
+    "5X5": [
+      {
+        "name": "Book Of Ra 5x5",
+        "id": 301,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Galaxy Adventure",
+        "id": 302,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Story",
+        "id": 303,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Irish Adventures",
+        "id": 304,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Cars 5x5",
+        "id": 305,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Jungle Jim 5x5",
+        "id": 306,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Polar Bash 5x5",
+        "id": 307,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bahamas Babes",
+        "id": 308,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Great Hit",
+        "id": 309,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gnome 3",
+        "id": 310,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rock Climber 3",
+        "id": 311,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Garage 3 5x5",
+        "id": 312,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Eastern Tale",
+        "id": 313,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Island 3",
+        "id": 314,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Sweet 3",
+        "id": 315,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mega Frog",
+        "id": 316,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Viking Reels",
+        "id": 317,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Santa Gifts",
+        "id": 318,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Witch Slot",
+        "id": 319,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mexicanos",
+        "id": 320,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Piece Of Cake",
+        "id": 321,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "FishingMania",
+        "id": 322,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fairy Girls",
+        "id": 323,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Vip Society",
+        "id": 324,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Perfect Strike 5x5",
+        "id": 325,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "SimSimSlot",
+        "id": 326,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Spark Of Love",
+        "id": 327,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Private Eye 5x5",
+        "id": 328,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sharky 5x5",
+        "id": 329,
+        "provider": "Superomatic"
+      }
+    ],
+    "GLOBAL": [
+      {
+        "name": "Cherry Love",
+        "id": 330,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cute & Fluffy",
+        "id": 331,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Discovery",
+        "id": 332,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fairy Magic",
+        "id": 333,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fantastic Four",
+        "id": 334,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "From Russia",
+        "id": 335,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Happy Bugs",
+        "id": 336,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "House Of The Dead",
+        "id": 337,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Penguin Vacation",
+        "id": 338,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Phantasy Star",
+        "id": 339,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Punisher",
+        "id": 340,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rocky",
+        "id": 341,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Virtua Fighter",
+        "id": 342,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Al Capone",
+        "id": 343,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Azteca",
+        "id": 344,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Diamond Valley Pro",
+        "id": 345,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dolphin Reef",
+        "id": 346,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Great Blue",
+        "id": 347,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Panter Moon",
+        "id": 348,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Safari Heat",
+        "id": 349,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Silent Samurai",
+        "id": 350,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sparta",
+        "id": 351,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Spirit",
+        "id": 352,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pharaohs Secrets",
+        "id": 353,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Arctic Treasure",
+        "id": 354,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bonus Bears",
+        "id": 355,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Captain Treasure Pro",
+        "id": 356,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Desert Treasure",
+        "id": 357,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golden Games",
+        "id": 358,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Incredible Hulk",
+        "id": 359,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Irish Luck",
+        "id": 360,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "A Night Out",
+        "id": 361,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Nights",
+        "id": 362,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rome & Glory",
+        "id": 363,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Skazka",
+        "id": 364,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Thai Paradise",
+        "id": 365,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "True Love",
+        "id": 366,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Incredible Hulk 50",
+        "id": 367,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Blade",
+        "id": 368,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Daredevil",
+        "id": 369,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Elektra",
+        "id": 370,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Football Rules",
+        "id": 371,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Harry Potter",
+        "id": 372,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "La Chatte Rouge",
+        "id": 373,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Spin2Millions",
+        "id": 374,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Xmen",
+        "id": 375,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Transformers",
+        "id": 376,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Desert Treasure 2",
+        "id": 377,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Kong",
+        "id": 378,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Top Gun",
+        "id": 379,
+        "provider": "Superomatic"
+      }
+    ],
+    "EXCITING": [
+      {
+        "name": "Dodge City",
+        "id": 380,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dog Mafia",
+        "id": 381,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Seven",
+        "id": 382,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "London Fever",
+        "id": 383,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Money Honey",
+        "id": 384,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Riddle Jungle",
+        "id": 385,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cave Goblins",
+        "id": 386,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Devils Night",
+        "id": 387,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Frozen",
+        "id": 388,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Merry Christmas",
+        "id": 389,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "New Space Adventure",
+        "id": 390,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Royal Scotland",
+        "id": 391,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Reserve",
+        "id": 392,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Monte Cristo",
+        "id": 393,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sinderella",
+        "id": 394,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Newyear Girls",
+        "id": 395,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pirate Slots",
+        "id": 396,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rockabilly",
+        "id": 397,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Vicing Striking",
+        "id": 398,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "World Travel",
+        "id": 399,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Kingdom",
+        "id": 400,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Market Mania",
+        "id": 401,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Minotaurs Gold",
+        "id": 402,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Beauty Parlor",
+        "id": 403,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Candy Shop",
+        "id": 404,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dinner Party",
+        "id": 405,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dragons Nest",
+        "id": 406,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Elven Mirror",
+        "id": 407,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Erotic Fantasy",
+        "id": 408,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Halloween Night",
+        "id": 409,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Inca Treasures",
+        "id": 410,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Jewellery Shop",
+        "id": 411,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magican Of The Emerald Town",
+        "id": 412,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Prison Adventure",
+        "id": 413,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Seasons Reels",
+        "id": 414,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Stone Quest",
+        "id": 415,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Summer On The Beach",
+        "id": 416,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Surprize",
+        "id": 417,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Beatles",
+        "id": 418,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "World Under Water",
+        "id": 419,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Legend Of Zorro",
+        "id": 420,
+        "provider": "Superomatic"
+      }
+    ],
+    "IGROSOFT_INT": [
+      {
+        "name": "Fruit Coctail 2 Interactive",
+        "id": 421,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Island Interactive",
+        "id": 422,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fairyland Interactive",
+        "id": 423,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Hunter Interactive",
+        "id": 424,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Garage 2 Interactive",
+        "id": 425,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Life Interactive",
+        "id": 426,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruit Cocktail Interactive",
+        "id": 427,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bank Robbery Interactive",
+        "id": 428,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Monkey Interactive",
+        "id": 429,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dragon Treasure Interactive",
+        "id": 430,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "L'Art Du Nu Interactive",
+        "id": 431,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Piratos Interactive",
+        "id": 432,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rock Climber Interactive",
+        "id": 433,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gnome Interactive",
+        "id": 434,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rezident Interactive",
+        "id": 435,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Keks Interactive",
+        "id": 436,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Whisky Interactive",
+        "id": 437,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sweet Life 2 Interactive",
+        "id": 438,
+        "provider": "Superomatic"
+      }
+    ],
+    "CHAMPION": [
+      {
+        "name": "Nautilus",
+        "id": 439,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fire Frenzy",
+        "id": 440,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gulliver",
+        "id": 441,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sea Light",
+        "id": 442,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Ladys Glamour",
+        "id": 443,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sevens On Fire",
+        "id": 444,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bananas",
+        "id": 445,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Riddle Of The Sphinx",
+        "id": 446,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mariner",
+        "id": 447,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Crazy Barmen",
+        "id": 448,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Pirates Fortune",
+        "id": 449,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Casino World",
+        "id": 450,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Sevens",
+        "id": 451,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rich Fruits",
+        "id": 452,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Casino And Stars",
+        "id": 453,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Money",
+        "id": 454,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Savanna Queen",
+        "id": 455,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hearts",
+        "id": 456,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gates Of Avalon",
+        "id": 457,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golden Harvest",
+        "id": 458,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Robinson",
+        "id": 459,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fire Rage",
+        "id": 460,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Slot",
+        "id": 461,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Kings Of Jewels",
+        "id": 462,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Tropical Fruit",
+        "id": 463,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book Of Winners",
+        "id": 464,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Secret",
+        "id": 465,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Computer World",
+        "id": 466,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Roll Of Ramses",
+        "id": 467,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Scatter Wins",
+        "id": 468,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Triple Diamond",
+        "id": 469,
+        "provider": "Superomatic"
+      }
+    ],
+    "ARISTOCRAT": [
+      {
+        "name": "Geisha",
+        "id": 470,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dolphin Treasure",
+        "id": 471,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Queen Of The Nile",
+        "id": 472,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Big Red",
+        "id": 473,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Count",
+        "id": 474,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "5 Dragons",
+        "id": 475,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Tiki Torch",
+        "id": 476,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sun And Moon",
+        "id": 477,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Queen Of The Nile II",
+        "id": 478,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "50 Lions",
+        "id": 479,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "50 Dragons",
+        "id": 480,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Miss Kitty",
+        "id": 481,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Moon Festival",
+        "id": 482,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Double Happiness",
+        "id": 483,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Buffalo",
+        "id": 484,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wolf Moon",
+        "id": 485,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Were Wolf Wild",
+        "id": 486,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Imperial House",
+        "id": 487,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Where Is The Gold",
+        "id": 488,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Big Ben",
+        "id": 489,
+        "provider": "Superomatic"
+      }
+    ],
+    "EGT": [
+      {
+        "name": "Age Of Troy",
+        "id": 490,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Amazons Battle",
+        "id": 491,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Blue Heart",
+        "id": 492,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Burning Dice",
+        "id": 493,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Burning Hot",
+        "id": 494,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Caramel Hot",
+        "id": 495,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "100 Cats",
+        "id": 496,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "5 Dazzling Hot",
+        "id": 497,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "20 Diamonds",
+        "id": 498,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dice Of Ra",
+        "id": 499,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dragon Reels",
+        "id": 500,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Extra Stars",
+        "id": 501,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Extremely Hot",
+        "id": 502,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Flaming Hot",
+        "id": 503,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruits Kingdom",
+        "id": 504,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Game Of Luck",
+        "id": 505,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Grace Of Cleopatra",
+        "id": 506,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Great Egypt",
+        "id": 507,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Great Empire",
+        "id": 508,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Olympus Glory",
+        "id": 509,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Secrets Of Alchemy",
+        "id": 510,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Shining Crown",
+        "id": 511,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "30 Spicy Fruits",
+        "id": 512,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "100 Super Hot",
+        "id": 513,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "20 Super Hot",
+        "id": 514,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "40 Super Hot",
+        "id": 515,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Supreme Hot",
+        "id": 516,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ultimate Hot",
+        "id": 517,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Zodiac Wheel",
+        "id": 518,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Amazing Amazonia",
+        "id": 519,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Aztec Glory",
+        "id": 520,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book of Magic",
+        "id": 521,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "10 Burning Heart",
+        "id": 522,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "5 Burning Heart",
+        "id": 523,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "20 Burning Hot",
+        "id": 524,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Coral Island",
+        "id": 525,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "20 Dazzling Hot",
+        "id": 526,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "2 Dragons",
+        "id": 527,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fast Money",
+        "id": 528,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fortune Spells",
+        "id": 529,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "5 Great Star",
+        "id": 530,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "20 Joker Reels",
+        "id": 531,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "40 Lucky King",
+        "id": 532,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Majestic Forest",
+        "id": 533,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Queen of Rio",
+        "id": 534,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Retro Style",
+        "id": 535,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Rise of RA",
+        "id": 536,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Spanish Passion",
+        "id": 537,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Big Journey",
+        "id": 538,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The White Wolf",
+        "id": 539,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Versailles Gold",
+        "id": 540,
+        "provider": "Superomatic"
+      }
+    ],
+    "AMATIC": [
+      {
+        "name": "Admiral Nelson",
+        "id": 541,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "All Ways Fruits",
+        "id": 542,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Bells On Fire",
+        "id": 543,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Billyonaire",
+        "id": 544,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Blue Dolphin",
+        "id": 545,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book of Aztec",
+        "id": 546,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book of Fortune",
+        "id": 547,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Casanova",
+        "id": 548,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cool Diamonds II",
+        "id": 549,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Diamond Cats",
+        "id": 550,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Diamond Monkey",
+        "id": 551,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Diamonds on Fire",
+        "id": 552,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Dragons Pearl",
+        "id": 553,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fire Ice",
+        "id": 554,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fortunas Fruits",
+        "id": 555,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Grand X",
+        "id": 556,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Diamonds",
+        "id": 557,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Neon",
+        "id": 558,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Scatter",
+        "id": 559,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Seven",
+        "id": 560,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Star",
+        "id": 561,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hot Twenty",
+        "id": 562,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lady Joker",
+        "id": 563,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lovely Lady",
+        "id": 564,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Bells",
+        "id": 565,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Coin",
+        "id": 566,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Forest",
+        "id": 567,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Idol",
+        "id": 568,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Magic Owl",
+        "id": 569,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mermaid's Gold",
+        "id": 570,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Merry Fruits",
+        "id": 571,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Party Time",
+        "id": 572,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Red Chilli",
+        "id": 573,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Tweety Birds",
+        "id": 574,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild 7",
+        "id": 575,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Dragon",
+        "id": 576,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wolf Moon",
+        "id": 577,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Big Panda",
+        "id": 578,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Eye Of Ra",
+        "id": 579,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golden Book",
+        "id": 580,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Shark",
+        "id": 581,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Stars",
+        "id": 582,
+        "provider": "Superomatic"
+      }
+    ],
+    "ENDORPHINA": [
+      {
+        "name": "Fresh Fruits",
+        "id": 583,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hell Hot 100",
+        "id": 584,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hit Slot 2021",
+        "id": 585,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Streak",
+        "id": 586,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Streak 2",
+        "id": 587,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Streak 3",
+        "id": 588,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mongol Treasures",
+        "id": 589,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The King",
+        "id": 590,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ultra Fresh",
+        "id": 591,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book Of Santa",
+        "id": 592,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chance Machine 100",
+        "id": 593,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chance Machine 5",
+        "id": 594,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chance Machine 40",
+        "id": 595,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chance Machine 20",
+        "id": 596,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hit Slot 2020",
+        "id": 597,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Dice 3",
+        "id": 598,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Dice 2",
+        "id": 599,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Dice",
+        "id": 600,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Urartu",
+        "id": 601,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sparkling Fresh",
+        "id": 602,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chimney Sweep",
+        "id": 603,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "More Fresh Fruits",
+        "id": 604,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Emirate",
+        "id": 605,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Aus Dem Tal",
+        "id": 606,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Football",
+        "id": 607,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gems n Stones",
+        "id": 608,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Joker Stoker",
+        "id": 609,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Mystery Of Eldorado",
+        "id": 610,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Windy City",
+        "id": 611,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "100 Zombies",
+        "id": 612,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Buffalo 50",
+        "id": 613,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Diamond Chance",
+        "id": 614,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Four Of A King",
+        "id": 615,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Little Panda",
+        "id": 616,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Little Panda Dice",
+        "id": 617,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Red Cap",
+        "id": 618,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Safari",
+        "id": 619,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Wild Fruits",
+        "id": 620,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Almighty Sparta",
+        "id": 621,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Almighty Sparta Dice",
+        "id": 622,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ancient Troy",
+        "id": 623,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Ancient Troy Dice",
+        "id": 624,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Asgardians",
+        "id": 625,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Asgardians Dice",
+        "id": 626,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cricket Heroes",
+        "id": 627,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Geisha",
+        "id": 628,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "In Jazz",
+        "id": 629,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Macarons",
+        "id": 630,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sugar Glider",
+        "id": 631,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Sugar Glider Dice",
+        "id": 632,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hell Hot 20",
+        "id": 633,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Hell Hot 40",
+        "id": 634,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Book Of Oil",
+        "id": 635,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Cash Tank",
+        "id": 636,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gem Blast",
+        "id": 637,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Undines Deep",
+        "id": 638,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Temple Cats",
+        "id": 639,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Royal Xmass",
+        "id": 640,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Water Tiger",
+        "id": 641,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Chunjie",
+        "id": 642,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Football Superstar",
+        "id": 643,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Fruletta",
+        "id": 644,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gladiators",
+        "id": 645,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Gladiators 2016",
+        "id": 646,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Golden Ox",
+        "id": 647,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Legendary Sumo",
+        "id": 648,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Lucky Lands",
+        "id": 649,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Retromania",
+        "id": 650,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "The Vampires",
+        "id": 651,
+        "provider": "Superomatic"
+      },
+      {
+        "name": "Troll Haven",
+        "id": 652,
+        "provider": "Superomatic"
+      }
+    ]
+  },
+  "error": null,
+  "message": "success",
+  "status": 200
+}

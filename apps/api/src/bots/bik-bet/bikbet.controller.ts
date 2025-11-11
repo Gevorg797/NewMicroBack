@@ -936,8 +936,8 @@ export class BikBetController {
       );
     });
 
-    this.bot.action(/operator_novomatic_(.+)/, async (ctx) => {
-      await this.bikbetService.showNovomaticGames(
+    this.bot.action(/operator_gaminator_(.+)/, async (ctx) => {
+      await this.bikbetService.showGaminatorGames(
         ctx,
         (ctx.callbackQuery as any).data,
       );
@@ -966,6 +966,20 @@ export class BikBetController {
 
     this.bot.action(/operator_playtech_(.+)/, async (ctx) => {
       await this.bikbetService.showPlayTechGames(
+        ctx,
+        (ctx.callbackQuery as any).data,
+      );
+    });
+
+    this.bot.action(/operator_igrosoft_(.+)/, async (ctx) => {
+      await this.bikbetService.showIgrosoftGames(
+        ctx,
+        (ctx.callbackQuery as any).data,
+      );
+    });
+
+    this.bot.action(/operator_3oaks_(.+)/, async (ctx) => {
+      await this.bikbetService.show3OaksGames(
         ctx,
         (ctx.callbackQuery as any).data,
       );
@@ -1023,21 +1037,21 @@ export class BikBetController {
     });
 
     // Generic pagination handlers for all operators
-    this.bot.action(/prev_novomatic_page_(\d+)_(.+)/, async (ctx) => {
+    this.bot.action(/prev_gaminator_page_(\d+)_(.+)/, async (ctx) => {
       await this.bikbetService.handleOperatorPagination(
         ctx,
         (ctx.callbackQuery as any).data,
-        'Novomatic',
-        this.bikbetService['NOVOMATIC_GAMES'],
+        'Gaminator',
+        this.bikbetService['GAMINATOR_GAMES'],
       );
     });
 
-    this.bot.action(/next_novomatic_page_(\d+)_(.+)/, async (ctx) => {
+    this.bot.action(/next_gaminator_page_(\d+)_(.+)/, async (ctx) => {
       await this.bikbetService.handleOperatorPagination(
         ctx,
         (ctx.callbackQuery as any).data,
-        'Novomatic',
-        this.bikbetService['NOVOMATIC_GAMES'],
+        'Gaminator',
+        this.bikbetService['GAMINATOR_GAMES'],
       );
     });
 
@@ -1092,6 +1106,42 @@ export class BikBetController {
         (ctx.callbackQuery as any).data,
         'PlayTech',
         this.bikbetService['PLAYTECH_GAMES'],
+      );
+    });
+
+    this.bot.action(/prev_igrosoft_page_(\d+)_(.+)/, async (ctx) => {
+      await this.bikbetService.handleOperatorPagination(
+        ctx,
+        (ctx.callbackQuery as any).data,
+        'IgroSoft',
+        this.bikbetService['IGROSOFT_GAMES'],
+      );
+    });
+
+    this.bot.action(/next_igrosoft_page_(\d+)_(.+)/, async (ctx) => {
+      await this.bikbetService.handleOperatorPagination(
+        ctx,
+        (ctx.callbackQuery as any).data,
+        'IgroSoft',
+        this.bikbetService['IGROSOFT_GAMES'],
+      );
+    });
+
+    this.bot.action(/prev_3oaks_page_(\d+)_(.+)/, async (ctx) => {
+      await this.bikbetService.handleOperatorPagination(
+        ctx,
+        (ctx.callbackQuery as any).data,
+        '3Oaks',
+        this.bikbetService['THREE_OAKS_GAMES'],
+      );
+    });
+
+    this.bot.action(/next_3oaks_page_(\d+)_(.+)/, async (ctx) => {
+      await this.bikbetService.handleOperatorPagination(
+        ctx,
+        (ctx.callbackQuery as any).data,
+        '3Oaks',
+        this.bikbetService['THREE_OAKS_GAMES'],
       );
     });
 
@@ -1155,8 +1205,10 @@ export class BikBetController {
             );
             break;
 
+          case 'gaminator':
+          case 'gaminator v1':
           case 'novomatic':
-            await this.bikbetService.handleNovomaticGameSelection(
+            await this.bikbetService.handleGaminatorGameSelection(
               ctx,
               callbackData,
             );
@@ -1183,6 +1235,20 @@ export class BikBetController {
 
           case 'playtech':
             await this.bikbetService.handlePlayTechGameSelection(
+              ctx,
+              callbackData,
+            );
+            break;
+
+          case 'igrosoft':
+            await this.bikbetService.handleIgrosoftGameSelection(
+              ctx,
+              callbackData,
+            );
+            break;
+
+          case '3oaks':
+            await this.bikbetService.handle3OaksGameSelection(
               ctx,
               callbackData,
             );

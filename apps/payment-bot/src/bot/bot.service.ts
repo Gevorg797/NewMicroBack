@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { EntityManager, LockMode } from '@mikro-orm/core';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { createHash, randomInt } from 'crypto';
 import { Markup } from 'telegraf';
 import { GptService } from './gpt.service';
@@ -291,7 +291,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   async handleApaysStatusCheck(ctx: any, invoiceId: string): Promise<void> {
     const payment = await this.getPaymentByInvoiceId(invoiceId);
     if (!payment) {
-      await ctx.answerCbQuery?.('Платеж не найден', { show_alert: true });
+      await ctx.answerCbQuery?.('Платеж не найден');
       return;
     }
 
@@ -310,9 +310,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (status === 'pending') {
-      await ctx.answerCbQuery?.('⏳ Ожидается оплата...', {
-        show_alert: true,
-      });
+      await ctx.answerCbQuery?.('⏳ Ожидается оплата...');
       return;
     }
 
@@ -686,10 +684,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   private buildDepositMethodKeyboard(amount: number) {
     return Markup.inlineKeyboard([
-      [
-        Markup.button.callback('💳 YooMoney', `deposit_yoomoney_${amount}`),
-        Markup.button.callback('🛡 Apay', `deposit_apays_${amount}`),
-      ],
+      [Markup.button.callback('От 50р:', 'ignore_game')],
+      [Markup.button.callback('Карта', `deposit_apays_${amount}`)],
+      [Markup.button.callback('Юмани', `deposit_yoomoney_${amount}`)],
       [Markup.button.callback('⬅️ Назад', 'donate')],
     ]);
   }
@@ -705,13 +702,6 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     user: BovaPaymentUser,
     amount: number,
   ): Promise<void> {
-    if (!this.yoomoneyWallet || !this.yoomoneyToken) {
-      await ctx.answerCbQuery?.('Метод оплаты временно недоступен', {
-        show_alert: true,
-      });
-      return;
-    }
-
     const invoiceId = `${user.telegramId}_${Math.floor(Date.now() / 1000)}`;
 
     await this.recordPendingPayment(
@@ -740,7 +730,6 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       Markup.inlineKeyboard([
         [Markup.button.url('➡️ Перейти к оплате', paymentUrl)],
         [Markup.button.callback('✅ Я оплатил(а)', `check_${invoiceId}`)],
-        [Markup.button.callback('⬅️ Назад', 'donate')],
       ]),
     );
   }
@@ -750,12 +739,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     user: BovaPaymentUser,
     amount: number,
   ): Promise<void> {
-    if (!this.apaysClientId || !this.apaysSecretKey) {
-      await ctx.answerCbQuery?.('Метод оплаты временно недоступен', {
-        show_alert: true,
-      });
-      return;
-    }
+    // if (!this.apaysClientId || !this.apaysSecretKey) {
+    //   await ctx.answerCbQuery?.('Метод оплаты временно недоступен', {
+    //     show_alert: true,
+    //   });
+    //   return;
+    // }
 
     const invoiceId = `${Date.now()}${randomInt(1000, 9999)}`;
     const amountInKopecks = amount * 100;
@@ -800,16 +789,32 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         ]),
       );
     } catch (error) {
-      this.logger.error(
-        `Не удалось создать платеж Apay: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
-      await ctx.answerCbQuery?.(
-        'Не удалось создать платеж. Попробуйте позже.',
-        {
-          show_alert: true,
-        },
-      );
+      let userMessage = 'Не удалось создать платеж. Попробуйте позже.';
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const data = error.response?.data;
+        const details =
+          (typeof data === 'object' && data?.message) ||
+          (typeof data === 'string' ? data : null);
+        if (details) {
+          userMessage = `Не удалось создать платеж: ${details}`;
+        } else if (status) {
+          userMessage = `Не удалось создать платеж (код ${status}).`;
+        }
+        this.logger.error(
+          `Не удалось создать платеж Apay: status=${status}, data=${JSON.stringify(
+            data,
+          )}`,
+        );
+      } else {
+        this.logger.error(
+          `Не удалось создать платеж Apay: ${(error as Error).message}`,
+          (error as Error).stack,
+        );
+      }
+      await ctx.answerCbQuery?.(userMessage, {
+        show_alert: true,
+      });
     }
   }
 

@@ -51,20 +51,26 @@ export class BotController {
       await this.botService.handleDepositCallback(ctx, match);
     });
 
-    this.bot.action(/deposit_(yoomoney|apays)_(\d+)/, async (ctx) => {
-      const method = (ctx as any).match?.[1];
-      const amountRaw = (ctx as any).match?.[2];
+    this.bot.action(/deposit_yoomoney_(\d+)/, async (ctx) => {
+      const amountRaw = (ctx as any).match?.[1];
       const amount = Number(amountRaw);
       if (!Number.isFinite(amount)) {
         await ctx.answerCbQuery('Некорректная сумма', { show_alert: true });
         return;
       }
       await ctx.answerCbQuery();
-      await this.botService.handleDepositMethod(
-        ctx,
-        method as 'yoomoney' | 'apays',
-        amount,
-      );
+      await this.botService.handleDepositMethod(ctx, 'yoomoney', amount);
+    });
+
+    this.bot.action(/deposit_apays_(\d+)/, async (ctx) => {
+      const amountRaw = (ctx as any).match?.[1];
+      const amount = Number(amountRaw);
+      if (!Number.isFinite(amount)) {
+        await ctx.answerCbQuery('Некорректная сумма', { show_alert: true });
+        return;
+      }
+      await ctx.answerCbQuery();
+      await this.botService.handleDepositMethod(ctx, 'apays', amount);
     });
 
     this.bot.action(/loot@(.+)/, async (ctx) => {

@@ -90,4 +90,12 @@ export class GamesController {
     async getB2BGamesWithProviders() {
         return this.gamesService.getB2BGamesWithProviders();
     }
+
+    @Get('Superomatic-by-provider')
+    @ApiOperation({ summary: 'Get all Superomatic games grouped by sub-providers' })
+    @ApiResponse({ status: 200, description: 'Superomatic games retrieved successfully' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getSuperomaticGamesWithProviders() {
+        return this.gamesService.getSuperomaticGamesWithProviders();
+    }
 }

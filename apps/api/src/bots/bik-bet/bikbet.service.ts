@@ -34,11 +34,14 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import {
   GAMINATOR_GAME_NAMES_WITH_IDS,
-  GAMINATOR2_GAME_NAMES_WITH_IDS,
-  NETENT_GAME_NAMES_WITH_IDS,
-  EGT_GAME_NAMES_WITH_IDS,
-  WAZDAN_GAME_NAMES_WITH_IDS,
   IGROSOFT_GAME_NAMES_WITH_IDS,
+  PRAGMATIC_PLAY_GAME_NAMES_WITH_IDS,
+  NETENT_BY_B2B_GAME_NAMES_WITH_IDS,
+  PLAY_N_GO_GAME_NAMES_WITH_IDS,
+  PUSH_GAMING_GAME_NAMES_WITH_IDS,
+  BET_IN_HELL_GAME_NAMES_WITH_IDS,
+  PLAYTECH_GAME_NAMES_WITH_IDS,
+  THREE_OAKS_GAME_NAMES_WITH_IDS,
   GameData,
 } from './games-data';
 import { PaymentService } from '../../client/payment/payment.service';
@@ -140,10 +143,10 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     private readonly promocodesService: PromocodesService,
     private readonly wheelService: WheelService,
     private readonly em: EntityManager,
-  ) {}
+  ) { }
 
   // Game data for different operators (referenced directly to save memory)
-  private readonly PRAGMATIC_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
+  private readonly PRAGMATIC_GAMES = PRAGMATIC_PLAY_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -151,13 +154,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }),
   );
 
-  private readonly NETENT_GAMES = NETENT_GAME_NAMES_WITH_IDS.map((game) => ({
+  private readonly NETENT_GAMES = NETENT_BY_B2B_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
     provider: game.provider,
   }));
 
-  private readonly NOVOMATIC_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
+  private readonly GAMINATOR_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -165,19 +168,19 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }),
   );
 
-  private readonly PLAYNGO_GAMES = EGT_GAME_NAMES_WITH_IDS.map((game) => ({
+  private readonly PLAYNGO_GAMES = PLAY_N_GO_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
     provider: game.provider,
   }));
 
-  private readonly PUSH_GAMES = WAZDAN_GAME_NAMES_WITH_IDS.map((game) => ({
+  private readonly PUSH_GAMES = PUSH_GAMING_GAME_NAMES_WITH_IDS.map((game) => ({
     id: String(game.id),
     name: game.name,
     provider: game.provider,
   }));
 
-  private readonly BETINHELL_GAMES = IGROSOFT_GAME_NAMES_WITH_IDS.map(
+  private readonly BETINHELL_GAMES = BET_IN_HELL_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -185,7 +188,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }),
   );
 
-  private readonly PLAYTECH_GAMES = GAMINATOR_GAME_NAMES_WITH_IDS.map(
+  private readonly PLAYTECH_GAMES = PLAYTECH_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -193,7 +196,23 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }),
   );
 
-  private readonly POPULAR_GAMES = GAMINATOR2_GAME_NAMES_WITH_IDS.map(
+  private readonly IGROSOFT_GAMES = IGROSOFT_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+      provider: game.provider,
+    }),
+  );
+
+  private readonly THREE_OAKS_GAMES = THREE_OAKS_GAME_NAMES_WITH_IDS.map(
+    (game) => ({
+      id: String(game.id),
+      name: game.name,
+      provider: game.provider,
+    }),
+  );
+
+  private readonly POPULAR_GAMES = PRAGMATIC_PLAY_GAME_NAMES_WITH_IDS.map(
     (game) => ({
       id: String(game.id),
       name: game.name,
@@ -814,14 +833,18 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
             Markup.button.callback('NetEnt', `operator_netent_${userId}`),
           ],
           [
-            Markup.button.callback('Novomatic', `operator_novomatic_${userId}`),
+            Markup.button.callback('Gaminator v1', `operator_gaminator_${userId}`),
             Markup.button.callback('PlaynGo', `operator_playngo_${userId}`),
           ],
           [
             Markup.button.callback('PushGaming', `operator_push_${userId}`),
             Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
           ],
-          [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
+          [
+            Markup.button.callback('PlayTech', `operator_playtech_${userId}`),
+            Markup.button.callback('IgroSoft', `operator_igrosoft_${userId}`),
+          ],
+          [Markup.button.callback('3oaks', `operator_3oaks_${userId}`)],
           [Markup.button.callback('🔙 Назад', 'slots')],
         ]).reply_markup,
       });
@@ -894,12 +917,30 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  async showNovomaticGames(ctx: any, callbackData: string) {
+  async showGaminatorGames(ctx: any, callbackData: string) {
     await this.showOperatorGames(
       ctx,
       callbackData,
-      'Novomatic',
-      this.NOVOMATIC_GAMES,
+      'Gaminator v1',
+      this.GAMINATOR_GAMES,
+    );
+  }
+
+  async showIgrosoftGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      'IgroSoft',
+      this.IGROSOFT_GAMES,
+    );
+  }
+
+  async show3OaksGames(ctx: any, callbackData: string) {
+    await this.showOperatorGames(
+      ctx,
+      callbackData,
+      '3oaks',
+      this.THREE_OAKS_GAMES,
     );
   }
 
@@ -1229,14 +1270,18 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
         Markup.button.callback('NetEnt', `operator_netent_${userId}`),
       ],
       [
-        Markup.button.callback('Novomatic', `operator_novomatic_${userId}`),
+        Markup.button.callback('Gaminator v1', `operator_gaminator_${userId}`),
         Markup.button.callback('PlaynGo', `operator_playngo_${userId}`),
       ],
       [
         Markup.button.callback('PushGaming', `operator_push_${userId}`),
         Markup.button.callback('BetInHell', `operator_betinhell_${userId}`),
       ],
-      [Markup.button.callback('PlayTech', `operator_playtech_${userId}`)],
+      [
+        Markup.button.callback('PlayTech', `operator_playtech_${userId}`),
+        Markup.button.callback('IgroSoft', `operator_igrosoft_${userId}`),
+      ],
+      [Markup.button.callback('3oaks', `operator_3oaks_${userId}`)],
       [Markup.button.callback('🔙 Назад', 'slots')],
     ]);
   }
@@ -1371,17 +1416,49 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async handleNovomaticGameSelection(ctx: any, callbackData: string) {
+  async handleGaminatorGameSelection(ctx: any, callbackData: string) {
     const parts = callbackData.split('_');
     const gameId = parts[0];
-    const game = this.NOVOMATIC_GAMES.find((g) => g.id === gameId);
+    const game = this.GAMINATOR_GAMES.find((g) => g.id === gameId);
     if (game) {
       await this.handleGameSelection(
         ctx,
         callbackData,
         game.id,
         game.name,
-        'Novomatic',
+        'Gaminator',
+        String(game.provider),
+      );
+    }
+  }
+
+  async handleIgrosoftGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.IGROSOFT_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        'IgroSoft',
+        String(game.provider),
+      );
+    }
+  }
+
+  async handle3OaksGameSelection(ctx: any, callbackData: string) {
+    const parts = callbackData.split('_');
+    const gameId = parts[0];
+    const game = this.THREE_OAKS_GAMES.find((g) => g.id === gameId);
+    if (game) {
+      await this.handleGameSelection(
+        ctx,
+        callbackData,
+        game.id,
+        game.name,
+        '3Oaks',
         String(game.provider),
       );
     }
@@ -2985,7 +3062,7 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
           media: {
             source: this.getImageBuffer(
               filePath.split(/[/\\]/).pop() ||
-                filePath.replace(/^.*[\/\\]/, ''),
+              filePath.replace(/^.*[\/\\]/, ''),
             ),
           },
           caption: text,
@@ -4389,13 +4466,13 @@ export class BikBetService implements OnModuleInit, OnModuleDestroy {
 
         const createdAt = promo.createdAt
           ? new Date(promo.createdAt).toLocaleString('ru-RU', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            })
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
           : '-';
 
         // Get metadata
@@ -4450,12 +4527,12 @@ ${promolist}
 
   private parsePromoInput(input: string):
     | {
-        error?: string;
-        promo_code: string;
-        amount: number;
-        max_activations: number;
-        min_to_activate: number;
-      }
+      error?: string;
+      promo_code: string;
+      amount: number;
+      max_activations: number;
+      min_to_activate: number;
+    }
     | { error: string } {
     const parts = input.trim().split(/\s+/);
     if (parts.length !== 4) {

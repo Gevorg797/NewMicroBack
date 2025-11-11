@@ -112,4 +112,48 @@ export class GamesService {
 
     return result;
   }
+
+  async getSuperomaticGamesWithProviders() {
+    // Find B2BSlots provider
+    const superomaticProvider = await this.em.findOne(GameProvider, {
+      name: { $ilike: 'Superomatic' }
+    }, { populate: ['subProviders'] });
+
+    if (!superomaticProvider) {
+      return {};
+    }
+
+    const result: any = {};
+
+    // Get all sub-providers for B2B
+    const subProviders = await this.em.find(GameSubProvider, {
+      provider: superomaticProvider.id
+    });
+
+    // For each sub-provider, get all games
+    for (const subProvider of subProviders) {
+      const games = await this.em.find(Game, {
+        subProvider: subProvider.id,
+        deletedAt: null
+      });
+
+      // Convert subProvider name to uppercase key format (e.g., "Play'n GO" -> "PLAYNGO")
+      const subProviderKey = subProvider.name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      // Map games with provider name included
+      const gamesData = games.map(game => ({
+        name: game.name,
+        id: game.id,
+        provider: superomaticProvider.name
+      }));
+
+      result[subProviderKey] = gamesData;
+    }
+
+    return result;
+  }
 }

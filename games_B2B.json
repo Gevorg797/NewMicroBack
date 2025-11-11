@@ -1,0 +1,3267 @@
+{
+  "data": {
+    "NETENT_BY_B2B": [
+      {
+        "name": "Spell Cast",
+        "id": 653,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Star Burst",
+        "id": 654,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Flowers Christmas",
+        "id": 655,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gonzo Quest",
+        "id": 656,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bollywood Story",
+        "id": 657,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Shop Christmas",
+        "id": 658,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dead Or Alive",
+        "id": 659,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Excalibur",
+        "id": 660,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Reel Steal",
+        "id": 661,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mythic Maiden",
+        "id": 662,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ghost Pirates",
+        "id": 663,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Spin",
+        "id": 664,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Space Wars",
+        "id": 665,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Water",
+        "id": 666,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Steam Tower",
+        "id": 667,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Twin Spin",
+        "id": 668,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pyramid",
+        "id": 669,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wolf Cub",
+        "id": 670,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secret Of Atlantis",
+        "id": 671,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "EggOMatic",
+        "id": 672,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fire Flies",
+        "id": 673,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Flowers",
+        "id": 674,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Piggy Riches",
+        "id": 675,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Stickers",
+        "id": 676,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Shop",
+        "id": 677,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Angler",
+        "id": 678,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Victorious Max",
+        "id": 679,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Magic Portals",
+        "id": 680,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "American Roulette",
+        "id": 681,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "European Roulette",
+        "id": 682,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "French Roulette",
+        "id": 683,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Advanced Roulette",
+        "id": 684,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Reel Rush",
+        "id": 685,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sparks",
+        "id": 686,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jack Hammer",
+        "id": 687,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "King Of Slots",
+        "id": 688,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jack Hammer 2",
+        "id": 689,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secrets Of Christmas",
+        "id": 690,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secret Of The Stones",
+        "id": 691,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Blood Suckers",
+        "id": 692,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Copy Cats",
+        "id": 693,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Neon Staxx",
+        "id": 694,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Twin Spin Deluxe",
+        "id": 695,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker Pro",
+        "id": 696,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dazzle Me",
+        "id": 697,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Motorhead",
+        "id": 698,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Wild West",
+        "id": 699,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Berry Burst Max",
+        "id": 700,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "WildOTron 3000",
+        "id": 701,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "BerryBurst",
+        "id": 702,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scruffy Duck",
+        "id": 703,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hooks Heroes",
+        "id": 704,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "HotLine",
+        "id": 705,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dracula",
+        "id": 706,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Double Stacks",
+        "id": 707,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Witch Craft Academy",
+        "id": 708,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jack And Beanstalk",
+        "id": 709,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Halloween Jack",
+        "id": 710,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Butterfly Staxx",
+        "id": 711,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Bazaar",
+        "id": 712,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jingle Spin",
+        "id": 713,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Vikings",
+        "id": 714,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Blackjack",
+        "id": 715,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Coins Of Egypt",
+        "id": 716,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jungle Spirit",
+        "id": 717,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mirror Mirror",
+        "id": 718,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hansel & Gretel",
+        "id": 719,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Red Riding Hood",
+        "id": 720,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aloha",
+        "id": 721,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden Grimoire",
+        "id": 722,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "European Roulette Low Limit",
+        "id": 723,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Advanced Roulette Low Limit",
+        "id": 724,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pirate from the East",
+        "id": 725,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Whos the Bride",
+        "id": 726,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweety Honey Fruity",
+        "id": 727,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Twin Happiness",
+        "id": 728,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Magic Maid Cafe",
+        "id": 729,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "East Sea Dragon King",
+        "id": 730,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Treasure Rain",
+        "id": 731,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Long Pao",
+        "id": 732,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "King of 3 Kingdoms",
+        "id": 733,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Turkey",
+        "id": 734,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fortune Rangers",
+        "id": 735,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dead Or Alive 2",
+        "id": 736,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Go Bananas",
+        "id": 737,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Case",
+        "id": 738,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Temple Of Nudges",
+        "id": 739,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Oceans Treasure",
+        "id": 740,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Butterfly Staxx 2",
+        "id": 741,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wings of Riches",
+        "id": 742,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Creature From The Black Lagoon",
+        "id": 743,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Wish Master",
+        "id": 744,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Invisible Man",
+        "id": 745,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Santa Vs Rudolf",
+        "id": 746,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Koi Princess",
+        "id": 747,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Happy Riches",
+        "id": 748,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Blackjack Classic",
+        "id": 749,
+        "provider": "B2BSlots"
+      }
+    ],
+    "YGGDRASIL": [
+      {
+        "name": "Rainbow Ryan",
+        "id": 750,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Penguin City",
+        "id": 751,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruitoids",
+        "id": 752,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Winter Berries",
+        "id": 753,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Blox",
+        "id": 754,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "White Snake Lady",
+        "id": 755,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cazino Zeppelin",
+        "id": 756,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Doubles",
+        "id": 757,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Chibeasties",
+        "id": 758,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Vikings Go Wild",
+        "id": 759,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bicicleta",
+        "id": 760,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Valley Of The Gods",
+        "id": 761,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Reptoids",
+        "id": 762,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cyrus The Virus",
+        "id": 763,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sunny Shores",
+        "id": 764,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sahara Nights",
+        "id": 765,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wilhelm Tell",
+        "id": 766,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Time Travel Tigers",
+        "id": 767,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The One Armed Bandit",
+        "id": 768,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Incinerator",
+        "id": 769,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pumpkin Smash",
+        "id": 770,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Easter Island",
+        "id": 771,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gem Rocks",
+        "id": 772,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Double Dragons",
+        "id": 773,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Vikings Go Berzerk",
+        "id": 774,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Vikings Go To Hell",
+        "id": 775,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Football Glory",
+        "id": 776,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Beauty And The Beast",
+        "id": 777,
+        "provider": "B2BSlots"
+      }
+    ],
+    "IGROSOFT": [
+      {
+        "name": "Keks",
+        "id": 778,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet Life 2",
+        "id": 779,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet Life",
+        "id": 780,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Haunter",
+        "id": 781,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gnome",
+        "id": 782,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Island 2",
+        "id": 783,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Island",
+        "id": 784,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Doughnut",
+        "id": 785,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "BetInHell",
+        "id": 786,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Zombie",
+        "id": 787,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Beaver builder",
+        "id": 788,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Crazy monkey",
+        "id": 789,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Paperman",
+        "id": 790,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Resident",
+        "id": 791,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Coctail",
+        "id": 792,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Salad",
+        "id": 793,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Garage",
+        "id": 794,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Crazy Monkey 2",
+        "id": 795,
+        "provider": "B2BSlots"
+      }
+    ],
+    "NOVOMATIC_DELUXE": [
+      {
+        "name": "Fruits and royals",
+        "id": 796,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Diamond 7",
+        "id": 797,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot cubes",
+        "id": 798,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Inferno",
+        "id": 799,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sizzling gems",
+        "id": 800,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit sensation",
+        "id": 801,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruitilicious",
+        "id": 802,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mystery star",
+        "id": 803,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dazzling diamonds",
+        "id": 804,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mafia",
+        "id": 805,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Glittering peaks",
+        "id": 806,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cosmic miracle",
+        "id": 807,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Knightly valor",
+        "id": 808,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of ra classic",
+        "id": 809,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden ark",
+        "id": 810,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Red lady",
+        "id": 811,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Faust",
+        "id": 812,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lord of ocean",
+        "id": 813,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Columbus deluxe",
+        "id": 814,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Money game deluxe",
+        "id": 815,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Alchemist",
+        "id": 816,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Angry birds",
+        "id": 817,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Magic Princess",
+        "id": 818,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cryptic highway",
+        "id": 819,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Caribbean Holidays",
+        "id": 820,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Columbus",
+        "id": 821,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bananas Go Bahamas",
+        "id": 822,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bee Bop",
+        "id": 823,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Beetle Mania",
+        "id": 824,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Banana Splash",
+        "id": 825,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Atilla",
+        "id": 826,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dynasty Of Ming",
+        "id": 827,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Emperrors China",
+        "id": 828,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gold Craze",
+        "id": 829,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Egyptian Experience",
+        "id": 830,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Beetle Mania Deluxe",
+        "id": 831,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gryphons Gold",
+        "id": 832,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hanniball Of Charthago",
+        "id": 833,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Money Game",
+        "id": 834,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pharaohs Gold II Deluxe",
+        "id": 835,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pharaohs Gold III",
+        "id": 836,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Polar Fox",
+        "id": 837,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Royal Treasures",
+        "id": 838,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secret Forest",
+        "id": 839,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Silver Fox",
+        "id": 840,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Ming Dynasty",
+        "id": 841,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Unicorn Magic",
+        "id": 842,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wonderful Fluite",
+        "id": 843,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sizzling Hot",
+        "id": 844,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Just jewels",
+        "id": 845,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Moorhuhn",
+        "id": 846,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Lady",
+        "id": 847,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mario",
+        "id": 848,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot Target",
+        "id": 849,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot Volee",
+        "id": 850,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit farm",
+        "id": 851,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cold Spell",
+        "id": 852,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Always Hot Cubes",
+        "id": 853,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Always Hot Deluxe",
+        "id": 854,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Always Hot",
+        "id": 855,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Always Wet",
+        "id": 856,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ultra Hot Deluxe",
+        "id": 857,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ultra Hot",
+        "id": 858,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ultra Gems",
+        "id": 859,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sizzling Crowns",
+        "id": 860,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Just Fruits",
+        "id": 861,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Holmes & Watson Deluxe",
+        "id": 862,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden Prophecies Deluxe",
+        "id": 863,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gate Of Ra Deluxe",
+        "id": 864,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Always American",
+        "id": 865,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "All American",
+        "id": 866,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Age Of Heroes Deluxe",
+        "id": 867,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book Of Moorhuhn",
+        "id": 868,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Helena",
+        "id": 869,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Reel King",
+        "id": 870,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sharky",
+        "id": 871,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book Of Ra HD",
+        "id": 872,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Santa's Riches",
+        "id": 873,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dolphins pearl deluxe",
+        "id": 874,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of ra deluxe",
+        "id": 875,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gryphons gold deluxe",
+        "id": 876,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dolphins pearl classic",
+        "id": 877,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky lady's charm deluxe",
+        "id": 878,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sea sirens",
+        "id": 879,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sizzling hot deluxe",
+        "id": 880,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Kings of cards",
+        "id": 881,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Just jewels deluxe",
+        "id": 882,
+        "provider": "B2BSlots"
+      }
+    ],
+    "BET_IN_HELL": [
+      {
+        "name": "Book Of Sunrise",
+        "id": 883,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book Of Dark Sun",
+        "id": 884,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book Of Sahara",
+        "id": 885,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker Strike Again",
+        "id": 886,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Forest ant",
+        "id": 887,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Maniac house",
+        "id": 888,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sea underwater club",
+        "id": 889,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Revenge of cyborgs",
+        "id": 890,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Evil Genotype",
+        "id": 891,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet paradise",
+        "id": 892,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Space Battle",
+        "id": 893,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cheerful farmer",
+        "id": 894,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gemstone Of Aztec",
+        "id": 895,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lapland",
+        "id": 896,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Treasure of shaman",
+        "id": 897,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Don Slottione",
+        "id": 898,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Goblins Land",
+        "id": 899,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Horror Castle",
+        "id": 900,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Deep Blue Sea",
+        "id": 901,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Super Hamster",
+        "id": 902,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Frozen Rich Joker",
+        "id": 903,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker Win Spin",
+        "id": 904,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Romance V",
+        "id": 905,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Sword & The Magic",
+        "id": 906,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Divine Carnival",
+        "id": 907,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cleopatra's Diary",
+        "id": 908,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Imhotep Manuscript",
+        "id": 909,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Resident 3D",
+        "id": 910,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Warlock's Book",
+        "id": 911,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Rodeo",
+        "id": 912,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Brave Mongoose",
+        "id": 913,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Hell",
+        "id": 914,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Spin Joker Spin",
+        "id": 915,
+        "provider": "B2BSlots"
+      }
+    ],
+    "BELATRA": [
+      {
+        "name": "Fairy Land 2",
+        "id": 916,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Drink",
+        "id": 917,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Chukcha",
+        "id": 918,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Alcatraz",
+        "id": 919,
+        "provider": "B2BSlots"
+      }
+    ],
+    "UNICUM": [
+      {
+        "name": "Bratva",
+        "id": 920,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Zoloto Partii",
+        "id": 921,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bazar",
+        "id": 922,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Robinson",
+        "id": 923,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Around The World",
+        "id": 924,
+        "provider": "B2BSlots"
+      }
+    ],
+    "MEGAJACK": [
+      {
+        "name": "Slot-o-pol Deluxe",
+        "id": 925,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Slot-o-pol",
+        "id": 926,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec Gold",
+        "id": 927,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Champagne",
+        "id": 928,
+        "provider": "B2BSlots"
+      }
+    ],
+    "PLAYTECH": [
+      {
+        "name": "Azteca",
+        "id": 929,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Le Comte de Monte Cristo",
+        "id": 930,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "New space adventure",
+        "id": 931,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Captain's Treasure Pro",
+        "id": 932,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "New Year Girls",
+        "id": 933,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Nights",
+        "id": 934,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pirates Slots",
+        "id": 935,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rockabilly",
+        "id": 936,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Viking Striking",
+        "id": 937,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "World Travel",
+        "id": 938,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Riddle Jungle",
+        "id": 939,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cute And Fluffy",
+        "id": 940,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rome & Glory",
+        "id": 941,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Thai Paradise",
+        "id": 942,
+        "provider": "B2BSlots"
+      }
+    ],
+    "PLAY_N_GO": [
+      {
+        "name": "Doom Of Dead",
+        "id": 943,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "JewelBox",
+        "id": 944,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lady Of Fortune",
+        "id": 945,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Samba Carnival",
+        "id": 946,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Merry Xmas",
+        "id": 947,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book Of Dead",
+        "id": 948,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Doom Of Egypt",
+        "id": 949,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Photo Safari",
+        "id": 950,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec Warrior Princess",
+        "id": 951,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fortune Teller",
+        "id": 952,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Space Race",
+        "id": 953,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sails Of Gold",
+        "id": 954,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Prosperity Palace",
+        "id": 955,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Star Joker",
+        "id": 956,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Happy Halloween",
+        "id": 957,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden Legend",
+        "id": 958,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Xmas Magic",
+        "id": 959,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Holiday Season",
+        "id": 960,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Royal Masquerade",
+        "id": 961,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pimped",
+        "id": 962,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Reactoonz",
+        "id": 963,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec Idols",
+        "id": 964,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Chinese New Year",
+        "id": 965,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ninja Fruits",
+        "id": 966,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fire Joker",
+        "id": 967,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scroll Of Dead",
+        "id": 968,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Amulet Of Dead",
+        "id": 969,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pearl Lagoon",
+        "id": 970,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Myth",
+        "id": 971,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gold Trophy 2",
+        "id": 972,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Inferno Star",
+        "id": 973,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Inferno Joker",
+        "id": 974,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Win Cat",
+        "id": 975,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise Of Dead",
+        "id": 976,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gold King",
+        "id": 977,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dawn Of Egypt",
+        "id": 978,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Eclipse of the Sun God",
+        "id": 979,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ankh Of Anubis",
+        "id": 980,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Legacy Of Egypt",
+        "id": 981,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Merlin And Morgana",
+        "id": 982,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fu Er Dai",
+        "id": 983,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Spin Party",
+        "id": 984,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secret Of Dead",
+        "id": 985,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lost Chapter",
+        "id": 986,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "King's Mask",
+        "id": 987,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Eye Of Atum",
+        "id": 988,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pyramids of Dead",
+        "id": 989,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wandering City",
+        "id": 990,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sticky Joker",
+        "id": 991,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mystery Joker",
+        "id": 992,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Xmas Joker",
+        "id": 993,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Naughty Nicks Book",
+        "id": 994,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Riches Of Ra",
+        "id": 995,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dragon Ship",
+        "id": 996,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pilgrim Of Dead",
+        "id": 997,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Legacy Of Inca",
+        "id": 998,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Blazin Bullfrog",
+        "id": 999,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Crystal Sun",
+        "id": 1000,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Athena Ascending",
+        "id": 1001,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise Of Athena",
+        "id": 1002,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Love Joker",
+        "id": 1003,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Shield Of Athena",
+        "id": 1004,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Immor Tails",
+        "id": 1005,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "That's Rich",
+        "id": 1006,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rascal Riches",
+        "id": 1007,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Count Jokula",
+        "id": 1008,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates Of Troy",
+        "id": 1009,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "the Sword and the Grail",
+        "id": 1010,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ice Joker",
+        "id": 1011,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "the Green Knight",
+        "id": 1012,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "15 Crystal Roses",
+        "id": 1013,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Diamonds of the Realm",
+        "id": 1014,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cash a Cabana",
+        "id": 1015,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Blinged",
+        "id": 1016,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "New Year Riches",
+        "id": 1017,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise Of Gods:Reckoning",
+        "id": 1018,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Freya's Wedding",
+        "id": 1019,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scroll Of Seth",
+        "id": 1020,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Merlin's Grimoire",
+        "id": 1021,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Wild Class",
+        "id": 1022,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Tale Of Kyubiko",
+        "id": 1023,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Canine Carnage",
+        "id": 1024,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fox Mayhem",
+        "id": 1025,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Legion Gold",
+        "id": 1026,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rocco Gallo",
+        "id": 1027,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mega Don",
+        "id": 1028,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fire Toad",
+        "id": 1029,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Boat Bonanza",
+        "id": 1030,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mount M",
+        "id": 1031,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Tome of Madness",
+        "id": 1032,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise Of Merlin",
+        "id": 1033,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Legacy Of Dead",
+        "id": 1034,
+        "provider": "B2BSlots"
+      }
+    ],
+    "EROTIC": [
+      {
+        "name": "Erotic Fantasy",
+        "id": 1035,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Suicide Squad",
+        "id": 1036,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Star Wars",
+        "id": 1037,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secret Of Temptation",
+        "id": 1038,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Secret Of Seduction",
+        "id": 1039,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Queen Of Thrones",
+        "id": 1040,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Kill Bill",
+        "id": 1041,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ghost Busters",
+        "id": 1042,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Chica Boom",
+        "id": 1043,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Captain America",
+        "id": 1044,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Avengers",
+        "id": 1045,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Avatar",
+        "id": 1046,
+        "provider": "B2BSlots"
+      }
+    ],
+    "MICROGAMING": [
+      {
+        "name": "Game Of Thrones",
+        "id": 1047,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Matrix Resurrections",
+        "id": 1048,
+        "provider": "B2BSlots"
+      }
+    ],
+    "PRAGMATIC_PLAY": [
+      {
+        "name": "Book Of Tut",
+        "id": 1049,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of Vikings",
+        "id": 1050,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Return of the Dead",
+        "id": 1051,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scarab Queen",
+        "id": 1052,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Heart of Rio",
+        "id": 1053,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Madame Destiny",
+        "id": 1054,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ancient Egypt Classic",
+        "id": 1055,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ancient Egypt",
+        "id": 1056,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Super 7s",
+        "id": 1057,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker’s Jewels",
+        "id": 1058,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Rainbow",
+        "id": 1059,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mysterious Egypt",
+        "id": 1060,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Triple Jokers",
+        "id": 1061,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Triple Dragons",
+        "id": 1062,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Super Joker",
+        "id": 1063,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Catfather",
+        "id": 1064,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hockey League Wild Match",
+        "id": 1065,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hercules Son of Zeus",
+        "id": 1066,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Dragons",
+        "id": 1067,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot To Burn",
+        "id": 1068,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec Gems",
+        "id": 1069,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Master Joker",
+        "id": 1070,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "888 Dragons",
+        "id": 1071,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Triple Tigers",
+        "id": 1072,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Treasure Horse",
+        "id": 1073,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of the Fallen",
+        "id": 1074,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot Safari",
+        "id": 1075,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Gladiators",
+        "id": 1076,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Dog House",
+        "id": 1077,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet Bonanza",
+        "id": 1078,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet Bonanza Xmas",
+        "id": 1079,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates Of Olympus",
+        "id": 1080,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Starlight Princess",
+        "id": 1081,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden Ox",
+        "id": 1119,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Aztec",
+        "id": 1082,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Hades",
+        "id": 1083,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Gatot Kaca",
+        "id": 1084,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Starlight Christmas",
+        "id": 1085,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hockey Bonanza",
+        "id": 1086,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet Bonanza Dice",
+        "id": 1087,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Pyramid Bonanza",
+        "id": 1088,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "the Dog House Dice Show",
+        "id": 1089,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fortune of Giza",
+        "id": 1090,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jokers Jewels Dice",
+        "id": 1091,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Tweety House",
+        "id": 1092,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of Aztec King",
+        "id": 1093,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Juicy Fruits",
+        "id": 1094,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Bonanza",
+        "id": 1095,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Christmas Big Bass Bonanza",
+        "id": 1096,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Extra Juicy",
+        "id": 1097,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fire Strike",
+        "id": 1098,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fire Strike 2",
+        "id": 1099,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild West Gold",
+        "id": 1100,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise of Samurai III",
+        "id": 1101,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker King",
+        "id": 1102,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Wild Riches",
+        "id": 1103,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Hand of Midas",
+        "id": 1104,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bigger Bass Bonanza",
+        "id": 1105,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Keeping it Reel",
+        "id": 1106,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sugar Rush",
+        "id": 1107,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sugar Twist",
+        "id": 1108,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mochimon",
+        "id": 1109,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Guarana eyes of the Amazon",
+        "id": 1110,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Party 2",
+        "id": 1111,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Beach Party",
+        "id": 1112,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fruit Party",
+        "id": 1113,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cleocatra",
+        "id": 1114,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wolf Gold",
+        "id": 1115,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky New Year Tiger Treasures",
+        "id": 1116,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky New Year",
+        "id": 1117,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Money Mouse",
+        "id": 1118,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bull Fiesta",
+        "id": 1120,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Madame Destiny Megaways",
+        "id": 1121,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Old Gold Miner Megaways",
+        "id": 1122,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sword of Ares",
+        "id": 1123,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker Blast Bonanza",
+        "id": 1124,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Hop&Drop",
+        "id": 1125,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "LadyBug Luck",
+        "id": 1126,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Santas Wonderland",
+        "id": 1127,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gems Bonanza",
+        "id": 1128,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Bonanza Megaways",
+        "id": 1129,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gemstone",
+        "id": 1130,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Tucanito",
+        "id": 1131,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Yi Sun Shin",
+        "id": 1132,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "John Hunter Nellantica Roma",
+        "id": 1133,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gemine",
+        "id": 1134,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Juan",
+        "id": 1135,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mr Toad Gold Megaways",
+        "id": 1136,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Dog House Megaways",
+        "id": 1137,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bigger Bass Blizzard Christmas Catch",
+        "id": 1138,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sugar Rush Xmas",
+        "id": 1139,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Club Tropicana",
+        "id": 1140,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Buffalo King Megaways",
+        "id": 1141,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Splash",
+        "id": 1142,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of Tut Megaways",
+        "id": 1143,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot Fiesta",
+        "id": 1144,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Might of Ra",
+        "id": 1145,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Great Rhino",
+        "id": 1146,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Great Rhino Deluxe",
+        "id": 1147,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Forge of Olympus",
+        "id": 1148,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Xibalba",
+        "id": 1149,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Santas Great Gifts",
+        "id": 1150,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Candy Blitz",
+        "id": 1151,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Xmas Spark",
+        "id": 1152,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cyber Heist",
+        "id": 1153,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wisdom of Athena",
+        "id": 1154,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Olympus 1000",
+        "id": 1155,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Starlight Princess 1000",
+        "id": 1156,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jewel Rush",
+        "id": 1157,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cash Patrol",
+        "id": 1158,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Great Rhino Megaways",
+        "id": 1159,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Christmas Carol Megaways",
+        "id": 1160,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mr Tains Fishing Adventures",
+        "id": 1161,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Saray Ruyasi",
+        "id": 1162,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sasuntsi Davit",
+        "id": 1163,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Supermania",
+        "id": 1164,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Saiyan Mania",
+        "id": 1165,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Buffalo King",
+        "id": 1166,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bison Spirit",
+        "id": 1167,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Magicians Secrets",
+        "id": 1168,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Robber Strike",
+        "id": 1169,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wildman Super Bonanza",
+        "id": 1170,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec King Megaways",
+        "id": 1171,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise of Samurai Megaways",
+        "id": 1172,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Heaven",
+        "id": 1173,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Happy Fortune",
+        "id": 1174,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gates of Olympus Dice",
+        "id": 1175,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec King",
+        "id": 1176,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Holiday Ride",
+        "id": 1177,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Tiger Warrior",
+        "id": 1178,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Dragon Ball",
+        "id": 1179,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gold Party",
+        "id": 1180,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gorilla Mayhem",
+        "id": 1181,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Moonshot",
+        "id": 1182,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Clover Gold",
+        "id": 1183,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Kingdom of Asgard",
+        "id": 1184,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Power of Ninja",
+        "id": 1185,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bali Dragon",
+        "id": 1186,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jeitinho Brasileiro",
+        "id": 1187,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "HokkaidoWolf",
+        "id": 1188,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden Pig",
+        "id": 1189,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Little Gem",
+        "id": 1190,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Ultra Hold and Spin",
+        "id": 1191,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Animal Magic 1000",
+        "id": 1192,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "5 Lions Megaways",
+        "id": 1193,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "5 Frozen Charms Megaways",
+        "id": 1194,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "5 Rabbits Megaways",
+        "id": 1195,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Lucky Phoenix Megaways",
+        "id": 1196,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Casino Heist Megaways",
+        "id": 1197,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Halloween",
+        "id": 1198,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Christmas Bash",
+        "id": 1199,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Amazon Xtreme",
+        "id": 1200,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Day at the Races",
+        "id": 1201,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Dog House - Dog or Alive",
+        "id": 1202,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Dog House Multihold",
+        "id": 1203,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sugar Rush 1000",
+        "id": 1204,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Octobeer Fortunes",
+        "id": 1205,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Treasure Wild",
+        "id": 1206,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Zeus vs Hades - Gods of War",
+        "id": 1207,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise of Samurai IV",
+        "id": 1208,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Train to Seoul",
+        "id": 1209,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sweet Bonanza 1000",
+        "id": 1210,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Treasure Trawler",
+        "id": 1211,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rise of Montezuma",
+        "id": 1212,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Monkey King Rush",
+        "id": 1213,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Wild Gladiator",
+        "id": 1214,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Conqueror",
+        "id": 1215,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hand of Midas 2",
+        "id": 1216,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Games in Olympus",
+        "id": 1217,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Samurai Code",
+        "id": 1218,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Puffers vs Sharks",
+        "id": 1219,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "To Peiratiko Multihold",
+        "id": 1220,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Green Sun",
+        "id": 1221,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sugar Rush Dice",
+        "id": 1222,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wolf Gold Dice",
+        "id": 1223,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Cyber Heist 1000",
+        "id": 1224,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dragon Gold 88",
+        "id": 1225,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Trolling 1000",
+        "id": 1226,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mafiosa Dead or a Llama",
+        "id": 1227,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gold Carp Bonanza",
+        "id": 1228,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bass Halloween 2",
+        "id": 1229,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wild Wild Rage",
+        "id": 1230,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Barbar",
+        "id": 1231,
+        "provider": "B2BSlots"
+      }
+    ],
+    "PUSH_GAMING": [
+      {
+        "name": "Deadly 5",
+        "id": 1240,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jammin Jars",
+        "id": 1239,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hearts Highway",
+        "id": 1232,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fat Santa",
+        "id": 1233,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fat Rabbit",
+        "id": 1234,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "10 Swords",
+        "id": 1235,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fire Hopper",
+        "id": 1236,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Razor Shark",
+        "id": 1237,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Blaze Of Ra",
+        "id": 1238,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Retro Tapes",
+        "id": 1241,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fat Banker",
+        "id": 1242,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Bison Battle",
+        "id": 1243,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Crystal Catcher",
+        "id": 1244,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Giga Jar",
+        "id": 1245,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Joker Troupe",
+        "id": 1246,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fish 'n' Nudge",
+        "id": 1247,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mystery Mission To The Moon",
+        "id": 1248,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "TikiTumble",
+        "id": 1249,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Rat King",
+        "id": 1250,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Generous Jack",
+        "id": 1251,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dinopolis",
+        "id": 1252,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Jaguar Drop",
+        "id": 1253,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dj Cat",
+        "id": 1254,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "BigBite",
+        "id": 1255,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bam Book",
+        "id": 1256,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Retro Sweets",
+        "id": 1257,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "10 Flaming Bisons",
+        "id": 1258,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mystery Nile",
+        "id": 1259,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Razor Ways",
+        "id": 1260,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "The Grand Show",
+        "id": 1261,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Mad Blast",
+        "id": 1262,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Razor Returns",
+        "id": 1263,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Bamboo",
+        "id": 1264,
+        "provider": "B2BSlots"
+      }
+    ],
+    "3_OAKS": [
+      {
+        "name": "Dancing Joker",
+        "id": 1265,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Coin Express",
+        "id": 1266,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Big Heist",
+        "id": 1267,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Eggs of Gold",
+        "id": 1268,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Grab More Gold",
+        "id": 1269,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dragon Pearls",
+        "id": 1270,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sun of Egypt",
+        "id": 1271,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Super Rich God",
+        "id": 1272,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Thunder of Olympus",
+        "id": 1273,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sun of Egypt 2",
+        "id": 1274,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sun of Egypt 3",
+        "id": 1275,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Sun of Egypt 4",
+        "id": 1276,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Book of Sun Multichance",
+        "id": 1277,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Magic Apple",
+        "id": 1278,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Magic Apple 2",
+        "id": 1279,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Olympian Gods",
+        "id": 1280,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scarab Boost",
+        "id": 1281,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scarab Riches",
+        "id": 1282,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Scarab Temple",
+        "id": 1283,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Super Marble",
+        "id": 1284,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Wolf Night",
+        "id": 1285,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "15 Dragon Pearls",
+        "id": 1286,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Aztec Sun",
+        "id": 1287,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Dragon Wealth",
+        "id": 1288,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "3 Coins Egypt",
+        "id": 1289,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "3 Coins",
+        "id": 1290,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "777 Fruity Classic",
+        "id": 1291,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "777 Gems Respin",
+        "id": 1292,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Hot Fire Fruits",
+        "id": 1293,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Moon Sisters",
+        "id": 1294,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Fortune Globe",
+        "id": 1295,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Crystal Scarabs",
+        "id": 1296,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Gold Express",
+        "id": 1297,
+        "provider": "B2BSlots"
+      },
+      {
+        "name": "Golden Teapot",
+        "id": 1298,
+        "provider": "B2BSlots"
+      }
+    ]
+  },
+  "error": null,
+  "message": "success",
+  "status": 200
+}

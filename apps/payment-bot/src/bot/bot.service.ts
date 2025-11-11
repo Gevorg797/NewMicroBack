@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { EntityManager, LockMode } from '@mikro-orm/core';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { createHash, randomInt } from 'crypto';
 import { Markup } from 'telegraf';
 import { GptService } from './gpt.service';
@@ -60,6 +60,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     string,
     { messageId?: number }
   >();
+  private readonly promoPendingUsers = new Set<string>();
+  private readonly promoCode =
+    process.env.PAYMENT_BOT_PROMOCODE ?? 'bovaAiOpen';
+  private readonly promoReward = Number(
+    process.env.PAYMENT_BOT_PROMOCODE_REWARD ?? 200,
+  );
 
   constructor(
     private readonly em: EntityManager,
@@ -92,6 +98,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const telegramId = this.getTelegramId(ctx);
     if (telegramId) {
       this.customDepositUsers.delete(telegramId);
+      this.promoPendingUsers.delete(telegramId);
     }
 
     const firstName = ctx.from?.first_name ?? ctx.from?.username ?? 'друг';
@@ -134,12 +141,13 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.customDepositUsers.delete(telegramId);
+    this.promoPendingUsers.delete(telegramId);
 
     this.activeChatUsers.add(telegramId);
     this.gptService.resetConversation(telegramId);
     const promptsUrl =
       process.env.PAYMENT_BOT_PROMPTS_URL ??
-      'https://telegra.ph/Specialnye-prompty-11-10-4';
+      'https://telegra.ph/Specialnye-prompty-11-11';
 
     const message = `💬<b> Замечательно! Жду вашего сообщения:</b>
 
@@ -181,6 +189,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const user = await this.ensureUserExists(ctx);
     if (!user) return;
     this.customDepositUsers.delete(user.telegramId);
+    this.promoPendingUsers.delete(user.telegramId);
 
     const message = `<b>🌟 Покупка звезд</b>
 
@@ -195,6 +204,92 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  async handlePromocode(ctx: any): Promise<void> {
+    const user = await this.ensureUserExists(ctx);
+    if (!user) return;
+
+    this.customDepositUsers.delete(user.telegramId);
+    this.promoPendingUsers.add(user.telegramId);
+
+    if (ctx.callbackQuery) {
+      try {
+        await ctx.deleteMessage();
+      } catch {
+        // ignore deletion errors
+      }
+    }
+
+    const message = `<b>🎟 Введите промокод</b>
+
+<i>Отправьте промокод сообщением. Для отмены нажмите «❌ Отмена».</i>`;
+
+    await ctx.reply(message, {
+      parse_mode: 'HTML',
+      reply_markup: this.buildPromocodeCancelKeyboard().reply_markup,
+    });
+  }
+
+  async handlePromocodeMessage(ctx: any): Promise<boolean> {
+    const telegramId = this.getTelegramId(ctx);
+    if (!telegramId || !this.promoPendingUsers.has(telegramId)) {
+      return false;
+    }
+
+    const text = ctx.message?.text?.trim();
+    if (!text) {
+      await ctx.reply('Введите текстовый промокод.');
+      return true;
+    }
+
+    if (this.isCancelCommand(text)) {
+      this.promoPendingUsers.delete(telegramId);
+      await ctx.reply('❌ Ввод промокода отменен.', {
+        reply_markup: Markup.removeKeyboard(),
+      });
+      await this.handleProfile(ctx);
+      return true;
+    }
+
+    const user = await this.ensureUserExists(ctx);
+    if (!user) {
+      this.promoPendingUsers.delete(telegramId);
+      return true;
+    }
+
+    if (user.promoActivated) {
+      await ctx.reply('Вы уже активировали этот промокод!', {
+        parse_mode: 'HTML',
+        reply_markup: Markup.removeKeyboard(),
+      });
+      await this.handleProfile(ctx);
+      return true;
+    }
+
+    if (text !== this.promoCode) {
+      await ctx.reply('Такого промокода не существует!');
+      return true;
+    }
+
+    const updated = await this.activatePromocode(telegramId, this.promoReward);
+    if (!updated) {
+      await ctx.reply(
+        'Не удалось активировать промокод. Попробуйте позже или обратитесь в поддержку.',
+      );
+      return true;
+    }
+
+    this.promoPendingUsers.delete(telegramId);
+    await ctx.reply(
+      `✅ Промокод успешно активирован!\n⭐️ На ваш счет начислено ${this.promoReward} звезд.`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: Markup.removeKeyboard(),
+      },
+    );
+    await this.handleProfile(ctx);
+    return true;
+  }
+
   async handleDepositCallback(ctx: any, rawValue: string): Promise<void> {
     const user = await this.ensureUserExists(ctx);
     if (!user) return;
@@ -205,6 +300,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.customDepositUsers.delete(user.telegramId);
+    this.promoPendingUsers.delete(user.telegramId);
 
     const amount = Number(rawValue);
 
@@ -225,6 +321,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     if (!user) return;
 
     this.customDepositUsers.delete(user.telegramId);
+    this.promoPendingUsers.delete(user.telegramId);
 
     if (!Number.isInteger(amount) || amount < this.minDeposit) {
       await ctx.answerCbQuery?.(
@@ -493,6 +590,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const user = await this.ensureUserExists(ctx);
     if (!user) return;
     this.customDepositUsers.delete(user.telegramId);
+    this.promoPendingUsers.delete(user.telegramId);
 
     const createdAt = this.formatMoscowDate(user.createdAt);
     const promoStatus = user.promoActivated
@@ -646,6 +744,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     this.customDepositUsers.set(telegramId, {
       messageId: ctx.callbackQuery?.message?.message_id,
     });
+    this.promoPendingUsers.delete(telegramId);
 
     const message = `<i>💰 Введите сумму звезд для покупки</i>\n<i>✨ Минимальное количество звезд: ${this.minDeposit} шт</i>\n<i>⭐️ Отправьте нужное количество сообщением</i>`;
 
@@ -695,6 +794,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     return Markup.inlineKeyboard([
       [Markup.button.callback('⬅️ Назад', 'donate')],
     ]);
+  }
+
+  private buildPromocodeCancelKeyboard() {
+    return Markup.keyboard([['❌ Отмена']])
+      .oneTime()
+      .resize();
   }
 
   private async handleYoomoneyDeposit(
@@ -940,6 +1045,39 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  private async activatePromocode(
+    telegramId: string,
+    reward: number,
+  ): Promise<BovaPaymentUser | null> {
+    try {
+      return await this.em.transactional(async (em) => {
+        const user = await em.findOne(
+          BovaPaymentUser,
+          { telegramId },
+          { lockMode: LockMode.PESSIMISTIC_WRITE },
+        );
+
+        if (!user || user.promoActivated) {
+          return null;
+        }
+
+        user.balance += reward;
+        user.promoActivated = true;
+        user.updatedAt = new Date();
+        await em.flush();
+        return user;
+      });
+    } catch (error) {
+      this.logger.error(
+        `Не удалось активировать промокод для ${telegramId}: ${
+          (error as Error).message
+        }`,
+        (error as Error).stack,
+      );
+      return null;
+    }
+  }
+
   private async updatePaymentStatus(
     invoiceId: string,
     status: BovaPaymentStatus,
@@ -971,6 +1109,16 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private isCancelCommand(text: string): boolean {
+    const normalized = text.trim().toLowerCase();
+    return (
+      normalized === '❌ отмена'.toLowerCase() ||
+      normalized === 'отмена' ||
+      normalized === 'cancel' ||
+      normalized === '/cancel'
+    );
+  }
+
   private buildDonateKeyboard() {
     return Markup.inlineKeyboard([
       [
@@ -997,13 +1145,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       [
         Markup.button.url(
           '📄 Политика конфиденциальности',
-          process.env.PAYMENT_BOT_PRIVACY_URL ?? 'https://t.me/bovaAI_privacy',
+          process.env.PAYMENT_BOT_PRIVACY_URL ??
+            'https://telegra.ph/POLITIKA-KONFIDENCIALNOSTI-PO-RABOTE-S-PERSONALNYMI-DANNYMI-POLZOVATELEJ-11-11-2',
         ),
       ],
       [
         Markup.button.url(
           '📃 Пользовательское соглашение',
-          process.env.PAYMENT_BOT_TOS_URL ?? 'https://t.me/bovaAI_terms',
+          process.env.PAYMENT_BOT_TOS_URL ??
+            'https://telegra.ph/Polzovatelskoe-soglashenie-Publichnaya-oferta-11-11-2',
         ),
       ],
       [Markup.button.callback('◀️ Вернуться назад', 'start')],

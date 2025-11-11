@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { BotService } from './bot.service';
-import { Telegraf } from 'telegraf';
+import { Telegraf, TelegramError } from 'telegraf';
 import { checkIsTelegramAdmin } from 'libs/utils/decorator/telegram-admin.decorator';
 
 @ApiTags('payment-bot')
@@ -27,25 +27,37 @@ export class BotController {
     });
 
     this.bot.action('start_chat', async (ctx) => {
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleChatStart(ctx);
     });
 
     this.bot.action('generate_image', async (ctx) => {
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleGenerateImage(ctx);
     });
 
     this.bot.action('donate', async (ctx) => {
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleBalance(ctx);
+    });
+
+    this.bot.action('promocode', async (ctx) => {
+      await this.safeAnswerCbQuery(ctx);
+      await this.botService.handlePromocode(ctx);
+    });
+
+    this.bot.action('start', async (ctx) => {
+      await this.safeAnswerCbQuery(ctx);
+      await this.botService.handleStart(ctx);
     });
 
     this.bot.action(/deposit:(.+)/, async (ctx) => {
       const match = (ctx as any).match?.[1];
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       if (!match) {
-        await ctx.answerCbQuery('Некорректные данные', { show_alert: true });
+        await this.safeAnswerCbQuery(ctx, 'Некорректные данные', {
+          show_alert: true,
+        });
         return;
       }
       await this.botService.handleDepositCallback(ctx, match);
@@ -55,10 +67,12 @@ export class BotController {
       const amountRaw = (ctx as any).match?.[1];
       const amount = Number(amountRaw);
       if (!Number.isFinite(amount)) {
-        await ctx.answerCbQuery('Некорректная сумма', { show_alert: true });
+        await this.safeAnswerCbQuery(ctx, 'Некорректная сумма', {
+          show_alert: true,
+        });
         return;
       }
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleDepositMethod(ctx, 'yoomoney', amount);
     });
 
@@ -66,40 +80,49 @@ export class BotController {
       const amountRaw = (ctx as any).match?.[1];
       const amount = Number(amountRaw);
       if (!Number.isFinite(amount)) {
-        await ctx.answerCbQuery('Некорректная сумма', { show_alert: true });
+        await this.safeAnswerCbQuery(ctx, 'Некорректная сумма', {
+          show_alert: true,
+        });
         return;
       }
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleDepositMethod(ctx, 'apays', amount);
     });
 
     this.bot.action(/loot@(.+)/, async (ctx) => {
       const invoiceId = (ctx as any).match?.[1];
       if (!invoiceId) {
-        await ctx.answerCbQuery('Некорректная ссылка', { show_alert: true });
+        await this.safeAnswerCbQuery(ctx, 'Некорректная ссылка', {
+          show_alert: true,
+        });
         return;
       }
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleApaysStatusCheck(ctx, invoiceId);
     });
 
     this.bot.action(/check_(.+)/, async (ctx) => {
       const label = (ctx as any).match?.[1];
       if (!label) {
-        await ctx.answerCbQuery('Некорректная метка', { show_alert: true });
+        await this.safeAnswerCbQuery(ctx, 'Некорректная метка', {
+          show_alert: true,
+        });
         return;
       }
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleYoomoneyStatusCheck(ctx, label);
     });
 
     this.bot.action('profile', async (ctx) => {
-      await ctx.answerCbQuery();
+      await this.safeAnswerCbQuery(ctx);
       await this.botService.handleProfile(ctx);
     });
 
     this.bot.on('text', async (ctx) => {
       if (ctx.message?.text?.startsWith('/')) {
+        return;
+      }
+      if (await this.botService.handlePromocodeMessage(ctx)) {
         return;
       }
       if (await this.botService.handleDepositText(ctx)) {
@@ -128,5 +151,29 @@ export class BotController {
 
   onModuleDestroy() {
     this.bot.stop();
+  }
+
+  private async safeAnswerCbQuery(
+    ctx: any,
+    text?: string,
+    extra?: { show_alert?: boolean; url?: string; cache_time?: number },
+  ) {
+    if (typeof ctx.answerCbQuery !== 'function') {
+      return;
+    }
+
+    try {
+      await ctx.answerCbQuery(text, extra);
+    } catch (error) {
+      if (
+        error instanceof TelegramError &&
+        error.response?.error_code === 400 &&
+        error.response?.description?.includes('query is too old')
+      ) {
+        return;
+      }
+
+      throw error;
+    }
   }
 }

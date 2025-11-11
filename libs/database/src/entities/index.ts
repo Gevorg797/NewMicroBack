@@ -38,6 +38,8 @@ import {
   WheelTransaction,
   WheelTransactionStatus,
 } from './wheel-transaction.entity';
+import { BovaPaymentUser } from './bova-payment-user.entity';
+import { BovaPaymentTransaction } from './bova-payment-transaction.entity';
 
 // Export everything for convenient imports
 // export * from './balances.entity';
@@ -69,6 +71,8 @@ export const ENTITIES = [
   PromocodeUsage,
   WheelConfig,
   WheelTransaction,
+  BovaPaymentUser,
+  BovaPaymentTransaction,
 ];
 
 export {
@@ -113,4 +117,6 @@ export {
   WheelGivingType,
   WheelTransaction,
   WheelTransactionStatus,
+  BovaPaymentUser,
+  BovaPaymentTransaction,
 };

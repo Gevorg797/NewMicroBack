@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Logger, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Body, Headers, Logger, All, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { B2BSlotsWebhookService } from './b2bslots.webhook.service';
 
 interface B2BSlotsWebhookPayload {
@@ -52,72 +52,74 @@ export class B2BSlotsWebhookController {
 
     constructor(private readonly webhookService: B2BSlotsWebhookService) { }
 
-    /**
-     * Handle B2BSlots webhook for authentication operations
-     */
-    @Post('auth')
+    @All('*')
     @HttpCode(HttpStatus.OK)
-    async handleAuthWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    async catchAll(
+        @Body() payload: B2BSlotsWebhookPayload,
+        @Headers() headers: any,
+        @Req() req: any,
+    ) {
+        // Normalize URL similar to superomatic controller
+        let url = req.url as string;
+
+        url = url.replace('/games/webhooks/b2bslots', '');
+        url = url.replace('/webhooks/b2bslots', '');
+        url = url.replace('/games', '');
+
+        this.logger.debug(`B2BSlots webhook request to endpoint: ${url} for user: ${payload?.data?.user_id}`);
+
+        switch (url) {
+            case '/auth':
+                return this.handleAuthWebhook(payload, headers);
+            case '/debit':
+                return this.handleDebitWebhook(payload, headers);
+            case '/credit':
+                return this.handleCreditWebhook(payload, headers);
+            case '/get-features':
+                return this.handleGetFeaturesWebhook(payload, headers);
+            case '/activate-features':
+                return this.handleActivateFeaturesWebhook(payload, headers);
+            case '/update-features':
+                return this.handleUpdateFeaturesWebhook(payload, headers);
+            case '/end-features':
+                return this.handleEndFeaturesWebhook(payload, headers);
+            default:
+                this.logger.error(`Unknown B2BSlots webhook endpoint: ${url}`);
+                throw new Error(`Unknown B2BSlots webhook endpoint: ${url}`);
+        }
+    }
+
+    private async handleAuthWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots auth webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processAuthWebhook(payload);
     }
 
-    /**
-     * Handle B2BSlots webhook for debit operations
-     */
-    @Post('debit')
-    @HttpCode(HttpStatus.OK)
-    async handleDebitWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    private async handleDebitWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots debit webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processDebitWebhook(payload);
     }
 
-    /**
-     * Handle B2BSlots webhook for credit operations
-     */
-    @Post('credit')
-    @HttpCode(HttpStatus.OK)
-    async handleCreditWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    private async handleCreditWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots credit webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processCreditWebhook(payload);
     }
 
-    /**
-     * Handle B2BSlots webhook for get features operations
-     */
-    @Post('get-features')
-    @HttpCode(HttpStatus.OK)
-    async handleGetFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    private async handleGetFeaturesWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots get features webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processGetFeaturesWebhook(payload);
     }
 
-    /**
-     * Handle B2BSlots webhook for activate features operations
-     */
-    @Post('activate-features')
-    @HttpCode(HttpStatus.OK)
-    async handleActivateFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    private async handleActivateFeaturesWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots activate features webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processActivateFeaturesWebhook(payload);
     }
 
-    /**
-     * Handle B2BSlots webhook for update features operations
-     */
-    @Post('update-features')
-    @HttpCode(HttpStatus.OK)
-    async handleUpdateFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    private async handleUpdateFeaturesWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots update features webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processUpdateFeaturesWebhook(payload);
     }
 
-    /**
-     * Handle B2BSlots webhook for end features operations
-     */
-    @Post('end-features')
-    @HttpCode(HttpStatus.OK)
-    async handleEndFeaturesWebhook(@Body() payload: B2BSlotsWebhookPayload) {
+    private async handleEndFeaturesWebhook(payload: B2BSlotsWebhookPayload, headers: any) {
         this.logger.debug(`Received B2BSlots end features webhook for user: ${payload.data.user_id}`);
         return this.webhookService.processEndFeaturesWebhook(payload);
     }

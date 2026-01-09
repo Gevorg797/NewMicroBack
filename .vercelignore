@@ -1,5 +1,4 @@
 node_modules
-dist
 .git
 .env
 .env.local
@@ -10,3 +9,5 @@ coverage
 .vscode
 .idea
 # Only exclude non-HTTP services that won't work on Vercel
+# Note: dist is NOT excluded, needed for serverless functions
+# Note: dist is NOT excluded, needed for serverless functions

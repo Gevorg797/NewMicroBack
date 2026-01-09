@@ -10,7 +10,3 @@ coverage
 .vscode
 .idea
 # Only exclude non-HTTP services that won't work on Vercel
-apps/cronjobs
-apps/payment-bot
-apps/file-service
-

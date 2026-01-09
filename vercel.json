@@ -1,0 +1,82 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "builds": [
+    {
+      "src": "dist/apps/api/main.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/apps/admin/main.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/apps/finance-service/main.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/apps/game-service/main.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/apps/cronjobs/main.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/apps/payment-bot/main.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/admin/(.*)",
+      "dest": "dist/apps/admin/main.js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+    },
+    {
+      "src": "/finance/(.*)",
+      "dest": "dist/apps/finance-service/main.js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+    },
+    {
+      "src": "/games/(.*)",
+      "dest": "dist/apps/game-service/main.js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+    },
+    {
+      "src": "/cronjobs/(.*)",
+      "dest": "dist/apps/cronjobs/main.js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+    },
+    {
+      "src": "/payment-bot/(.*)",
+      "dest": "dist/apps/payment-bot/main.js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "dist/apps/api/main.js",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+    }
+  ],
+  "functions": {
+    "dist/apps/api/main.js": {
+      "maxDuration": 60
+    },
+    "dist/apps/admin/main.js": {
+      "maxDuration": 60
+    },
+    "dist/apps/finance-service/main.js": {
+      "maxDuration": 60
+    },
+    "dist/apps/game-service/main.js": {
+      "maxDuration": 60
+    },
+    "dist/apps/cronjobs/main.js": {
+      "maxDuration": 60
+    },
+    "dist/apps/payment-bot/main.js": {
+      "maxDuration": 60
+    }
+  }
+}
